@@ -1,114 +1,74 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800;900&display=swap');
-
-/* CSS Variables for Light Theme */
-:root {
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --bg-hero: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%);
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --accent-primary: #2563eb;
-  --accent-secondary: #1e40af;
-  --accent-gradient: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-  --border-color: #e2e8f0;
-  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.12);
-  --shadow-lg: 0 8px 32px rgba(15, 23, 42, 0.16);
-  --card-bg: #ffffff;
-  --hover-bg: #f1f5f9;
-  --error-bg: #fee2e2;
-  --error-text: #dc2626;
-}
-
-/* CSS Variables for Dark Theme */
-[data-theme="dark"] {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-hero: linear-gradient(135deg, #0c1220 0%, #1e293b 50%, #334155 100%);
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --accent-primary: #3b82f6;
-  --accent-secondary: #60a5fa;
-  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-  --border-color: #334155;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --card-bg: #1e293b;
-  --hover-bg: #334155;
-  --error-bg: #7f1d1d;
-  --error-text: #fca5a5;
-}
+/* Relies on globals from index.css */
 
 .auth-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-hero);
+  background: var(--bg-secondary);
   padding: 2rem;
-  font-family: 'Inter', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
   position: relative;
   overflow: hidden;
 }
 
 .auth-container::before {
+  /* Subtle ambient background */
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 20% 50%, rgba(37, 99, 235, 0.1) 0%, transparent 50%),
-              radial-gradient(circle at 80% 80%, rgba(30, 64, 175, 0.1) 0%, transparent 50%);
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(0, 113, 227, 0.03) 0%, transparent 70%);
+  z-index: 0;
   pointer-events: none;
 }
 
 .auth-card {
-  background: var(--card-bg);
-  border-radius: 24px;
-  padding: 2.5rem;
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-lg);
+  padding: 3rem;
   width: 100%;
-  max-width: 450px;
+  max-width: 440px;
   box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-light);
   position: relative;
   z-index: 1;
-  transition: all 0.3s ease;
+  transition: all var(--transition-normal);
+  backdrop-filter: blur(20px);
 }
 
 .auth-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
 }
 
 .auth-header h1 {
   font-size: 2rem;
-  font-weight: 900;
+  font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 0.5rem;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.02em;
 }
 
 .auth-header p {
   color: var(--text-secondary);
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 1.05rem;
+  font-weight: 400;
 }
 
 .error-message {
-  background: var(--error-bg);
-  color: var(--error-text);
-  padding: 0.75rem;
-  border-radius: 8px;
+  background: rgba(255, 59, 48, 0.1);
+  /* Apple system red style */
+  color: #ff3b30;
+  padding: 0.8rem;
+  border-radius: var(--border-radius-sm);
   margin-bottom: 1.5rem;
   text-align: center;
   font-size: 0.9rem;
-  font-weight: 600;
-  border: 1px solid var(--error-text);
+  font-weight: 500;
+  border: 1px solid rgba(255, 59, 48, 0.2);
 }
 
 .auth-form {
@@ -120,24 +80,26 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
 .form-group label {
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 500;
+  color: var(--text-secondary);
+  /* Softer label color */
   font-size: 0.9rem;
+  margin-left: 0.2rem;
 }
 
 .form-group input,
 .role-select {
-  padding: 0.875rem;
-  border: 2px solid var(--border-color);
-  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius-sm);
   font-size: 1rem;
   font-family: inherit;
-  transition: all 0.3s ease;
-  background: var(--bg-primary);
+  transition: all var(--transition-fast);
+  background: var(--bg-tertiary);
   color: var(--text-primary);
 }
 
@@ -145,87 +107,94 @@
 .role-select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  background: var(--card-bg);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  background: var(--bg-primary);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
 }
 
 .role-select {
-  background: var(--bg-primary);
   cursor: pointer;
+  appearance: none;
+  /* Add custom arrow if needed, but keeping simple for now */
 }
 
 .btn {
-  padding: 0.875rem 2rem;
-  border-radius: 12px;
+  padding: 1rem;
+  border-radius: 980px;
+  /* Pill */
   text-decoration: none;
-  font-weight: 700;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+  transition: all var(--transition-fast);
   border: none;
   cursor: pointer;
   display: inline-block;
-  font-size: 1rem;
-  letter-spacing: 0.3px;
+  font-size: 1.05rem;
+  letter-spacing: 0;
   font-family: inherit;
+  width: 100%;
 }
 
 .btn-primary {
-  background: var(--accent-gradient);
+  background: var(--accent-primary);
   color: white;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-.btn-full {
-  width: 100%;
-  margin-top: 0.5rem;
+  background: var(--accent-secondary);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 113, 227, 0.35);
 }
 
 .auth-footer {
-  margin-top: 2rem;
+  margin-top: 2.5rem;
   text-align: center;
+  border-top: 1px solid var(--border-light);
+  padding-top: 1.5rem;
 }
 
 .auth-footer p {
   color: var(--text-secondary);
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   font-size: 0.95rem;
 }
 
 .auth-footer a {
   color: var(--accent-primary);
   text-decoration: none;
-  font-weight: 600;
-  transition: all 0.3s ease;
+  font-weight: 500;
+  transition: all var(--transition-fast);
 }
 
 .auth-footer a:hover {
   text-decoration: underline;
-  color: var(--accent-secondary);
+  opacity: 0.8;
 }
 
 .back-link {
   display: inline-block;
   margin-top: 1rem;
-  color: var(--text-muted);
+  color: var(--text-tertiary);
   text-decoration: none;
   font-size: 0.9rem;
-  transition: all 0.3s ease;
+  transition: color var(--transition-fast);
 }
 
 .back-link:hover {
-  color: var(--accent-primary);
+  color: var(--text-primary);
 }
 
 @media (max-width: 768px) {
   .auth-card {
     padding: 2rem;
+    box-shadow: none;
+    /* Flatter on mobile usually looks better */
+    background: transparent;
   }
 
-  .auth-header h1 {
-    font-size: 1.75rem;
+  .auth-container {
+    background: var(--bg-primary);
+    /* Remove container bg on mobile */
+    align-items: flex-start;
+    padding-top: 3rem;
   }
 }
