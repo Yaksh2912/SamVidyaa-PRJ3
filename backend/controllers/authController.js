@@ -14,9 +14,10 @@ const registerUser = async (req, res) => {
 
         console.log("Registering user:", { name, email, role }); // Debug log
 
-        if (!email.endsWith('@bmu.edu.in')) {
-            return res.status(400).json({ message: 'Only @bmu.edu.in emails are allowed' });
-        }
+        // Removed email restriction for general testing
+        // if (!email.endsWith('@bmu.edu.in')) {
+        //     return res.status(400).json({ message: 'Only @bmu.edu.in emails are allowed' });
+        // }
 
         const userExists = await User.findOne({ email });
 
@@ -39,7 +40,11 @@ const registerUser = async (req, res) => {
             }
         }
 
-        const assignedRole = role ? role.toUpperCase() : 'STUDENT';
+        let assignedRole = role ? role.toUpperCase() : 'STUDENT';
+
+        // Map frontend role names to backend constants
+        if (assignedRole === 'TEACHER') assignedRole = 'INSTRUCTOR';
+
         if (!['STUDENT', 'INSTRUCTOR', 'ADMIN'].includes(assignedRole)) {
             return res.status(400).json({ message: 'Invalid role' });
         }

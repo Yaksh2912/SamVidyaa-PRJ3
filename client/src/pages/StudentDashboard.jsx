@@ -1,10 +1,11 @@
-import React from 'react'
+
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
-import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy } from 'react-icons/hi2'
+import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle } from 'react-icons/hi2'
 import './Dashboard.css'
 
 function StudentDashboard() {
@@ -14,10 +15,93 @@ function StudentDashboard() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [availableCourses, setAvailableCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [enrollLoading, setEnrollLoading] = useState(null); // Course ID being enrolled
+
   const handleLogout = () => {
     logout()
     navigate('/')
   }
+
+  const fetchData = async () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+
+      if (!token) return;
+
+      // Fetch Enrolled Courses
+      const enrolledRes = await fetch('http://localhost:5001/api/enrollments/student', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const enrolledData = await enrolledRes.json();
+      setEnrolledCourses(enrolledData);
+
+      // Fetch All Courses
+      const coursesRes = await fetch('http://localhost:5001/api/courses', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const allCourses = await coursesRes.json();
+
+      // Calculate Available Courses (Active Courses - Enrolled Courses)
+      // We only consider "Active" or "Pending" enrollments as "taking a slot". 
+      // Rejected/Dropped should appear in "Available" so they can try again.
+      const activeEnrollmentIds = enrolledData
+        .filter(e => ['ACTIVE', 'APPROVED', 'PENDING'].includes(e.status))
+        .map(e => e.course_id._id);
+
+      const available = allCourses.filter(c => !activeEnrollmentIds.includes(c._id) && c.is_active !== false); // Assuming default active if field missing
+      setAvailableCourses(available);
+
+      // Filter Enrolled Courses to only show Active/Pending/Approved - Hide Rejected/Dropped to "archive" them essentially
+      // unless we want a "History" tab later. For now, user wants them "back in available", which implies removed from here.
+      setEnrolledCourses(enrolledData.filter(e => ['ACTIVE', 'APPROVED', 'PENDING'].includes(e.status)));
+
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleEnroll = async (courseId) => {
+    setEnrollLoading(courseId);
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+
+      const response = await fetch('http://localhost:5001/api/enrollments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          course_id: courseId,
+          student_email: user.email
+        })
+      });
+
+      if (response.ok) {
+        await fetchData(); // Refresh lists
+        alert("Enrolled successfully!");
+      } else {
+        const data = await response.json();
+        alert(data.message || "Enrollment failed");
+      }
+    } catch (error) {
+      console.error("Enrollment error:", error);
+      alert("Something went wrong");
+    } finally {
+      setEnrollLoading(null);
+    }
+  };
 
   const t = translations.dashboard.student
 
@@ -66,11 +150,11 @@ function StudentDashboard() {
             transition={{ duration: 0.5, delay: 0.1 }}
           >
             <div className="stat-icon">
-              <HiDocumentText />
+              <HiBookOpen />
             </div>
             <div className="stat-info">
-              <h3>{t.stats.assignments}</h3>
-              <p className="stat-number">12</p>
+              <h3>Enrolled Courses</h3>
+              <p className="stat-number">{enrolledCourses.filter(e => e.status === 'ACTIVE' || e.status === 'APPROVED').length}</p>
             </div>
           </motion.div>
           <motion.div
@@ -80,11 +164,11 @@ function StudentDashboard() {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <div className="stat-icon">
-              <HiCheckCircle />
+              <HiClock />
             </div>
             <div className="stat-info">
-              <h3>{t.stats.completed}</h3>
-              <p className="stat-number">8</p>
+              <h3>Pending Requests</h3>
+              <p className="stat-number">{enrolledCourses.filter(e => e.status === 'PENDING').length}</p>
             </div>
           </motion.div>
           <motion.div
@@ -94,81 +178,83 @@ function StudentDashboard() {
             transition={{ duration: 0.5, delay: 0.3 }}
           >
             <div className="stat-icon">
-              <HiClock />
+              <HiPlusCircle />
             </div>
             <div className="stat-info">
-              <h3>{t.stats.pending}</h3>
-              <p className="stat-number">4</p>
-            </div>
-          </motion.div>
-          <motion.div
-            className="stat-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <div className="stat-icon">
-              <HiStar />
-            </div>
-            <div className="stat-info">
-              <h3>{t.stats.averageGrade}</h3>
-              <p className="stat-number">85%</p>
+              <h3>Available</h3>
+              <p className="stat-number">{availableCourses.length}</p>
             </div>
           </motion.div>
         </div>
 
-        <div className="dashboard-sections">
-          <motion.div
-            className="section-card"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-            whileHover={{ scale: 1.02, y: -4 }}
-          >
-            <h3>{t.sections.currentAssignments}</h3>
-            <p>{t.sections.currentAssignmentsDesc}</p>
-            <button className="btn btn-primary">{t.sections.viewAssignments}</button>
-          </motion.div>
-
-          <motion.div
-            className="section-card"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-            whileHover={{ scale: 1.02, y: -4 }}
-          >
-            <h3>{t.sections.submitWork}</h3>
-            <p>{t.sections.submitWorkDesc}</p>
-            <button className="btn btn-primary">{t.sections.submitWorkBtn}</button>
-          </motion.div>
-
-          <motion.div
-            className="section-card"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
-            whileHover={{ scale: 1.02, y: -4 }}
-          >
-            <h3>{t.sections.grades}</h3>
-            <p>{t.sections.gradesDesc}</p>
-            <button className="btn btn-primary">{t.sections.viewGrades}</button>
-          </motion.div>
-
-          <motion.div
-            className="section-card"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.8 }}
-            whileHover={{ scale: 1.02, y: -4 }}
-          >
-            <h3>{t.sections.resources}</h3>
-            <p>{t.sections.resourcesDesc}</p>
-            <button className="btn btn-primary">{t.sections.resourcesBtn}</button>
-          </motion.div>
+        {/* ENROLLED COURSES SECTION */}
+        <div className="dashboard-section mt-4">
+          <h3>My Courses</h3>
+          {loading ? <p>Loading...</p> : enrolledCourses.length === 0 ? (
+            <p className="empty-state">You are not enrolled in any courses yet.</p>
+          ) : (
+            <div className="modules-grid">
+              {enrolledCourses.map((enrollment) => (
+                <div key={enrollment._id} className="module-card">
+                  <div className="module-info">
+                    <h4>
+                      {enrollment.course_id.course_name}
+                      <span className={`status-badge ${enrollment.status.toLowerCase()}`}>
+                        {enrollment.status}
+                      </span>
+                    </h4>
+                    <p className="text-secondary">{enrollment.course_id.course_code}</p>
+                    <p>{enrollment.course_id.description}</p>
+                    <div className="module-meta">
+                      <span>Instructor: {enrollment.course_id.instructor ? enrollment.course_id.instructor.name : 'Unknown'}</span>
+                    </div>
+                    <button
+                      className="btn btn-primary mt-2"
+                      disabled={enrollment.status !== 'ACTIVE' && enrollment.status !== 'APPROVED'}
+                    >
+                      {enrollment.status === 'PENDING' ? 'Request Pending' : enrollment.status === 'REJECTED' ? 'Not Enrolled' : 'View Course'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
+        {/* AVAILABLE COURSES SECTION */}
+        <div className="dashboard-section mt-5">
+          <h3>Available Courses</h3>
+          {loading ? <p>Loading...</p> : availableCourses.length === 0 ? (
+            <p className="empty-state">No new courses available at the moment.</p>
+          ) : (
+            <div className="modules-grid">
+              {availableCourses.map((course) => (
+                <div key={course._id} className="module-card available">
+                  <div className="module-info">
+                    <h4>{course.course_name}</h4>
+                    <p className="text-secondary">{course.course_code}</p>
+                    <p>{course.description}</p>
+                    <div className="module-meta">
+                      <span>Subject: {course.subject}</span>
+                      <span>Instructor: {course.instructor ? course.instructor.name : 'Unknown'}</span>
+                    </div>
+                    <button
+                      className="btn btn-secondary mt-2"
+                      onClick={() => handleEnroll(course._id)}
+                      disabled={enrollLoading === course._id}
+                    >
+                      {enrollLoading === course._id ? 'Requesting...' : 'Request Enrollment'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Restore Recent Activity & Rankings Mock Data */}
         <motion.div
-          className="recent-activity"
+          className="recent-activity mt-5"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.9 }}
@@ -198,7 +284,7 @@ function StudentDashboard() {
         >
           <div className="rankings-header">
             <h3>{t.leaderboard?.title || "Class Rankings"}</h3>
-            <div className="stat-icon" style={{ width: '40px', height: '40px', fontSize: '1.5rem' }}>
+            <div className="stat-icon stat-icon-sm">
               <HiTrophy />
             </div>
           </div>

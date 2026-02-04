@@ -55,9 +55,9 @@ function Signup() {
         formData.role
       )
 
-      if (data.role === 'admin') {
+      if (data.role === 'ADMIN') {
         navigate('/admin')
-      } else if (data.role === 'teacher') {
+      } else if (data.role === 'INSTRUCTOR' || data.role === 'teacher') { // Handle both just in case
         navigate('/teacher')
       } else {
         navigate('/student')

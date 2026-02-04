@@ -21,6 +21,13 @@ function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to="/login" replace />
   }
 
+  // Debug logging
+  console.log("ProtectedRoute Check:", {
+    userRole: user?.role,
+    allowedRoles,
+    hasAccess: allowedRoles ? allowedRoles.includes(user?.role) : true
+  });
+
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
     return <Navigate to="/" replace />
   }
@@ -37,7 +44,7 @@ function AppRoutes() {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'admin']}>
             <AdminDashboard />
           </ProtectedRoute>
         }
@@ -45,7 +52,7 @@ function AppRoutes() {
       <Route
         path="/student"
         element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={['STUDENT', 'student']}>
             <StudentDashboard />
           </ProtectedRoute>
         }
@@ -53,7 +60,7 @@ function AppRoutes() {
       <Route
         path="/teacher"
         element={
-          <ProtectedRoute allowedRoles={['teacher']}>
+          <ProtectedRoute allowedRoles={['INSTRUCTOR', 'TEACHER', 'teacher', 'instructor']}>
             <TeacherDashboard />
           </ProtectedRoute>
         }

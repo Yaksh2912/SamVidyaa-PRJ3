@@ -39,9 +39,9 @@ function Login() {
 
       const userRole = data.role
 
-      if (userRole === 'admin') {
+      if (userRole === 'ADMIN') {
         navigate('/admin')
-      } else if (userRole === 'teacher') {
+      } else if (userRole === 'INSTRUCTOR' || userRole === 'teacher') {
         navigate('/teacher')
       } else {
         navigate('/student')

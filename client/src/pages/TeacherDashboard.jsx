@@ -123,6 +123,9 @@ function TeacherDashboard() {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
+        // Response now contains student details plus status, or we might need to adjust backend to ensure it returns the enrollment document with status.
+        // Wait, the backend currently returns a mapped object with status. Let's verify.
+        // Yes, backend returns: { _id, name, email, enrollment_number, status, enrolledAt }
         const data = await response.json()
         setStudents(data)
       }
@@ -130,6 +133,34 @@ function TeacherDashboard() {
       console.error('Failed to fetch students', error)
     } finally {
       setLoadingStudents(false)
+    }
+  }
+
+  const handleEnrollmentStatus = async (enrollmentId, newStatus) => {
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+
+      const response = await fetch(`http://localhost:5001/api/enrollments/${enrollmentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setStudents(students.map(s =>
+          s.enrollment_id === enrollmentId ? { ...s, status: newStatus } : s
+        ));
+      } else {
+        alert("Failed to update status");
+      }
+    } catch (error) {
+      console.error("Status update error", error);
+      alert("Error updating status");
     }
   }
 
@@ -436,14 +467,37 @@ function TeacherDashboard() {
                 <div className="modules-grid">
                   {students.length === 0 ? <p className="no-modules">No students enrolled yet.</p> : students.map(student => (
                     <div key={student._id} className="module-card">
-                      {/* Reusing module card for student display */}
                       <div className="module-info">
                         <h4>{student.name}</h4>
                         <p>{student.email}</p>
                         <div className="module-meta">
                           <span>ID: {student.enrollment_number || 'N/A'}</span>
-                          <span style={{ marginLeft: '1rem', color: 'var(--accent-color)' }}>{student.status}</span>
+                          <span style={{
+                            marginLeft: '1rem',
+                            color: student.status === 'PENDING' ? '#ffd700' : student.status === 'APPROVED' ? '#51cf66' : '#ff6b6b',
+                            fontWeight: 'bold'
+                          }}>
+                            {student.status}
+                          </span>
                         </div>
+                        {student.status === 'PENDING' && (
+                          <div style={{ marginTop: '1rem', display: 'flex', gap: '10px' }}>
+                            <button
+                              className="btn btn-primary"
+                              style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                              onClick={() => handleEnrollmentStatus(student.enrollment_id, 'APPROVED')}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              className="btn btn-danger"
+                              style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                              onClick={() => handleEnrollmentStatus(student.enrollment_id, 'REJECTED')}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

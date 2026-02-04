@@ -20,6 +20,12 @@ const enrollStudent = async (req, res) => {
 
         const enrollmentExists = await Enrollment.findOne({ course_id, student_id: student._id });
         if (enrollmentExists) {
+            if (enrollmentExists.status === 'REJECTED' || enrollmentExists.status === 'DROPPED') {
+                // Allow re-enrollment
+                enrollmentExists.status = 'PENDING';
+                await enrollmentExists.save();
+                return res.status(200).json(enrollmentExists);
+            }
             return res.status(400).json({ message: 'Student already enrolled' });
         }
 
@@ -46,6 +52,7 @@ const getEnrolledStudents = async (req, res) => {
         // Transform to return just students with enrollment info
         const students = enrollments.map(e => ({
             _id: e.student_id._id,
+            enrollment_id: e._id,
             name: e.student_id.name,
             email: e.student_id.email,
             enrollment_number: e.student_id.enrollment_number,
@@ -60,13 +67,44 @@ const getEnrolledStudents = async (req, res) => {
     }
 };
 
+// @desc    Update enrollment status (Approve/Reject)
+// @route   PUT /api/enrollments/:id
+// @access  Private (Instructor)
+const updateEnrollmentStatus = async (req, res) => {
+    try {
+        const { status } = req.body;
+        const enrollment = await Enrollment.findById(req.params.id).populate('course_id');
+
+        if (!enrollment) {
+            return res.status(404).json({ message: 'Enrollment not found' });
+        }
+
+        // Verify that the instructor owns the course
+        const course = await Course.findById(enrollment.course_id._id);
+        if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        enrollment.status = status;
+        await enrollment.save();
+
+        res.json(enrollment);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to update enrollment' });
+    }
+};
+
 // @desc    Get all courses a student is enrolled in
 // @route   GET /api/enrollments/student
 // @access  Private
 const getStudentEnrollments = async (req, res) => {
     try {
         const enrollments = await Enrollment.find({ student_id: req.user._id })
-            .populate('course_id');
+            .populate({
+                path: 'course_id',
+                populate: { path: 'instructor', select: 'name' }
+            });
 
         res.json(enrollments);
     } catch (error) {
@@ -78,5 +116,6 @@ const getStudentEnrollments = async (req, res) => {
 module.exports = {
     enrollStudent,
     getEnrolledStudents,
-    getStudentEnrollments
+    getStudentEnrollments,
+    updateEnrollmentStatus
 };
