@@ -1,0 +1,200 @@
+/* Relies on globals from index.css */
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-container::before {
+  /* Subtle ambient background */
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(0, 113, 227, 0.03) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.auth-card {
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-lg);
+  padding: 3rem;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-light);
+  position: relative;
+  z-index: 1;
+  transition: all var(--transition-normal);
+  backdrop-filter: blur(20px);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.auth-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.auth-header p {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  font-weight: 400;
+}
+
+.error-message {
+  background: rgba(255, 59, 48, 0.1);
+  /* Apple system red style */
+  color: #ff3b30;
+  padding: 0.8rem;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  /* Softer label color */
+  font-size: 0.9rem;
+  margin-left: 0.2rem;
+}
+
+.form-group input,
+.role-select {
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius-sm);
+  font-size: 1rem;
+  font-family: inherit;
+  transition: all var(--transition-fast);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.form-group input:focus,
+.role-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  background: var(--bg-primary);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+}
+
+.role-select {
+  cursor: pointer;
+  appearance: none;
+  /* Add custom arrow if needed, but keeping simple for now */
+}
+
+.btn {
+  padding: 1rem;
+  border-radius: 980px;
+  /* Pill */
+  text-decoration: none;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  border: none;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 1.05rem;
+  letter-spacing: 0;
+  font-family: inherit;
+  width: 100%;
+}
+
+.btn-primary {
+  background: var(--accent-primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
+}
+
+.btn-primary:hover {
+  background: var(--accent-secondary);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 113, 227, 0.35);
+}
+
+.auth-footer {
+  margin-top: 2.5rem;
+  text-align: center;
+  border-top: 1px solid var(--border-light);
+  padding-top: 1.5rem;
+}
+
+.auth-footer p {
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.auth-footer a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 1rem;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color var(--transition-fast);
+}
+
+.back-link:hover {
+  color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  .auth-card {
+    padding: 2rem;
+    box-shadow: none;
+    /* Flatter on mobile usually looks better */
+    background: transparent;
+  }
+
+  .auth-container {
+    background: var(--bg-primary);
+    /* Remove container bg on mobile */
+    align-items: flex-start;
+    padding-top: 3rem;
+  }
+}
