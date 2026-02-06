@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import './ModalForm.css';
 
 function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
     const [formData, setFormData] = useState({
@@ -86,7 +87,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                 <h2>Create New Module</h2>
                 {error && <div className="error-message">{error}</div>}
                 <form onSubmit={handleSubmit}>
-                    <div className="form-group-row" style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="form-row">
                         <div className="form-group" style={{ flex: 1 }}>
                             <label>Module Order</label>
                             <input
@@ -122,7 +123,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                         />
                     </div>
 
-                    <div className="form-group-row" style={{ display: 'flex', gap: '1rem' }}>
+                    <div className="form-row">
                         <div className="form-group" style={{ flex: 1 }}>
                             <label>Tasks Count</label>
                             <input
@@ -145,13 +146,13 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                         </div>
                         <div className="form-group" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                             <label style={{ marginBottom: '0.5rem', display: 'block' }}>Status</label>
-                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                            <label className="checkbox-label">
                                 <input
                                     type="checkbox"
+                                    className="checkbox-input"
                                     name="is_active"
                                     checked={formData.is_active}
                                     onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
-                                    style={{ width: 'auto' }}
                                 />
                                 Active
                             </label>
@@ -174,50 +175,6 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                     </div>
                 </form>
             </motion.div>
-            <style jsx>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-        }
-        .modal-content {
-          background: var(--bg-primary);
-          padding: 2rem;
-          border-radius: var(--border-radius-lg);
-          width: 90%;
-          max-width: 500px;
-          box-shadow: var(--shadow-lg);
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-secondary);
-        }
-        .form-group input, .form-group textarea {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid var(--border-light);
-            border-radius: var(--border-radius-sm);
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-        }
-        .modal-actions {
-          display: flex;
-          gap: 1rem;
-          margin-top: 1.5rem;
-          justify-content: flex-end;
-        }
-      `}</style>
         </div>
     );
 }

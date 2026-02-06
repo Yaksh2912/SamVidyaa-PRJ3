@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import './ModalForm.css';
 
 function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
     const [formData, setFormData] = useState({
@@ -198,9 +199,10 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
                                 value={newTestCase.expected_output}
                                 onChange={(e) => setNewTestCase({ ...newTestCase, expected_output: e.target.value })}
                             />
-                            <label>
+                            <label className="checkbox-label">
                                 <input
                                     type="checkbox"
+                                    className="checkbox-input"
                                     checked={newTestCase.is_sample}
                                     onChange={(e) => setNewTestCase({ ...newTestCase, is_sample: e.target.checked })}
                                 /> Sample
@@ -225,109 +227,6 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
                     </div>
                 </form>
             </motion.div>
-            <style jsx>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-        }
-        .modal-content {
-          background: var(--bg-primary);
-          padding: 2rem;
-          border-radius: var(--border-radius-lg);
-          width: 90%;
-          max-width: 600px;
-          max-height: 90vh;
-          overflow-y: auto;
-          box-shadow: var(--shadow-lg);
-        }
-         h2 { margin-bottom: 1.5rem; color: var(--text-primary); }
-         h3 { font-size: 1rem; color: var(--text-primary); margin-bottom: 0.5rem; }
-        .form-group {
-            margin-bottom: 1rem;
-            flex: 1;
-        }
-        .form-row {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-        .form-group input, .form-group textarea, .form-group select {
-            width: 100%;
-            padding: 0.6rem;
-            border: 1px solid var(--border-light);
-            border-radius: var(--border-radius-sm);
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            font-size: 0.95rem;
-        }
-        .test-cases-section {
-            background: var(--bg-secondary);
-            padding: 1rem;
-            border-radius: var(--border-radius-sm);
-            margin-bottom: 1rem;
-        }
-        .test-case-inputs {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-        .test-case-inputs input[type="text"] {
-            flex: 1;
-            padding: 0.4rem;
-        }
-        .test-cases-list {
-            list-style: none;
-            padding: 0;
-            max-height: 100px;
-            overflow-y: auto;
-        }
-        .test-cases-list li {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.3rem 0;
-            border-bottom: 1px solid var(--border-light);
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-        .btn-small {
-            padding: 0.4rem 0.8rem;
-            background: var(--accent-primary);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .btn-text-danger {
-            background: none;
-            border: none;
-            color: #ff3b30;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-        .modal-actions {
-          display: flex;
-          gap: 1rem;
-          margin-top: 1.5rem;
-          justify-content: flex-end;
-          border-top: 1px solid var(--border-light);
-          padding-top: 1rem;
-        }
-      `}</style>
         </div>
     );
 }

@@ -13,9 +13,17 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user')
+    console.log("AuthContext: Initializing, savedUser exists?", !!savedUser);
     if (savedUser) {
-      setUser(JSON.parse(savedUser))
-      setIsAuthenticated(true)
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        console.log("AuthContext: Parsed user role:", parsedUser.role);
+        setUser(parsedUser)
+        setIsAuthenticated(true)
+      } catch (e) {
+        console.error("AuthContext: Failed to parse user from local storage", e);
+        localStorage.removeItem('user');
+      }
     }
     setLoading(false)
   }, [])

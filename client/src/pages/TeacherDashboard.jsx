@@ -301,6 +301,32 @@ function TeacherDashboard() {
     }
   }
 
+  const handleCourseExport = async (courseId, courseName) => {
+    try {
+      const userStr = localStorage.getItem('user')
+      const token = userStr ? JSON.parse(userStr).token : null
+      const response = await fetch(`http://localhost:5001/api/courses/${courseId}/export`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${courseName.replace(/ /g, '_')}_COMPLETE.zip`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      } else {
+        alert('Course export failed')
+      }
+    } catch (error) {
+      console.error('Export error', error)
+      alert('Course export failed')
+    }
+  }
+
   const handleLogout = () => {
     logout()
     navigate('/')
@@ -474,7 +500,7 @@ function TeacherDashboard() {
                           <span>ID: {student.enrollment_number || 'N/A'}</span>
                           <span style={{
                             marginLeft: '1rem',
-                            color: student.status === 'PENDING' ? '#ffd700' : student.status === 'APPROVED' ? '#51cf66' : '#ff6b6b',
+                            color: student.status === 'PENDING' ? '#ffd700' : student.status === 'ACTIVE' ? '#51cf66' : '#ff6b6b',
                             fontWeight: 'bold'
                           }}>
                             {student.status}
@@ -485,7 +511,7 @@ function TeacherDashboard() {
                             <button
                               className="btn btn-primary"
                               style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
-                              onClick={() => handleEnrollmentStatus(student.enrollment_id, 'APPROVED')}
+                              onClick={() => handleEnrollmentStatus(student.enrollment_id, 'ACTIVE')}
                             >
                               Approve
                             </button>
@@ -518,6 +544,9 @@ function TeacherDashboard() {
                   <p style={{ color: 'var(--text-secondary)' }}>{selectedCourse.description}</p>
                 </div>
                 <div className="course-actions">
+                  <button className="btn btn-outline" onClick={() => handleCourseExport(selectedCourse._id, selectedCourse.course_name)} title="Export Course">
+                    <HiArrowDownTray /> Export Course
+                  </button>
                   <button className="btn btn-secondary" onClick={handleViewStudents}>
                     <HiUserGroup /> Students
                   </button>
