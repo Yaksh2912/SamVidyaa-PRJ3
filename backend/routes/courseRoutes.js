@@ -13,4 +13,6 @@ router.route('/:id')
     .get(protect, getCourseById)
     .delete(protect, deleteCourse);
 
+router.get('/:id/export', protect, require('../controllers/courseController').exportCourse);
+
 module.exports = router;

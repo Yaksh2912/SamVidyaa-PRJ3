@@ -78,9 +78,12 @@ const exportModule = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized' });
         }
 
+        // Fetch associated tasks
+        const Task = require('../models/Task');
+        const tasks = await Task.find({ module_id: module._id });
+
         console.log(`Exporting module: ${module.module_name}`);
         console.log(`Files count: ${module.files ? module.files.length : 0}`);
-        if (module.files) console.log('Files:', module.files);
 
         const archiveZip = archive('zip', {
             zlib: { level: 9 } // Sets the compression level.
@@ -90,6 +93,27 @@ const exportModule = async (req, res) => {
 
         archiveZip.pipe(res);
 
+        // Add module.json
+        const moduleData = {
+            module_name: module.module_name,
+            description: module.description,
+            module_order: module.module_order,
+            tasks_per_module: module.tasks_per_module,
+            module_test_questions: module.module_test_questions,
+            tasks: tasks.map(t => ({
+                task_name: t.task_name,
+                problem_statement: t.problem_statement,
+                constraints: t.constraints,
+                test_cases: t.test_cases,
+                language: t.language,
+                time_limit: t.time_limit,
+                points: t.points,
+                difficulty: t.difficulty
+            }))
+        };
+
+        archiveZip.append(JSON.stringify(moduleData, null, 2), { name: 'module.json' });
+
         if (module.files && module.files.length > 0) {
             for (const file of module.files) {
                 // Check if file exists
@@ -98,13 +122,14 @@ const exportModule = async (req, res) => {
                     archiveZip.file(file.path, { name: file.name });
                 } else {
                     console.error(`File not found: ${file.path}`);
-                    // We could add a text file saying file missing, or just skip
+                    archiveZip.append(`File not found: ${file.name}`, { name: `MISSING_${file.name}.txt` });
                 }
             }
         } else {
-            console.log('No files to export.');
-            // Maybe add a text file to the zip saying "No files in this module"
-            archiveZip.append('This module has no uploaded files.', { name: 'README.txt' });
+            // If no files, maybe just the json is enough, or a readme
+            if (tasks.length === 0) {
+                archiveZip.append('This module has no uploaded files or tasks.', { name: 'README.txt' });
+            }
         }
 
         await archiveZip.finalize();

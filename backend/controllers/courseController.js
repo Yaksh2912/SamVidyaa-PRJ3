@@ -130,4 +130,98 @@ const getTeacherStats = async (req, res) => {
     }
 };
 
-module.exports = { createCourse, getCourses, getCourseById, deleteCourse, getTeacherStats };
+const Module = require('../models/Module');
+const Task = require('../models/Task');
+const archive = require('archiver');
+const fs = require('fs');
+const path = require('path');
+
+// @desc    Export course as ZIP
+// @route   GET /api/courses/:id/export
+// @access  Private (Instructor/Admin)
+const exportCourse = async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+
+        if (!course) {
+            return res.status(404).json({ message: 'Course not found' });
+        }
+
+        // Check ownership
+        if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        console.log(`Exporting course: ${course.course_name}`);
+
+        const archiveZip = archive('zip', {
+            zlib: { level: 9 }
+        });
+
+        res.attachment(`${course.course_name.replace(/ /g, '_')}.zip`);
+        archiveZip.pipe(res);
+
+        // 1. Add course.json
+        const courseData = {
+            course_name: course.course_name,
+            course_code: course.course_code,
+            description: course.description,
+            subject: course.subject,
+            course_test_questions: course.course_test_questions,
+        };
+        archiveZip.append(JSON.stringify(courseData, null, 2), { name: 'course.json' });
+
+        // 2. Fetch all modules
+        const modules = await Module.find({ course_id: course._id }).sort({ module_order: 1 });
+
+        // 3. Loop through modules and add them to zip
+        for (const module of modules) {
+            const moduleFolderName = `${module.module_order}_${module.module_name.replace(/ /g, '_')}`;
+
+            // Fetch tasks
+            const tasks = await Task.find({ module_id: module._id });
+
+            const moduleData = {
+                module_name: module.module_name,
+                description: module.description,
+                module_order: module.module_order,
+                tasks_per_module: module.tasks_per_module,
+                module_test_questions: module.module_test_questions,
+                tasks: tasks.map(t => ({
+                    task_name: t.task_name,
+                    problem_statement: t.problem_statement,
+                    constraints: t.constraints,
+                    test_cases: t.test_cases,
+                    language: t.language,
+                    time_limit: t.time_limit,
+                    points: t.points,
+                    difficulty: t.difficulty
+                }))
+            };
+
+            // Add module.json to module folder
+            archiveZip.append(JSON.stringify(moduleData, null, 2), { name: `${moduleFolderName}/module.json` });
+
+            // Add files
+            if (module.files && module.files.length > 0) {
+                for (const file of module.files) {
+                    if (fs.existsSync(file.path)) {
+                        console.log(`Adding file to zip: ${file.path}`);
+                        archiveZip.file(file.path, { name: `${moduleFolderName}/${file.name}` });
+                    } else {
+                        console.error(`File not found: ${file.path}`);
+                        archiveZip.append(`File not found: ${file.name}`, { name: `${moduleFolderName}/MISSING_${file.name}.txt` });
+                    }
+                }
+            }
+        }
+
+        await archiveZip.finalize();
+
+    } catch (error) {
+        console.error('Course export error:', error);
+        res.status(500).json({ message: 'Course export failed' });
+    }
+};
+
+module.exports = { createCourse, getCourses, getCourseById, deleteCourse, getTeacherStats, exportCourse };
