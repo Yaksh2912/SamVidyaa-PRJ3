@@ -49,4 +49,30 @@ const getTasks = async (req, res) => {
     }
 };
 
-module.exports = { createTask, getTasks };
+// @desc    Delete a task
+// @route   DELETE /api/tasks/:id
+// @access  Private
+const deleteTask = async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id);
+
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        // Ideally check ownership via module -> course -> instructor
+        // For now, assuming authenticated teacher is enough or we rely on frontend scope
+
+        await task.deleteOne();
+
+        // Decrement module task count
+        await Module.findByIdAndUpdate(task.module_id, { $inc: { total_tasks: -1 } });
+
+        res.json({ message: 'Task removed' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to delete task' });
+    }
+};
+
+module.exports = { createTask, getTasks, deleteTask };

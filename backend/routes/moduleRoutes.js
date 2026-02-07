@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { protect } = require('../middleware/authMiddleware');
-const { createModule, getTeacherModules, exportModule, deleteModule } = require('../controllers/moduleController');
+const { createModule, getTeacherModules, deleteModule } = require('../controllers/moduleController');
 
 // Multer Config
 const storage = multer.diskStorage({
@@ -32,6 +32,6 @@ router.route('/:id')
     })
     .delete(protect, deleteModule);
 
-router.route('/:id/export').get(protect, exportModule);
+
 
 module.exports = router;

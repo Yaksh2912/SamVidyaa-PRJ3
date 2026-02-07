@@ -62,83 +62,7 @@ const getTeacherModules = async (req, res) => {
     }
 };
 
-// @desc    Export module as ZIP
-// @route   GET /api/modules/:id/export
-// @access  Private
-const exportModule = async (req, res) => {
-    try {
-        const module = await Module.findById(req.params.id);
 
-        if (!module) {
-            return res.status(404).json({ message: 'Module not found' });
-        }
-
-        // Check ownership (optional, but good practice)
-        if (module.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-            return res.status(401).json({ message: 'Not authorized' });
-        }
-
-        // Fetch associated tasks
-        const Task = require('../models/Task');
-        const tasks = await Task.find({ module_id: module._id });
-
-        console.log(`Exporting module: ${module.module_name}`);
-        console.log(`Files count: ${module.files ? module.files.length : 0}`);
-
-        const archiveZip = archive('zip', {
-            zlib: { level: 9 } // Sets the compression level.
-        });
-
-        res.attachment(`${module.module_name.replace(/ /g, '_')}.zip`);
-
-        archiveZip.pipe(res);
-
-        // Add module.json
-        const moduleData = {
-            module_name: module.module_name,
-            description: module.description,
-            module_order: module.module_order,
-            tasks_per_module: module.tasks_per_module,
-            module_test_questions: module.module_test_questions,
-            tasks: tasks.map(t => ({
-                task_name: t.task_name,
-                problem_statement: t.problem_statement,
-                constraints: t.constraints,
-                test_cases: t.test_cases,
-                language: t.language,
-                time_limit: t.time_limit,
-                points: t.points,
-                difficulty: t.difficulty
-            }))
-        };
-
-        archiveZip.append(JSON.stringify(moduleData, null, 2), { name: 'module.json' });
-
-        if (module.files && module.files.length > 0) {
-            for (const file of module.files) {
-                // Check if file exists
-                if (fs.existsSync(file.path)) {
-                    console.log(`Adding file to zip: ${file.path}`);
-                    archiveZip.file(file.path, { name: file.name });
-                } else {
-                    console.error(`File not found: ${file.path}`);
-                    archiveZip.append(`File not found: ${file.name}`, { name: `MISSING_${file.name}.txt` });
-                }
-            }
-        } else {
-            // If no files, maybe just the json is enough, or a readme
-            if (tasks.length === 0) {
-                archiveZip.append('This module has no uploaded files or tasks.', { name: 'README.txt' });
-            }
-        }
-
-        await archiveZip.finalize();
-
-    } catch (error) {
-        console.error('Export error:', error);
-        res.status(500).json({ message: 'Export failed' });
-    }
-};
 
 // @desc    Delete a module
 // @route   DELETE /api/modules/:id
@@ -176,6 +100,5 @@ const deleteModule = async (req, res) => {
 module.exports = {
     createModule,
     getTeacherModules,
-    exportModule,
     deleteModule
 };

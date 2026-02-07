@@ -275,29 +275,32 @@ function TeacherDashboard() {
     }
   }
 
-  const handleExport = async (moduleId, moduleName) => {
+  const handleDeleteTask = async (taskId, moduleId) => {
+    if (!window.confirm("Are you sure you want to delete this task?")) return;
+
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`http://localhost:5001/api/modules/${moduleId}/export`, {
+      const response = await fetch(`http://localhost:5001/api/tasks/${taskId}`, {
+        method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
 
       if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${moduleName.replace(/ /g, '_')}.zip`
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
+        setTasks(tasks.filter(t => t._id !== taskId))
+
+        // Update module task count locally
+        setModules(modules.map(m =>
+          m._id === moduleId
+            ? { ...m, tasks_per_module: Math.max(0, (m.tasks_per_module || 0) - 1) }
+            : m
+        ));
       } else {
-        alert('Export failed')
+        alert("Failed to delete task")
       }
     } catch (error) {
-      console.error('Export error', error)
-      alert('Export failed')
+      console.error("Delete error", error)
+      alert("Error deleting task")
     }
   }
 
@@ -578,9 +581,7 @@ function TeacherDashboard() {
                         <button className="btn btn-outline" onClick={() => openTaskForm(module._id)} title="Add Task">
                           <HiPlus /> Add
                         </button>
-                        <button className="btn btn-outline" onClick={() => handleExport(module._id, module.module_name)}>
-                          <HiArrowDownTray /> Export
-                        </button>
+
                         <button className="btn btn-danger" onClick={() => handleDeleteModule(module._id)} title="Delete Module">
                           <HiTrash />
                         </button>
@@ -633,6 +634,15 @@ function TeacherDashboard() {
                             <strong>Constraints:</strong> {task.constraints}
                           </p>
                         )}
+                      </div>
+                      <div className="module-actions">
+                        <button
+                          className="btn btn-danger"
+                          onClick={() => handleDeleteTask(task._id, task.module_id)}
+                          title="Delete Task"
+                        >
+                          <HiTrash />
+                        </button>
                       </div>
                     </div>
                   ))}

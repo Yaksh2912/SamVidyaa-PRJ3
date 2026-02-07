@@ -133,10 +133,10 @@ const getTeacherStats = async (req, res) => {
 const Module = require('../models/Module');
 const Task = require('../models/Task');
 const archive = require('archiver');
-const fs = require('fs');
-const path = require('path');
 
-// @desc    Export course as ZIP
+
+
+// @desc    Export course as JSON
 // @route   GET /api/courses/:id/export
 // @access  Private (Instructor/Admin)
 const exportCourse = async (req, res) => {
@@ -152,36 +152,19 @@ const exportCourse = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized' });
         }
 
-        console.log(`Exporting course: ${course.course_name}`);
+        console.log(`Exporting course JSON: ${course.course_name}`);
 
-        const archiveZip = archive('zip', {
-            zlib: { level: 9 }
-        });
-
-        res.attachment(`${course.course_name.replace(/ /g, '_')}.zip`);
-        archiveZip.pipe(res);
-
-        // 1. Add course.json
-        const courseData = {
-            course_name: course.course_name,
-            course_code: course.course_code,
-            description: course.description,
-            subject: course.subject,
-            course_test_questions: course.course_test_questions,
-        };
-        archiveZip.append(JSON.stringify(courseData, null, 2), { name: 'course.json' });
-
-        // 2. Fetch all modules
+        // 1. Fetch all modules
         const modules = await Module.find({ course_id: course._id }).sort({ module_order: 1 });
 
-        // 3. Loop through modules and add them to zip
-        for (const module of modules) {
-            const moduleFolderName = `${module.module_order}_${module.module_name.replace(/ /g, '_')}`;
+        const modulesData = [];
 
+        // 2. Loop through modules and fetch tasks
+        for (const module of modules) {
             // Fetch tasks
             const tasks = await Task.find({ module_id: module._id });
 
-            const moduleData = {
+            const moduleObj = {
                 module_name: module.module_name,
                 description: module.description,
                 module_order: module.module_order,
@@ -196,25 +179,42 @@ const exportCourse = async (req, res) => {
                     time_limit: t.time_limit,
                     points: t.points,
                     difficulty: t.difficulty
-                }))
+                })),
+                files: module.files ? module.files.map(f => ({
+                    name: f.name,
+                    mimetype: f.mimetype,
+                    size: f.size
+                    // Note: We are NOT exporting the actual file content, just metadata
+                })) : []
             };
 
-            // Add module.json to module folder
-            archiveZip.append(JSON.stringify(moduleData, null, 2), { name: `${moduleFolderName}/module.json` });
-
-            // Add files
-            if (module.files && module.files.length > 0) {
-                for (const file of module.files) {
-                    if (fs.existsSync(file.path)) {
-                        console.log(`Adding file to zip: ${file.path}`);
-                        archiveZip.file(file.path, { name: `${moduleFolderName}/${file.name}` });
-                    } else {
-                        console.error(`File not found: ${file.path}`);
-                        archiveZip.append(`File not found: ${file.name}`, { name: `${moduleFolderName}/MISSING_${file.name}.txt` });
-                    }
-                }
-            }
+            modulesData.push(moduleObj);
         }
+
+        // 3. Construct final JSON
+        const courseData = {
+            course_name: course.course_name,
+            course_code: course.course_code,
+            description: course.description,
+            subject: course.subject,
+            course_test_questions: course.course_test_questions,
+            modules: modulesData
+        };
+
+        // 4. Create ZIP and append JSON
+        const archiveZip = archive('zip', {
+            zlib: { level: 9 }
+        });
+
+        const zipFileName = `${course.course_name.replace(/ /g, '_')}_COMPLETE.zip`;
+        const jsonFileName = `${course.course_name.replace(/ /g, '_')}.json`;
+
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename=${zipFileName}`);
+
+        archiveZip.pipe(res);
+
+        archiveZip.append(JSON.stringify(courseData, null, 2), { name: jsonFileName });
 
         await archiveZip.finalize();
 
