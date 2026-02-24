@@ -1,4 +1,5 @@
 import React from 'react'
+import API_BASE_URL from '../config'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -50,7 +51,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch('${API_BASE_URL}/api/courses/stats', {
+      const response = await fetch(`${API_BASE_URL}/api/courses/stats`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
@@ -66,7 +67,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch('${API_BASE_URL}/api/courses', {
+      const response = await fetch(`${API_BASE_URL}/api/courses`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
@@ -83,7 +84,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`${API_BASE_URL}/api/modules?course_id=${courseId}`, {
+      const response = await fetch(`http://localhost:5001/api/modules?course_id=${courseId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
@@ -102,7 +103,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`${API_BASE_URL}/api/tasks?module_id=${moduleId}`, {
+      const response = await fetch(`http://localhost:5001/api/tasks?module_id=${moduleId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
@@ -121,7 +122,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`${API_BASE_URL}/api/enrollments/course/${courseId}`, {
+      const response = await fetch(`http://localhost:5001/api/enrollments/course/${courseId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
@@ -143,7 +144,7 @@ function TeacherDashboard() {
       const userStr = localStorage.getItem('user');
       const token = userStr ? JSON.parse(userStr).token : null;
 
-      const response = await fetch(`${API_BASE_URL}/api/enrollments/${enrollmentId}`, {
+      const response = await fetch(`http://localhost:5001/api/enrollments/${enrollmentId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -232,7 +233,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}`, {
+      const response = await fetch(`http://localhost:5001/api/courses/${courseId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -254,7 +255,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`${API_BASE_URL}/api/modules/${moduleId}`, {
+      const response = await fetch(`http://localhost:5001/api/modules/${moduleId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -280,7 +281,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+      const response = await fetch(`http://localhost:5001/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -307,7 +308,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}/export`, {
+      const response = await fetch(`http://localhost:5001/api/courses/${courseId}/export`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
 
@@ -336,7 +337,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`${API_BASE_URL}/api/modules/${moduleId}/export`, {
+      const response = await fetch(`http://localhost:5001/api/modules/${moduleId}/export`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
 
@@ -456,23 +457,8 @@ function TeacherDashboard() {
           </motion.div>
         </div>
 
-        <div className="dashboard-sections">
-          <motion.div className="section-card" whileHover={{ scale: 1.02, y: -4 }}>
-            <h3>{t.sections.gradeSubmissions}</h3>
-            <p>{t.sections.gradeSubmissionsDesc}</p>
-            <button className="btn btn-primary">{t.sections.gradeWork}</button>
-          </motion.div>
-          <motion.div className="section-card" whileHover={{ scale: 1.02, y: -4 }}>
-            <h3>{t.sections.studentProgress}</h3>
-            <p>{t.sections.studentProgressDesc}</p>
-            <button className="btn btn-primary">{t.sections.viewProgress}</button>
-          </motion.div>
-          <motion.div className="section-card" whileHover={{ scale: 1.02, y: -4 }}>
-            <h3>{t.sections.classResources}</h3>
-            <p>{t.sections.classResourcesDesc}</p>
-            <button className="btn btn-primary">{t.sections.manageResources}</button>
-          </motion.div>
-        </div>
+
+
 
         {!selectedCourse ? (
           /* COURSE LIST VIEW */
@@ -651,93 +637,6 @@ function TeacherDashboard() {
           />
         )}
 
-        {viewingStudents && selectedCourse && (
-          <div className="modal-overlay" onClick={() => { setViewingStudents(false); setStudents([]); }}>
-            <div className="modal-content" style={{ maxWidth: '800px', width: '95%' }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div>
-                  <h2 style={{ marginBottom: '0.25rem' }}>{selectedCourse.course_name}</h2>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Enrolled Students ({students.length})</p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button className="btn btn-primary" onClick={() => setShowAddStudentsModal(true)}>
-                    <HiPlus /> Add Students
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => { setViewingStudents(false); setStudents([]); }}>
-                    Close
-                  </button>
-                </div>
-              </div>
-
-              {loadingStudents ? <p>Loading students...</p> : (
-                <div style={{ maxHeight: '60vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                  {students.length === 0 ? (
-                    <p className="empty-state">No students enrolled yet.</p>
-                  ) : students.map(student => (
-                    <div key={student._id} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '1rem 1.25rem',
-                      background: 'var(--bg-tertiary)',
-                      borderRadius: 'var(--border-radius-sm)',
-                      border: '1px solid var(--border-light)',
-                      transition: 'all 0.2s ease'
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{student.name}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{student.email}</div>
-                        <div style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>ID: {student.enrollment_number || 'N/A'}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '980px',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          background: student.status === 'PENDING' ? 'rgba(245, 158, 11, 0.12)' : student.status === 'ACTIVE' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                          color: student.status === 'PENDING' ? '#d97706' : student.status === 'ACTIVE' ? '#059669' : '#dc2626',
-                          border: `1px solid ${student.status === 'PENDING' ? 'rgba(245, 158, 11, 0.25)' : student.status === 'ACTIVE' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`
-                        }}>
-                          {student.status}
-                        </span>
-                        {student.status === 'PENDING' && (
-                          <>
-                            <button
-                              className="btn btn-primary"
-                              style={{ padding: '0.25rem 0.75rem', fontSize: '0.78rem' }}
-                              onClick={() => handleEnrollmentStatus(student.enrollment_id, 'ACTIVE')}
-                            >
-                              Approve
-                            </button>
-                            <button
-                              className="btn btn-danger"
-                              style={{ padding: '0.25rem 0.75rem', fontSize: '0.78rem' }}
-                              onClick={() => handleEnrollmentStatus(student.enrollment_id, 'REJECTED')}
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {showAddStudentsModal && selectedCourse && (
-          <AddStudentsModal
-            courseId={selectedCourse._id}
-            onClose={() => setShowAddStudentsModal(false)}
-            onStudentsAdded={() => fetchEnrolledStudents(selectedCourse._id)}
-          />
-        )}
-
         <motion.div
           className="recent-activity"
           initial={{ opacity: 0, y: 20 }}
@@ -761,6 +660,98 @@ function TeacherDashboard() {
           </div>
         </motion.div>
       </main>
+
+      {/* STUDENTS POPUP MODAL */}
+      {viewingStudents && selectedCourse && (
+        <div className="modal-overlay" onClick={() => { setViewingStudents(false); setStudents([]); }}>
+          <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+              <div>
+                <h2 style={{ marginBottom: '0.25rem' }}>{selectedCourse.course_name}</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Enrolled Students ({students.length})</p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button className="btn btn-primary" onClick={() => setShowAddStudentsModal(true)} style={{ fontSize: '0.9rem', padding: '0.55rem 1.1rem' }}>
+                  <HiPlus /> Add Students
+                </button>
+                <button className="btn btn-secondary" onClick={() => { setViewingStudents(false); setStudents([]); }} style={{ fontSize: '0.9rem', padding: '0.55rem 1.1rem' }}>
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {loadingStudents ? <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading students...</p> : (
+                students.length === 0 ? (
+                  <p className="no-modules">No students enrolled yet.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    {students.map(student => (
+                      <div key={student._id} style={{
+                        background: 'var(--bg-tertiary)',
+                        borderRadius: 'var(--border-radius-sm)',
+                        padding: '1rem 1.25rem',
+                        borderLeft: `3px solid ${student.status === 'ACTIVE' ? 'var(--accent-green)' : student.status === 'PENDING' ? '#f59e0b' : 'var(--accent-red)'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '1rem',
+                        transition: 'all 0.2s ease'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: 1, minWidth: 0 }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>{student.name}</span>
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student.email}</span>
+                          <span style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{student.enrollment_number || 'N/A'}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                          <span style={{
+                            color: student.status === 'PENDING' ? '#f59e0b' : student.status === 'ACTIVE' ? '#10b981' : '#ef4444',
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            background: student.status === 'ACTIVE' ? 'rgba(16,185,129,0.1)' : student.status === 'PENDING' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)',
+                            padding: '0.25rem 0.65rem',
+                            borderRadius: '980px'
+                          }}>
+                            {student.status}
+                          </span>
+                          {student.status === 'PENDING' && (
+                            <>
+                              <button
+                                className="btn btn-primary"
+                                style={{ padding: '0.25rem 0.7rem', fontSize: '0.75rem' }}
+                                onClick={() => handleEnrollmentStatus(student.enrollment_id, 'ACTIVE')}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                className="btn btn-danger"
+                                style={{ padding: '0.25rem 0.7rem', fontSize: '0.75rem' }}
+                                onClick={() => handleEnrollmentStatus(student.enrollment_id, 'REJECTED')}
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddStudentsModal && selectedCourse && (
+        <AddStudentsModal
+          courseId={selectedCourse._id}
+          onClose={() => setShowAddStudentsModal(false)}
+          onStudentsAdded={() => fetchEnrolledStudents(selectedCourse._id)}
+        />
+      )}
     </div>
   )
 }
