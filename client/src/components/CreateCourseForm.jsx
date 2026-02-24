@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { API_BASE_URL } from '../config';
 import { motion } from 'framer-motion';
 
 function CreateCourseForm({ onClose, onCourseCreated }) {

@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { API_BASE_URL } from '../config'
 import '../components/ModalForm.css'
 
 function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {

@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react'
-import { API_BASE_URL } from '../config'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
