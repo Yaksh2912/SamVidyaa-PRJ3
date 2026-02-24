@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { API_BASE_URL } from '../config';
 import './ModalForm.css';
 
 function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
@@ -63,7 +64,7 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
                 test_cases_count: testCases.length
             };
 
-            const response = await fetch('http://localhost:5001/api/tasks', {
+            const response = await fetch(`${API_BASE_URL}/api/tasks`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

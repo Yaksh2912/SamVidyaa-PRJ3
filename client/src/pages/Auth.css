@@ -1,42 +1,76 @@
-/* Relies on globals from index.css */
+/* ═══════════════════════════════════════════
+   AUTH PAGES — Gradient BG + Glassmorphic Card
+   Relies on globals from index.css
+   ═══════════════════════════════════════════ */
 
 .auth-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-secondary);
-  padding: 2rem;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   position: relative;
   overflow: hidden;
+  padding: 2rem;
+
+  /* Animated gradient background */
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(108, 92, 231, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+    var(--bg-primary);
 }
 
 .auth-container::before {
-  /* Subtle ambient background */
   content: '';
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle at center, rgba(0, 113, 227, 0.03) 0%, transparent 70%);
-  z-index: 0;
+  top: -30%;
+  right: -20%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(108, 92, 231, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.auth-container::after {
+  content: '';
+  position: absolute;
+  bottom: -20%;
+  left: -15%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: float 10s ease-in-out infinite reverse;
   pointer-events: none;
 }
 
 .auth-card {
-  background: var(--bg-primary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-radius: var(--border-radius-lg);
   padding: 3rem;
   width: 100%;
   max-width: 440px;
   box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--glass-border);
   position: relative;
   z-index: 1;
   transition: all var(--transition-normal);
-  backdrop-filter: blur(20px);
+}
+
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent-gradient);
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
 }
 
 .auth-header {
@@ -46,57 +80,58 @@
 
 .auth-header h1 {
   font-size: 2rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-weight: 800;
   margin-bottom: 0.5rem;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .auth-header p {
   color: var(--text-secondary);
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 400;
 }
 
 .error-message {
-  background: rgba(255, 59, 48, 0.1);
-  /* Apple system red style */
-  color: #ff3b30;
-  padding: 0.8rem;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-red);
+  padding: 0.85rem 1rem;
   border-radius: var(--border-radius-sm);
   margin-bottom: 1.5rem;
   text-align: center;
   font-size: 0.9rem;
   font-weight: 500;
-  border: 1px solid rgba(255, 59, 48, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .form-group label {
   font-weight: 500;
   color: var(--text-secondary);
-  /* Softer label color */
-  font-size: 0.9rem;
-  margin-left: 0.2rem;
+  font-size: 0.88rem;
+  margin-left: 0.15rem;
 }
 
 .form-group input,
 .role-select {
-  padding: 1rem;
+  padding: 0.9rem 1rem;
   border: 1px solid var(--border-light);
   border-radius: var(--border-radius-sm);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-family: inherit;
   transition: all var(--transition-fast);
   background: var(--bg-tertiary);
@@ -107,26 +142,26 @@
 .role-select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  background: var(--bg-primary);
-  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
 }
 
 .role-select {
   cursor: pointer;
   appearance: none;
-  /* Add custom arrow if needed, but keeping simple for now */
 }
 
 .btn {
   padding: 1rem;
   border-radius: 980px;
-  /* Pill */
   text-decoration: none;
   font-weight: 600;
-  transition: all var(--transition-fast);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
   cursor: pointer;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.05rem;
   letter-spacing: 0;
   font-family: inherit;
@@ -134,19 +169,33 @@
 }
 
 .btn-primary {
-  background: var(--accent-primary);
+  background: var(--accent-gradient);
   color: white;
-  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
+  box-shadow: 0 4px 20px rgba(108, 92, 231, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .btn-primary:hover {
-  background: var(--accent-secondary);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 113, 227, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(108, 92, 231, 0.45);
+}
+
+.btn-primary:hover::after {
+  opacity: 1;
 }
 
 .auth-footer {
-  margin-top: 2.5rem;
+  margin-top: 2rem;
   text-align: center;
   border-top: 1px solid var(--border-light);
   padding-top: 1.5rem;
@@ -161,18 +210,18 @@
 .auth-footer a {
   color: var(--accent-primary);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
   transition: all var(--transition-fast);
 }
 
 .auth-footer a:hover {
+  color: var(--accent-secondary);
   text-decoration: underline;
-  opacity: 0.8;
 }
 
 .back-link {
   display: inline-block;
-  margin-top: 1rem;
+  margin-top: 0.75rem;
   color: var(--text-tertiary);
   text-decoration: none;
   font-size: 0.9rem;
@@ -180,21 +229,16 @@
 }
 
 .back-link:hover {
-  color: var(--text-primary);
+  color: var(--accent-primary);
 }
 
 @media (max-width: 768px) {
   .auth-card {
-    padding: 2rem;
-    box-shadow: none;
-    /* Flatter on mobile usually looks better */
-    background: transparent;
+    padding: 2rem 1.5rem;
+    border-radius: var(--border-radius-md);
   }
 
   .auth-container {
-    background: var(--bg-primary);
-    /* Remove container bg on mobile */
-    align-items: flex-start;
-    padding-top: 3rem;
+    padding: 1rem;
   }
 }

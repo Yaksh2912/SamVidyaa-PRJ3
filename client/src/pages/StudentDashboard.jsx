@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react'
+import { API_BASE_URL } from '../config'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -33,14 +34,14 @@ function StudentDashboard() {
       if (!token) return;
 
       // Fetch Enrolled Courses
-      const enrolledRes = await fetch('http://localhost:5001/api/enrollments/student', {
+      const enrolledRes = await fetch(`${API_BASE_URL}/api/enrollments/student`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const enrolledData = await enrolledRes.json();
       setEnrolledCourses(enrolledData);
 
       // Fetch All Courses
-      const coursesRes = await fetch('http://localhost:5001/api/courses', {
+      const coursesRes = await fetch(`${API_BASE_URL}/api/courses`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const allCourses = await coursesRes.json();
@@ -76,7 +77,7 @@ function StudentDashboard() {
       const userStr = localStorage.getItem('user');
       const token = userStr ? JSON.parse(userStr).token : null;
 
-      const response = await fetch('http://localhost:5001/api/enrollments', {
+      const response = await fetch(`${API_BASE_URL}/api/enrollments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

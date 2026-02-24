@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { API_BASE_URL } from '../config';
 import './ModalForm.css';
 
 function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
@@ -53,7 +54,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
             const userStr = localStorage.getItem('user');
             const token = userStr ? JSON.parse(userStr).token : null;
 
-            const response = await fetch('http://localhost:5001/api/modules', {
+            const response = await fetch(`${API_BASE_URL}/api/modules`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`

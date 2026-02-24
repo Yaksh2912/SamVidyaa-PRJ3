@@ -113,9 +113,75 @@ const getStudentEnrollments = async (req, res) => {
     }
 };
 
+// @desc    Bulk enroll students by enrollment number range
+// @route   POST /api/enrollments/bulk
+// @access  Private (Instructor)
+const bulkEnrollByRange = async (req, res) => {
+    try {
+        const { course_id, start_enrollment, end_enrollment } = req.body;
+
+        if (!course_id || !start_enrollment || !end_enrollment) {
+            return res.status(400).json({ message: 'Course ID, start and end enrollment numbers are required' });
+        }
+
+        // Find all students whose enrollment_number falls in the range
+        const students = await User.find({
+            role: 'STUDENT',
+            enrollment_number: {
+                $gte: start_enrollment,
+                $lte: end_enrollment
+            }
+        });
+
+        if (students.length === 0) {
+            return res.status(404).json({ message: 'No students found in the given enrollment number range' });
+        }
+
+        let enrolled = 0;
+        let skipped = 0;
+
+        for (const student of students) {
+            try {
+                const existing = await Enrollment.findOne({ course_id, student_id: student._id });
+                if (existing) {
+                    // If previously rejected/dropped, re-activate
+                    if (existing.status === 'REJECTED' || existing.status === 'DROPPED') {
+                        existing.status = 'ACTIVE';
+                        await existing.save();
+                        enrolled++;
+                    } else {
+                        skipped++;
+                    }
+                } else {
+                    await Enrollment.create({
+                        course_id,
+                        student_id: student._id,
+                        status: 'ACTIVE'
+                    });
+                    enrolled++;
+                }
+            } catch (err) {
+                // Duplicate key or other error — skip
+                skipped++;
+            }
+        }
+
+        res.status(200).json({
+            message: `Enrollment complete`,
+            enrolled,
+            skipped,
+            total_in_range: students.length
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Bulk enrollment failed' });
+    }
+};
+
 module.exports = {
     enrollStudent,
     getEnrolledStudents,
     getStudentEnrollments,
-    updateEnrollmentStatus
+    updateEnrollmentStatus,
+    bulkEnrollByRange
 };
