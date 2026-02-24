@@ -304,7 +304,7 @@ function TeacherDashboard() {
     }
   }
 
-  const handleCourseExport = async (courseId, courseName) => {
+  const handleCourseExport = async (courseId, courseCode) => {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
@@ -317,7 +317,10 @@ function TeacherDashboard() {
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `${courseName.replace(/ /g, '_')}_COMPLETE.zip`
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        a.download = `course_export_${courseCode}_${timestamp}.zip`;
+
         document.body.appendChild(a)
         a.click()
         a.remove()
@@ -327,6 +330,35 @@ function TeacherDashboard() {
     } catch (error) {
       console.error('Export error', error)
       alert('Course export failed')
+    }
+  }
+
+  const handleModuleExport = async (moduleId, moduleName) => {
+    try {
+      const userStr = localStorage.getItem('user')
+      const token = userStr ? JSON.parse(userStr).token : null
+      const response = await fetch(`http://localhost:5001/api/modules/${moduleId}/export`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        a.download = `module_export_${moduleName.replace(/ /g, '_')}_${timestamp}.zip`;
+
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      } else {
+        alert('Module export failed')
+      }
+    } catch (error) {
+      console.error('Export error', error)
+      alert('Module export failed')
     }
   }
 
@@ -547,7 +579,7 @@ function TeacherDashboard() {
                   <p style={{ color: 'var(--text-secondary)' }}>{selectedCourse.description}</p>
                 </div>
                 <div className="course-actions">
-                  <button className="btn btn-outline" onClick={() => handleCourseExport(selectedCourse._id, selectedCourse.course_name)} title="Export Course">
+                  <button className="btn btn-outline" onClick={() => handleCourseExport(selectedCourse._id, selectedCourse.course_code)} title="Export Course">
                     <HiArrowDownTray /> Export Course
                   </button>
                   <button className="btn btn-secondary" onClick={handleViewStudents}>
@@ -575,6 +607,9 @@ function TeacherDashboard() {
                         </div>
                       </div>
                       <div className="module-actions">
+                        <button className="btn btn-outline" onClick={() => handleModuleExport(module._id, module.module_name)} title="Export Module">
+                          <HiArrowDownTray /> Export
+                        </button>
                         <button className="btn btn-outline" onClick={() => handleModuleSelect(module)} title="View Tasks">
                           <HiListBullet /> Tasks
                         </button>

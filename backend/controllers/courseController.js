@@ -136,19 +136,21 @@ const archive = require('archiver');
 
 
 
+const CodingQuestion = require('../models/CodingQuestion');
+
 // @desc    Export course as JSON
 // @route   GET /api/courses/:id/export
 // @access  Private (Instructor/Admin)
 const exportCourse = async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id);
+        const course = await Course.findById(req.params.id).populate('instructor', 'name');
 
         if (!course) {
             return res.status(404).json({ message: 'Course not found' });
         }
 
         // Check ownership
-        if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        if (course.instructor._id.toString() !== req.user._id.toString() && req.user.role !== 'admin' && req.user.role !== 'ADMIN') {
             return res.status(401).json({ message: 'Not authorized' });
         }
 
@@ -159,62 +161,126 @@ const exportCourse = async (req, res) => {
 
         const modulesData = [];
 
-        // 2. Loop through modules and fetch tasks
+        // 2. Fetch Course Test Questions
+        const courseTestQs = await CodingQuestion.find({ course_id: course._id, question_type: 'COURSE_TEST' });
+        const mappedCourseTestQs = courseTestQs.map(q => ({
+            questionType: q.question_type,
+            questionText: q.question_text,
+            problemStatement: q.problem_statement,
+            expectedOutput: q.expected_output,
+            sampleInput: q.sample_input,
+            sampleOutput: q.sample_output,
+            difficulty: q.difficulty,
+            points: q.points,
+            timeLimit: q.time_limit,
+            language: q.language,
+            testCases: q.test_cases ? q.test_cases.map(tc => ({
+                input: tc.input,
+                expectedOutput: tc.expected_output,
+                isSample: tc.is_sample,
+                orderIndex: tc.order_index
+            })) : []
+        }));
+
+        // 3. Loop through modules and fetch tasks & test questions
         for (const module of modules) {
-            // Fetch tasks
             const tasks = await Task.find({ module_id: module._id });
+            const moduleTestQs = await CodingQuestion.find({ module_id: module._id, question_type: 'MODULE_TEST' });
+
+            const mappedTasks = tasks.map(t => ({
+                taskName: t.task_name,
+                description: t.description,
+                problemStatement: t.problem_statement,
+                expectedOutput: t.expected_output,
+                sampleInput: t.sample_input,
+                sampleOutput: t.sample_output,
+                difficulty: t.difficulty,
+                points: t.points,
+                timeLimit: t.time_limit,
+                language: t.language,
+                testCases: t.test_cases ? t.test_cases.map(tc => ({
+                    input: tc.input,
+                    expectedOutput: tc.expected_output,
+                    isSample: tc.is_sample,
+                    orderIndex: tc.order_index
+                })) : []
+            }));
+
+            const mappedModuleTestQs = moduleTestQs.map(q => ({
+                questionType: q.question_type,
+                questionText: q.question_text,
+                problemStatement: q.problem_statement,
+                expectedOutput: q.expected_output,
+                sampleInput: q.sample_input,
+                sampleOutput: q.sample_output,
+                difficulty: q.difficulty,
+                points: q.points,
+                timeLimit: q.time_limit,
+                language: q.language,
+                testCases: q.test_cases ? q.test_cases.map(tc => ({
+                    input: tc.input,
+                    expectedOutput: tc.expected_output,
+                    isSample: tc.is_sample,
+                    orderIndex: tc.order_index
+                })) : []
+            }));
 
             const moduleObj = {
-                module_name: module.module_name,
+                moduleName: module.module_name,
                 description: module.description,
-                module_order: module.module_order,
-                tasks_per_module: module.tasks_per_module,
-                module_test_questions: module.module_test_questions,
-                tasks: tasks.map(t => ({
-                    task_name: t.task_name,
-                    problem_statement: t.problem_statement,
-                    constraints: t.constraints,
-                    test_cases: t.test_cases,
-                    language: t.language,
-                    time_limit: t.time_limit,
-                    points: t.points,
-                    difficulty: t.difficulty
-                })),
-                files: module.files ? module.files.map(f => ({
-                    name: f.name,
-                    mimetype: f.mimetype,
-                    size: f.size
-                    // Note: We are NOT exporting the actual file content, just metadata
-                })) : []
+                moduleOrder: module.module_order,
+                tasksPerModule: module.tasks_per_module,
+                moduleTestQuestionsCount: module.module_test_questions,
+                isActive: module.is_active !== undefined ? module.is_active : true,
+                tasks: mappedTasks,
+                moduleTestQuestions: mappedModuleTestQs
             };
 
             modulesData.push(moduleObj);
         }
 
-        // 3. Construct final JSON
-        const courseData = {
-            course_name: course.course_name,
-            course_code: course.course_code,
-            description: course.description,
-            subject: course.subject,
-            course_test_questions: course.course_test_questions,
-            modules: modulesData
+        // 4. Construct final JSON
+        const exportData = {
+            exportType: "COURSE",
+            exportVersion: "1.0",
+            exportDate: new Date().toISOString(),
+            course: {
+                courseCode: course.course_code,
+                courseName: course.course_name,
+                description: course.description,
+                subject: course.subject,
+                instructorName: course.instructor ? course.instructor.name : 'Unknown',
+                courseTestQuestionsCount: course.course_test_questions,
+                isActive: course.is_active !== undefined ? course.is_active : true,
+                modules: modulesData,
+                courseTestQuestions: mappedCourseTestQs
+            }
         };
 
-        // 4. Create ZIP and append JSON
+        // 5. Create ZIP and append JSON
         const archiveZip = archive('zip', {
             zlib: { level: 9 }
         });
 
-        const zipFileName = `${course.course_name.replace(/ /g, '_')}_COMPLETE.zip`;
-        const jsonFileName = `${course.course_name.replace(/ /g, '_')}.json`;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const zipFileName = `course_export_${course.course_code}_${timestamp}.zip`;
 
         res.setHeader('Content-Type', 'application/zip');
-        res.setHeader('Content-Disposition', `attachment; filename=${zipFileName}`);
+        res.setHeader('Content-Disposition', `attachment; filename="${zipFileName}"`);
 
         archiveZip.pipe(res);
 
-        archiveZip.append(JSON.stringify(courseData, null, 2), { name: jsonFileName });
+        archiveZip.append(JSON.stringify(exportData, null, 2), { name: 'course_data.json' });
+
+        const readmeContent = `Course Export Metadata
+----------------------
+Course Code: ${course.course_code}
+Course Name: ${course.course_name}
+Export Date: ${exportData.exportDate}
+Instructor: ${exportData.course.instructorName}
+Modules Count: ${modulesData.length}
+`;
+        archiveZip.append(readmeContent, { name: 'README.txt' });
 
         await archiveZip.finalize();
 

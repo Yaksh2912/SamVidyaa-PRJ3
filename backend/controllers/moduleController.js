@@ -97,8 +97,109 @@ const deleteModule = async (req, res) => {
     }
 };
 
+const Task = require('../models/Task');
+const CodingQuestion = require('../models/CodingQuestion');
+
+// @desc    Export module as JSON
+// @route   GET /api/modules/:id/export
+// @access  Private (Teacher/Admin)
+const exportModule = async (req, res) => {
+    try {
+        const module = await Module.findById(req.params.id);
+
+        if (!module) {
+            return res.status(404).json({ message: 'Module not found' });
+        }
+
+        // Check ownership
+        if (module.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin' && req.user.role !== 'ADMIN') {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        console.log(`Exporting module JSON: ${module.module_name}`);
+
+        const tasks = await Task.find({ module_id: module._id });
+        const moduleTestQs = await CodingQuestion.find({ module_id: module._id, question_type: 'MODULE_TEST' });
+
+        const mappedTasks = tasks.map(t => ({
+            taskName: t.task_name,
+            description: t.description,
+            problemStatement: t.problem_statement,
+            expectedOutput: t.expected_output,
+            sampleInput: t.sample_input,
+            sampleOutput: t.sample_output,
+            difficulty: t.difficulty,
+            points: t.points,
+            timeLimit: t.time_limit,
+            language: t.language,
+            testCases: t.test_cases ? t.test_cases.map(tc => ({
+                input: tc.input,
+                expectedOutput: tc.expected_output,
+                isSample: tc.is_sample,
+                orderIndex: tc.order_index
+            })) : []
+        }));
+
+        const mappedModuleTestQs = moduleTestQs.map(q => ({
+            questionType: q.question_type,
+            questionText: q.question_text,
+            problemStatement: q.problem_statement,
+            expectedOutput: q.expected_output,
+            sampleInput: q.sample_input,
+            sampleOutput: q.sample_output,
+            difficulty: q.difficulty,
+            points: q.points,
+            timeLimit: q.time_limit,
+            language: q.language,
+            testCases: q.test_cases ? q.test_cases.map(tc => ({
+                input: tc.input,
+                expectedOutput: tc.expected_output,
+                isSample: tc.is_sample,
+                orderIndex: tc.order_index
+            })) : []
+        }));
+
+        const exportData = {
+            exportType: "MODULE",
+            exportVersion: "1.0",
+            exportDate: new Date().toISOString(),
+            module: {
+                moduleName: module.module_name,
+                description: module.description,
+                moduleOrder: module.module_order,
+                tasksPerModule: module.tasks_per_module,
+                moduleTestQuestionsCount: module.module_test_questions,
+                isActive: module.is_active !== undefined ? module.is_active : true,
+                tasks: mappedTasks,
+                moduleTestQuestions: mappedModuleTestQs
+            }
+        };
+
+        const archiveZip = archive('zip', {
+            zlib: { level: 9 }
+        });
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const zipFileName = `module_export_${module.module_name.replace(/ /g, '_')}_${timestamp}.zip`;
+
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="${zipFileName}"`);
+
+        archiveZip.pipe(res);
+
+        archiveZip.append(JSON.stringify(exportData, null, 2), { name: 'module_data.json' });
+
+        await archiveZip.finalize();
+
+    } catch (error) {
+        console.error('Module export error:', error);
+        res.status(500).json({ message: 'Module export failed' });
+    }
+};
+
 module.exports = {
     createModule,
     getTeacherModules,
-    deleteModule
+    deleteModule,
+    exportModule
 };
