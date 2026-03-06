@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
-import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle } from 'react-icons/hi2'
+import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip } from 'react-icons/hi2'
 import './Dashboard.css'
 
 function StudentDashboard() {
@@ -71,7 +71,28 @@ function StudentDashboard() {
     fetchData();
   }, []);
 
+  const handleHandoutDownload = async (handoutPath, filename) => {
+    try {
+      const url = `${API_BASE_URL}/${handoutPath.replace(/\\/g, '/')}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename || 'handout.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Download error', error);
+      alert('Download failed');
+    }
+  };
+
   const handleEnroll = async (courseId) => {
+
     setEnrollLoading(courseId);
     try {
       const userStr = localStorage.getItem('user');
@@ -209,12 +230,34 @@ function StudentDashboard() {
                     <div className="module-meta">
                       <span>Instructor: {enrollment.course_id.instructor ? enrollment.course_id.instructor.name : 'Unknown'}</span>
                     </div>
-                    <button
-                      className="btn btn-primary mt-2"
-                      disabled={enrollment.status !== 'ACTIVE' && enrollment.status !== 'APPROVED'}
-                    >
-                      {enrollment.status === 'PENDING' ? 'Request Pending' : enrollment.status === 'REJECTED' ? 'Not Enrolled' : 'View Course'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+                      <button
+                        className="btn btn-primary"
+                        disabled={enrollment.status !== 'ACTIVE' && enrollment.status !== 'APPROVED'}
+                      >
+                        {enrollment.status === 'PENDING' ? 'Request Pending' : enrollment.status === 'REJECTED' ? 'Not Enrolled' : 'View Course'}
+                      </button>
+                      {(enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') && enrollment.course_id.handout_path && (
+                        <>
+                          <a
+                            className="btn btn-outline"
+                            href={`${API_BASE_URL.replace('/api', '')}/${enrollment.course_id.handout_path.replace(/\\/g, '/')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.88rem' }}
+                          >
+                            <HiPaperClip /> View Handout
+                          </a>
+                          <button
+                            className="btn btn-outline"
+                            onClick={() => handleHandoutDownload(enrollment.course_id.handout_path, enrollment.course_id.handout_filename)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.88rem' }}
+                          >
+                            <HiArrowDownTray /> Download
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

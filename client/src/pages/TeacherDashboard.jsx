@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
-import { HiUsers, HiBookOpen, HiDocumentText, HiChartBar, HiFolderPlus, HiArrowDownTray, HiTrash, HiPlus, HiListBullet, HiUserGroup } from 'react-icons/hi2'
+import { HiUsers, HiBookOpen, HiDocumentText, HiChartBar, HiFolderPlus, HiArrowDownTray, HiTrash, HiPlus, HiListBullet, HiUserGroup, HiPaperClip } from 'react-icons/hi2'
 import CreateModuleForm from '../components/CreateModuleForm'
 import CreateCourseForm from '../components/CreateCourseForm'
 import CreateTaskForm from '../components/CreateTaskForm'
@@ -39,6 +39,10 @@ function TeacherDashboard() {
 
   const [selectedModuleForTask, setSelectedModuleForTask] = React.useState(null) // For modal context
   const [showAddStudentsModal, setShowAddStudentsModal] = React.useState(false)
+
+  // Handout state
+  const [handoutUploading, setHandoutUploading] = React.useState(false)
+  const handoutInputRef = React.useRef(null)
 
   const [stats, setStats] = React.useState({
     activeClasses: 0,
@@ -362,6 +366,77 @@ function TeacherDashboard() {
     }
   }
 
+  const handleHandoutUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setHandoutUploading(true);
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+
+      const formData = new FormData();
+      formData.append('handout', file);
+
+      const response = await fetch(`${API_BASE_URL}/api/courses/${selectedCourse._id}/handout`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedCourse(prev => ({
+          ...prev,
+          handout_filename: data.handout_filename,
+          handout_path: data.handout_path,
+        }));
+        // Also update in courses list
+        setCourses(prev => prev.map(c => c._id === selectedCourse._id
+          ? { ...c, handout_filename: data.handout_filename, handout_path: data.handout_path }
+          : c
+        ));
+      } else {
+        const err = await response.json();
+        alert(err.message || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Handout upload error', error);
+      alert('Upload failed');
+    } finally {
+      setHandoutUploading(false);
+      // Reset file input so the same file can be re-selected after removal
+      if (handoutInputRef.current) handoutInputRef.current.value = '';
+    }
+  };
+
+  const handleHandoutDelete = async () => {
+    if (!window.confirm('Remove the uploaded handout?')) return;
+
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+
+      const response = await fetch(`${API_BASE_URL}/api/courses/${selectedCourse._id}/handout`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        setSelectedCourse(prev => ({ ...prev, handout_filename: null, handout_path: null }));
+        setCourses(prev => prev.map(c => c._id === selectedCourse._id
+          ? { ...c, handout_filename: null, handout_path: null }
+          : c
+        ));
+      } else {
+        alert('Failed to remove handout');
+      }
+    } catch (error) {
+      console.error('Handout delete error', error);
+      alert('Error removing handout');
+    }
+  };
+
   const handleLogout = () => {
     logout()
     navigate('/')
@@ -516,7 +591,72 @@ function TeacherDashboard() {
                     <HiFolderPlus /> Add Module
                   </button>
                 </div>
+
+                {/* Hidden file input for handout */}
+                <input
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  style={{ display: 'none' }}
+                  ref={handoutInputRef}
+                  onChange={handleHandoutUpload}
+                />
               </div>
+            </div>
+
+            {/* Handout section */}
+            <div style={{
+              background: 'var(--bg-tertiary)',
+              borderRadius: 'var(--border-radius-sm)',
+              padding: '0.9rem 1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              flexWrap: 'wrap',
+              marginBottom: '1.25rem',
+              border: selectedCourse.handout_path ? '1px solid var(--accent-green, #10b981)' : '1px dashed var(--border-color)',
+            }}>
+              <HiPaperClip style={{ flexShrink: 0, color: selectedCourse.handout_path ? 'var(--accent-green, #10b981)' : 'var(--text-tertiary)' }} />
+              {selectedCourse.handout_path ? (
+                <>
+                  <span style={{ flex: 1, fontWeight: 500, fontSize: '0.9rem' }}>
+                    <a
+                      href={`${API_BASE_URL.replace('/api', '')}/${selectedCourse.handout_path.replace(/\\/g, '/')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--accent-blue, #3b82f6)', textDecoration: 'underline' }}
+                    >
+                      {selectedCourse.handout_filename}
+                    </a>
+                  </span>
+                  <button
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.82rem', padding: '0.3rem 0.8rem' }}
+                    onClick={() => handoutInputRef.current?.click()}
+                    disabled={handoutUploading}
+                  >
+                    {handoutUploading ? 'Uploading…' : '↑ Replace'}
+                  </button>
+                  <button
+                    className="btn btn-danger"
+                    style={{ fontSize: '0.82rem', padding: '0.3rem 0.8rem' }}
+                    onClick={handleHandoutDelete}
+                  >
+                    <HiTrash /> Remove
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span style={{ flex: 1, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No handout uploaded</span>
+                  <button
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.82rem', padding: '0.3rem 0.9rem' }}
+                    onClick={() => handoutInputRef.current?.click()}
+                    disabled={handoutUploading}
+                  >
+                    <HiPaperClip /> {handoutUploading ? 'Uploading…' : 'Upload Handout (PDF)'}
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="modules-section">

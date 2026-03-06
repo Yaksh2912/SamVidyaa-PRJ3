@@ -1,5 +1,32 @@
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// ---- Multer setup for handout PDFs ----
+const handoutStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = path.join(__dirname, '..', 'uploads', 'handouts');
+        fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+        cb(null, `${unique}${path.extname(file.originalname)}`);
+    }
+});
+
+const handoutUpload = multer({
+    storage: handoutStorage,
+    limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB max
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/pdf') cb(null, true);
+        else cb(new Error('Only PDF files are allowed'));
+    }
+});
+
+const handoutUploadMiddleware = handoutUpload.single('handout');
 
 // @desc    Create a new course
 // @route   POST /api/courses
@@ -290,4 +317,70 @@ Modules Count: ${modulesData.length}
     }
 };
 
-module.exports = { createCourse, getCourses, getCourseById, deleteCourse, getTeacherStats, exportCourse };
+// @desc    Upload / replace a handout PDF for a course
+// @route   POST /api/courses/:id/handout
+// @access  Private (Instructor)
+const uploadHandout = async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ message: 'Course not found' });
+
+        if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+        // Remove old handout file if one exists
+        if (course.handout_path) {
+            const oldFile = path.join(__dirname, '..', course.handout_path);
+            if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+        }
+
+        // Save relative path (e.g. uploads/handouts/xyz.pdf)
+        const relativePath = path.join('uploads', 'handouts', req.file.filename);
+
+        course.handout_filename = req.file.originalname;
+        course.handout_path = relativePath;
+        await course.save();
+
+        res.json({
+            message: 'Handout uploaded',
+            handout_filename: course.handout_filename,
+            handout_path: course.handout_path,
+        });
+    } catch (error) {
+        console.error('Handout upload error:', error);
+        res.status(500).json({ message: 'Failed to upload handout' });
+    }
+};
+
+// @desc    Delete the handout PDF for a course
+// @route   DELETE /api/courses/:id/handout
+// @access  Private (Instructor)
+const deleteHandout = async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+        if (!course) return res.status(404).json({ message: 'Course not found' });
+
+        if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        if (course.handout_path) {
+            const filePath = path.join(__dirname, '..', course.handout_path);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+
+        course.handout_filename = null;
+        course.handout_path = null;
+        await course.save();
+
+        res.json({ message: 'Handout removed' });
+    } catch (error) {
+        console.error('Handout delete error:', error);
+        res.status(500).json({ message: 'Failed to remove handout' });
+    }
+};
+
+module.exports = { createCourse, getCourses, getCourseById, deleteCourse, getTeacherStats, exportCourse, uploadHandout, deleteHandout, handoutUploadMiddleware };

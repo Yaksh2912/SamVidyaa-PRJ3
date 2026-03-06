@@ -32,6 +32,14 @@ const courseSchema = mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        handout_filename: {
+            type: String,
+            default: null,
+        },
+        handout_path: {
+            type: String,
+            default: null,
+        },
     },
     {
         timestamps: true,

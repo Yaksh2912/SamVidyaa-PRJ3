@@ -1,7 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
-const { createCourse, getCourses, getCourseById, deleteCourse, getTeacherStats } = require('../controllers/courseController');
+const {
+    createCourse,
+    getCourses,
+    getCourseById,
+    deleteCourse,
+    getTeacherStats,
+    uploadHandout,
+    deleteHandout,
+    handoutUploadMiddleware,
+} = require('../controllers/courseController');
 
 router.route('/')
     .post(protect, createCourse)
@@ -14,5 +23,9 @@ router.route('/:id')
     .delete(protect, deleteCourse);
 
 router.get('/:id/export', protect, require('../controllers/courseController').exportCourse);
+
+// Handout routes
+router.post('/:id/handout', protect, handoutUploadMiddleware, uploadHandout);
+router.delete('/:id/handout', protect, deleteHandout);
 
 module.exports = router;
