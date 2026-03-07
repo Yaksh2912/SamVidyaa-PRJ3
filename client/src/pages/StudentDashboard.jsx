@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
 import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip } from 'react-icons/hi2'
+import { FiSun, FiMoon } from 'react-icons/fi'
 import './Dashboard.css'
 
 function StudentDashboard() {
@@ -147,7 +148,7 @@ function StudentDashboard() {
                 onClick={toggleTheme}
                 aria-label="Toggle theme"
               >
-                {isDark ? '☀️' : '🌙'}
+                {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
               </button>
             </div>
             <span className="user-info">{t.welcome}, {user?.name || 'Student'}</span>

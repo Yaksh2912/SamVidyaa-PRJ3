@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { FiPlus, FiMinus, FiMapPin, FiPhone, FiMail, FiSend } from 'react-icons/fi'
+import { FiPlus, FiMinus, FiMapPin, FiPhone, FiMail, FiSend, FiArrowRight, FiCheckCircle, FiSun, FiMoon } from 'react-icons/fi'
 import { FaUserGraduate, FaChalkboardTeacher, FaUserTie } from 'react-icons/fa'
 import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
+import ShaderBackground from '../components/ui/ShaderBackground'
 import './LandingPage.css'
 
 // faqData moved to translations
@@ -66,7 +67,7 @@ function LandingPage() {
                 onClick={toggleTheme}
                 aria-label="Toggle theme"
               >
-                {isDark ? '☀️' : '🌙'}
+                {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
               </button>
             </div>
             <Link to="/login" className="nav-link">{t.nav?.login || 'Login'}</Link>
@@ -75,55 +76,101 @@ function LandingPage() {
         </div>
       </motion.nav>
 
-      <motion.main
-        className="hero"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: false, amount: 0.3 }}
-        variants={staggerContainer}
-      >
-        <div className="hero-content">
-          <motion.h1 className="hero-title" variants={fadeInUp}>{t.hero?.title} SamVidyaa</motion.h1>
-          <motion.p className="hero-subtitle" variants={fadeInUp}>
-            {t.hero?.subtitle}
-          </motion.p>
-          <motion.div className="hero-buttons" variants={fadeInUp}>
-            <Link to="/signup" className="btn btn-large btn-primary">
-              {t.hero?.getStarted}
-            </Link>
-            <Link to="/login" className="btn btn-large btn-secondary">
-              {t.hero?.signIn}
-            </Link>
-          </motion.div>
-        </div>
-
-        <motion.div
-          className="features"
+      {/* Hero section with animated shader background */}
+      <div className="hero-wrapper">
+        <ShaderBackground speed={0.6} intensity={1.2} activeEffect="mesh" isDark={isDark} />
+        <motion.main
+          className="hero"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: false, amount: 0.3 }}
           variants={staggerContainer}
         >
-          <motion.div className="feature-card" variants={fadeInUp}>
-            <div className="feature-icon">
-              <FaUserGraduate />
-            </div>
-            <h3>{t.features?.students}</h3>
-            <p>{t.features?.studentsDesc}</p>
+          <div className="hero-content">
+            <motion.h1 className="hero-title" variants={fadeInUp}>{t.hero?.title} SamVidyaa</motion.h1>
+            <motion.p className="hero-subtitle" variants={fadeInUp}>
+              {t.hero?.subtitle}
+            </motion.p>
+            <motion.div className="hero-buttons" variants={fadeInUp}>
+              <Link to="/signup" className="btn btn-large btn-primary">
+                {t.hero?.getStarted}
+              </Link>
+              <Link to="/login" className="btn btn-large btn-secondary">
+                {t.hero?.signIn}
+              </Link>
+            </motion.div>
+          </div>
+
+          <motion.div
+            className="features"
+            variants={staggerContainer}
+          >
+            {/* Students Card */}
+            <motion.div className="feature-card feature-card--student" variants={fadeInUp}>
+              <div className="feature-card__accent" />
+              <div className="feature-card__body">
+                <div className="feature-card__icon-wrap feature-card__icon-wrap--student">
+                  <FaUserGraduate />
+                </div>
+                <div className="feature-card__tag">For Students</div>
+                <h3 className="feature-card__title">{t.features?.students}</h3>
+                <p className="feature-card__desc">{t.features?.studentsDesc}</p>
+                <ul className="feature-card__list">
+                  <li><FiCheckCircle /> Access assignments &amp; lab tasks</li>
+                  <li><FiCheckCircle /> Track grades &amp; progress</li>
+                  <li><FiCheckCircle /> Download course handouts</li>
+                </ul>
+                <Link to="/signup" className="feature-card__cta">
+                  Get Started <FiArrowRight />
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Teachers Card */}
+            <motion.div className="feature-card feature-card--teacher" variants={fadeInUp}>
+              <div className="feature-card__accent feature-card__accent--teacher" />
+              <div className="feature-card__body">
+                <div className="feature-card__icon-wrap feature-card__icon-wrap--teacher">
+                  <FaChalkboardTeacher />
+                </div>
+                <div className="feature-card__tag">For Teachers</div>
+                <h3 className="feature-card__title">{t.features?.teachers}</h3>
+                <p className="feature-card__desc">{t.features?.teachersDesc}</p>
+                <ul className="feature-card__list">
+                  <li><FiCheckCircle /> Create modules &amp; tasks</li>
+                  <li><FiCheckCircle /> Grade student submissions</li>
+                  <li><FiCheckCircle /> Upload handouts &amp; resources</li>
+                </ul>
+                <Link to="/signup" className="feature-card__cta feature-card__cta--teacher">
+                  Start Teaching <FiArrowRight />
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Admins Card */}
+            <motion.div className="feature-card feature-card--admin" variants={fadeInUp}>
+              <div className="feature-card__accent feature-card__accent--admin" />
+              <div className="feature-card__body">
+                <div className="feature-card__icon-wrap feature-card__icon-wrap--admin">
+                  <FaUserTie />
+                </div>
+                <div className="feature-card__tag">For Admins</div>
+                <h3 className="feature-card__title">{t.features?.admins}</h3>
+                <p className="feature-card__desc">{t.features?.adminsDesc}</p>
+                <ul className="feature-card__list">
+                  <li><FiCheckCircle /> Manage users &amp; roles</li>
+                  <li><FiCheckCircle /> Monitor system activity</li>
+                  <li><FiCheckCircle /> Generate reports</li>
+                </ul>
+                <Link to="/signup" className="feature-card__cta feature-card__cta--admin">
+                  Manage System <FiArrowRight />
+                </Link>
+              </div>
+            </motion.div>
+
           </motion.div>
-          <motion.div className="feature-card" variants={fadeInUp}>
-            <div className="feature-icon">
-              <FaChalkboardTeacher />
-            </div>
-            <h3>{t.features?.teachers}</h3>
-            <p>{t.features?.teachersDesc}</p>
-          </motion.div>
-          <motion.div className="feature-card" variants={fadeInUp}>
-            <div className="feature-icon">
-              <FaUserTie />
-            </div>
-            <h3>{t.features?.admins}</h3>
-            <p>{t.features?.adminsDesc}</p>
-          </motion.div>
-        </motion.div>
-      </motion.main>
+        </motion.main>
+      </div>
 
       <motion.section
         className="faq-section"
