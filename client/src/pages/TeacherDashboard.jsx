@@ -5,12 +5,13 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
-import { HiUsers, HiBookOpen, HiDocumentText, HiChartBar, HiFolderPlus, HiArrowDownTray, HiTrash, HiPlus, HiListBullet, HiUserGroup, HiPaperClip } from 'react-icons/hi2'
+import { HiUsers, HiBookOpen, HiDocumentText, HiChartBar, HiFolderPlus, HiArrowDownTray, HiTrash, HiPlus, HiListBullet, HiUserGroup, HiPaperClip, HiGift } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import CreateModuleForm from '../components/CreateModuleForm'
 import CreateCourseForm from '../components/CreateCourseForm'
 import CreateTaskForm from '../components/CreateTaskForm'
 import AddStudentsModal from '../components/AddStudentsModal'
+import ManageRewardsModal from '../components/ManageRewardsModal'
 import './Dashboard.css'
 
 function TeacherDashboard() {
@@ -40,6 +41,7 @@ function TeacherDashboard() {
 
   const [selectedModuleForTask, setSelectedModuleForTask] = React.useState(null) // For modal context
   const [showAddStudentsModal, setShowAddStudentsModal] = React.useState(false)
+  const [showRewardsModal, setShowRewardsModal] = React.useState(false)
 
   // Handout state
   const [handoutUploading, setHandoutUploading] = React.useState(false)
@@ -563,7 +565,7 @@ function TeacherDashboard() {
                   <p>{course.description}</p>
                   <div className="course-meta">
                     <span>{course.subject}</span>
-                    <span>Q: {course.course_test_questions}</span>
+                    <span>Q: {course.course_test_questions} | {course.points || 0} pts</span>
                   </div>
                 </motion.div>
               ))}
@@ -587,6 +589,9 @@ function TeacherDashboard() {
                   </button>
                   <button className="btn btn-secondary" onClick={handleViewStudents}>
                     <HiUserGroup /> Students
+                  </button>
+                  <button className="btn btn-secondary" onClick={() => setShowRewardsModal(true)}>
+                    <HiGift /> Rewards
                   </button>
                   <button className="btn btn-primary" onClick={() => setShowModuleForm(true)}>
                     <HiFolderPlus /> Add Module
@@ -672,6 +677,7 @@ function TeacherDashboard() {
                         <div className="module-meta">
                           <span className="file-count">{module.files.length} Files</span>
                           <span>{module.tasks_per_module} Tasks</span>
+                          <span>{module.points || 0} pts</span>
                         </div>
                       </div>
                       <div className="module-actions">
@@ -775,6 +781,13 @@ function TeacherDashboard() {
             onClose={() => setShowTaskForm(false)}
             onTaskCreated={handleTaskCreated}
             moduleId={selectedModuleForTask}
+          />
+        )}
+
+        {showRewardsModal && selectedCourse && (
+          <ManageRewardsModal
+            course={selectedCourse}
+            onClose={() => setShowRewardsModal(false)}
           />
         )}
 

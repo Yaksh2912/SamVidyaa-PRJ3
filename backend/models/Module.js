@@ -34,6 +34,10 @@ const moduleSchema = mongoose.Schema(
             type: Number,
             default: 0,
         },
+        points: {
+            type: Number,
+            default: 100,
+        },
         is_active: {
             type: Boolean,
             default: true,

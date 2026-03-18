@@ -62,6 +62,19 @@ const getTeacherModules = async (req, res) => {
     }
 };
 
+// @desc    Get all modules for a specific course (used by students to view curriculum)
+// @route   GET /api/modules/course/:courseId
+// @access  Private
+const getCourseModules = async (req, res) => {
+    try {
+        const modules = await Module.find({ course_id: req.params.courseId })
+            .sort({ module_order: 1 });
+        res.json(modules);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 
 
 // @desc    Delete a module
@@ -200,6 +213,7 @@ const exportModule = async (req, res) => {
 module.exports = {
     createModule,
     getTeacherModules,
+    getCourseModules,
     deleteModule,
     exportModule
 };

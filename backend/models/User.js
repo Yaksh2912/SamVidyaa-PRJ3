@@ -36,6 +36,10 @@ const userSchema = mongoose.Schema(
         last_login: {
             type: Date,
         },
+        points: {
+            type: Number,
+            default: 0,
+        },
     },
     {
         timestamps: true,

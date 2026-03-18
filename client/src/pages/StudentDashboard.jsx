@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
-import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip } from 'react-icons/hi2'
+import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import './Dashboard.css'
 
@@ -21,6 +21,29 @@ function StudentDashboard() {
   const [availableCourses, setAvailableCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enrollLoading, setEnrollLoading] = useState(null); // Course ID being enrolled
+  const [userPoints, setUserPoints] = useState(0);
+  const [claimingReward, setClaimingReward] = useState(null);
+  const [showPointShop, setShowPointShop] = useState(false);
+
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [courseModules, setCourseModules] = useState([]);
+  const [courseTasks, setCourseTasks] = useState({});
+  const [expandedModule, setExpandedModule] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const [rewards, setRewards] = useState([]);
+  const [loadingRewards, setLoadingRewards] = useState(true);
+
+  // Mapping of icon names to actual components
+  const MAP_ICONS = {
+    'HiCheckBadge': <HiCheckBadge />,
+    'HiClock': <HiClock />,
+    'HiLightBulb': <HiLightBulb />,
+    'HiSwatch': <HiSwatch />,
+    'HiBolt': <HiBolt />,
+    'HiIdentification': <HiIdentification />,
+    'HiGift': <HiGift />
+  };
 
   const handleLogout = () => {
     logout()
@@ -68,8 +91,133 @@ function StudentDashboard() {
     }
   };
 
+  const fetchUserPoints = async () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      if (!token) return;
+      const res = await fetch(`${API_BASE_URL}/api/users/me/points`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setUserPoints(data.points || 0);
+    } catch (error) {
+      console.error('Error fetching points:', error);
+    }
+  };
+
+  const fetchRewards = async () => {
+    try {
+      setLoadingRewards(true);
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      if (!token) return;
+      const res = await fetch(`${API_BASE_URL}/api/rewards/student`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRewards(data);
+      }
+    } catch (error) {
+      console.error('Error fetching rewards:', error);
+    } finally {
+      setLoadingRewards(false);
+    }
+  };
+
+  const handleClaimReward = async (reward) => {
+    setClaimingReward(reward._id);
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      const res = await fetch(`${API_BASE_URL}/api/users/claim-reward`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ rewardId: reward._id })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUserPoints(data.points);
+        alert(`🎉 ${data.message}`);
+      } else {
+        alert(data.message || 'Could not claim reward');
+      }
+    } catch (error) {
+      console.error('Claim error:', error);
+      alert('Something went wrong');
+    } finally {
+      setClaimingReward(null);
+    }
+  };
+
+  const handleAddPoints = async (amount = 50) => {
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      const res = await fetch(`${API_BASE_URL}/api/users/add-points`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ amount })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUserPoints(data.points);
+      }
+    } catch (error) {
+      console.error('Add points error:', error);
+    }
+  };
+
+  const handleViewCourse = async (course) => {
+    setSelectedCourse(course);
+    setModalLoading(true);
+    setCourseModules([]);
+    setExpandedModule(null);
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      const res = await fetch(`${API_BASE_URL}/api/modules/course/${course._id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCourseModules(data);
+      }
+    } catch (err) {
+      console.error('Error fetching modules:', err);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const toggleModule = async (moduleId) => {
+    if (expandedModule === moduleId) {
+      setExpandedModule(null);
+      return;
+    }
+    setExpandedModule(moduleId);
+    if (!courseTasks[moduleId]) {
+      try {
+        const userStr = localStorage.getItem('user');
+        const token = userStr ? JSON.parse(userStr).token : null;
+        const res = await fetch(`${API_BASE_URL}/api/tasks?module_id=${moduleId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCourseTasks(prev => ({ ...prev, [moduleId]: data }));
+        }
+      } catch (err) {
+        console.error('Error fetching tasks:', err);
+      }
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchUserPoints();
+    fetchRewards();
   }, []);
 
   const handleHandoutDownload = async (handoutPath, filename) => {
@@ -150,6 +298,11 @@ function StudentDashboard() {
               >
                 {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
               </button>
+            </div>
+            <div className="points-badge" onClick={() => setShowPointShop(!showPointShop)} title="Open Point Shop">
+              <HiStar className="points-badge-icon" />
+              <span className="points-badge-value">{userPoints}</span>
+              <span className="points-badge-label">pts</span>
             </div>
             <span className="user-info">{t.welcome}, {user?.name || 'Student'}</span>
             <button onClick={handleLogout} className="btn btn-secondary">
@@ -235,6 +388,7 @@ function StudentDashboard() {
                       <button
                         className="btn btn-primary"
                         disabled={enrollment.status !== 'ACTIVE' && enrollment.status !== 'APPROVED'}
+                        onClick={() => handleViewCourse(enrollment.course_id)}
                       >
                         {enrollment.status === 'PENDING' ? 'Request Pending' : enrollment.status === 'REJECTED' ? 'Not Enrolled' : 'View Course'}
                       </button>
@@ -297,30 +451,69 @@ function StudentDashboard() {
           )}
         </div>
 
-        {/* Restore Recent Activity & Rankings Mock Data */}
+        {/* POINT SHOP SECTION */}
         <motion.div
-          className="recent-activity mt-5"
+          className="dashboard-section point-shop-section mt-5"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.9 }}
+          transition={{ duration: 0.5, delay: 0.7 }}
         >
-          <h3>{t.activity.title}</h3>
-          <div className="activity-list">
-            <div className="activity-item">
-              <span className="activity-time">{t.activity.dueTomorrow}</span>
-              <span className="activity-text">Lab 5: Data Structures</span>
+          <div className="point-shop-header">
+            <div className="point-shop-title-row">
+              <HiShoppingCart className="point-shop-icon" />
+              <h3>Point Shop</h3>
             </div>
-            <div className="activity-item">
-              <span className="activity-time">Due: 3 days</span>
-              <span className="activity-text">Lab 6: Algorithms</span>
+            <div className="point-shop-balance">
+              <HiStar className="balance-star" />
+              <span className="balance-amount">{userPoints}</span>
+              <span className="balance-label">points available</span>
             </div>
-            <div className="activity-item">
-              <span className="activity-time">{t.activity.graded}</span>
-              <span className="activity-text">Lab 4: OOP Concepts - Grade: 90%</span>
-            </div>
+          </div>
+
+          <div className="point-shop-earn-row">
+            <button className="btn btn-earn-points" onClick={() => handleAddPoints(50)}>
+              <HiBolt /> Earn 50 Points (Test)
+            </button>
+          </div>
+
+          <div className="rewards-grid">
+            {loadingRewards ? (
+              <p style={{ color: 'var(--text-secondary)' }}>Loading fresh rewards...</p>
+            ) : rewards.length === 0 ? (
+              <p className="empty-state">No custom rewards available. Keep an eye out for updates from your teachers!</p>
+            ) : rewards.map((reward) => (
+              <motion.div
+                key={reward._id}
+                className={`reward-card ${userPoints < reward.cost ? 'locked' : ''}`}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="reward-card-icon">{MAP_ICONS[reward.icon_name] || <HiGift />}</div>
+                <div className="reward-card-body">
+                  <h4 className="reward-card-name" style={{ marginBottom: '0.15rem' }}>{reward.name}</h4>
+                  {reward.course_id && (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
+                      Course: {reward.course_id.course_name}
+                    </span>
+                  )}
+                  <p className="reward-card-desc">{reward.description}</p>
+                </div>
+                <div className="reward-card-footer">
+                  <span className="reward-cost"><HiStar /> {reward.cost} pts</span>
+                  <button
+                    className="btn btn-claim"
+                    disabled={userPoints < reward.cost || claimingReward === reward._id}
+                    onClick={() => handleClaimReward(reward)}
+                  >
+                    {claimingReward === reward._id ? 'Claiming...' : userPoints < reward.cost ? 'Not enough' : 'Claim'}
+                  </button>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </motion.div>
 
+        {/* Rankings Mock Data */}
         <motion.div
           className="rankings-section"
           initial={{ opacity: 0, y: 20 }}
@@ -360,6 +553,131 @@ function StudentDashboard() {
           </div>
         </motion.div>
       </main>
+
+      {/* COURSE DETAILS MODAL */}
+      {selectedCourse && (
+        <div className="modal-overlay" onClick={() => setSelectedCourse(null)}>
+          <div
+            className="modal-content"
+            style={{ maxWidth: '800px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '1rem' }}>
+              <div>
+                <h2 style={{ marginBottom: '0.25rem', color: 'var(--text-primary)' }}>
+                  {selectedCourse.course_name}
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                  {selectedCourse.course_code} | <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{selectedCourse.points || 0} Course Points</span>
+                </p>
+              </div>
+              <button className="btn btn-secondary" onClick={() => setSelectedCourse(null)}>Close</button>
+            </div>
+
+            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '0.5rem' }}>
+              {modalLoading ? (
+                <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading syllabus...</p>
+              ) : courseModules.length === 0 ? (
+                <p className="empty-state">No modules available for this course yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {courseModules.map((module) => (
+                    <div key={module._id} style={{
+                      background: 'var(--bg-tertiary)',
+                      borderRadius: 'var(--border-radius-md)',
+                      border: '1px solid var(--border-light)',
+                      overflow: 'hidden'
+                    }}>
+                      <div
+                        style={{
+                          padding: '1.25rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          background: expandedModule === module._id ? 'var(--bg-secondary)' : 'transparent',
+                          transition: 'background 0.2s ease'
+                        }}
+                        onClick={() => toggleModule(module._id)}
+                      >
+                        <div>
+                          <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.1rem' }}>
+                            {module.module_order}. {module.module_name}
+                          </h4>
+                          <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                            {module.description}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <span style={{
+                            background: 'var(--accent-gradient-subtle)',
+                            color: 'var(--accent-primary)',
+                            padding: '0.3rem 0.8rem',
+                            borderRadius: '980px',
+                            fontWeight: 600,
+                            fontSize: '0.85rem'
+                          }}>
+                            {module.points || 0} pts
+                          </span>
+                        </div>
+                      </div>
+
+                      {expandedModule === module._id && (
+                        <div style={{ padding: '1.25rem', borderTop: '1px solid var(--border-light)', background: 'var(--glass-bg)' }}>
+                          <h5 style={{ marginBottom: '1rem', color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                            Tasks ({courseTasks[module._id]?.length || 0})
+                          </h5>
+                          
+                          {!courseTasks[module._id] ? (
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Loading tasks...</p>
+                          ) : courseTasks[module._id].length === 0 ? (
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No tasks assigned yet.</p>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                              {courseTasks[module._id].map(task => (
+                                <div key={task._id} style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '0.8rem 1rem',
+                                  background: 'var(--bg-primary)',
+                                  borderRadius: 'var(--border-radius-sm)',
+                                  border: '1px solid var(--border-light)'
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <div>
+                                      <span style={{ display: 'block', fontWeight: 600, color: 'var(--text-primary)' }}>{task.task_name}</span>
+                                      <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                                        {task.difficulty} | {task.language} | {task.time_limit}m
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <span style={{
+                                      color: '#fbbf24',
+                                      fontWeight: 700,
+                                      fontSize: '0.9rem',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.25rem'
+                                    }}>
+                                      <HiStar /> {task.points} pts
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

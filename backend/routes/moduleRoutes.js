@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { protect } = require('../middleware/authMiddleware');
-const { createModule, getTeacherModules, deleteModule, exportModule } = require('../controllers/moduleController');
+const { createModule, getTeacherModules, getCourseModules, deleteModule, exportModule } = require('../controllers/moduleController');
 
 // Multer Config
 const storage = multer.diskStorage({
@@ -23,6 +23,9 @@ const upload = multer({
 router.route('/')
     .post(protect, upload.array('files'), createModule)
     .get(protect, getTeacherModules);
+
+router.route('/course/:courseId')
+    .get(protect, getCourseModules);
 
 router.route('/:id/export')
     .get(protect, exportModule);

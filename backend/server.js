@@ -7,6 +7,7 @@ const authRoutes = require('./routes/authRoutes');
 const moduleRoutes = require('./routes/moduleRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const taskRoutes = require('./routes/taskRoutes');
+const rewardRoutes = require('./routes/rewardRoutes');
 
 dotenv.config();
 
@@ -24,7 +25,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/rewards', rewardRoutes);
 app.use('/api/enrollments', require('./routes/enrollmentRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
 
 const PORT = process.env.PORT || 5001;
 

@@ -32,6 +32,10 @@ const courseSchema = mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        points: {
+            type: Number,
+            default: 1000,
+        },
         handout_filename: {
             type: String,
             default: null,

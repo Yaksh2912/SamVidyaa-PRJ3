@@ -8,7 +8,8 @@ function CreateCourseForm({ onClose, onCourseCreated }) {
         course_code: '',
         subject: '',
         description: '',
-        course_test_questions: 5
+        course_test_questions: 5,
+        points: 1000
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -94,6 +95,17 @@ function CreateCourseForm({ onClose, onCourseCreated }) {
                                 onChange={handleChange}
                                 required
                                 placeholder="e.g., Computer Science"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Course Points</label>
+                            <input
+                                type="number"
+                                name="points"
+                                value={formData.points}
+                                onChange={handleChange}
+                                required
+                                min="1"
                             />
                         </div>
                     </div>

@@ -10,7 +10,8 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
         module_order: 1,
         tasks_per_module: 10,
         module_test_questions: 3,
-        is_active: true
+        is_active: true,
+        points: 100
     });
     const [files, setFiles] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,6 +45,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
         submitData.append('module_order', formData.module_order);
         submitData.append('tasks_per_module', formData.tasks_per_module);
         submitData.append('module_test_questions', formData.module_test_questions);
+        submitData.append('points', formData.points);
         submitData.append('is_active', formData.is_active);
 
         for (let i = 0; i < files.length; i++) {
@@ -143,6 +145,16 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                                 value={formData.module_test_questions}
                                 onChange={handleChange}
                                 min="0"
+                            />
+                        </div>
+                        <div className="form-group" style={{ flex: 1 }}>
+                            <label>Module Points</label>
+                            <input
+                                type="number"
+                                name="points"
+                                value={formData.points}
+                                onChange={handleChange}
+                                min="1"
                             />
                         </div>
                         <div className="form-group" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
