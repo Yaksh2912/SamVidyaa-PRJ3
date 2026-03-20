@@ -1,8 +1,8 @@
 import { MeshGradient, DotOrbit } from "@paper-design/shaders-react"
 
 // Color palettes matched to the app's theme design tokens
-const DARK_PALETTE = ["#0f0f1a", "#1a1a2e", "#252542", "#6c5ce7"]
-const LIGHT_PALETTE = ["#f8f9fc", "#eef0f6", "#dcd6f7", "#6c5ce7"]
+const DARK_PALETTE = ["#0c1222", "#151e30", "#1e2a40", "#2dd4bf"]
+const LIGHT_PALETTE = ["#f5f7fa", "#edf1f7", "#c7f0eb", "#0d9488"]
 
 export default function ShaderBackground({
     speed = 1.0,
@@ -11,15 +11,15 @@ export default function ShaderBackground({
     isDark = false,
 }) {
     const colors = isDark ? DARK_PALETTE : LIGHT_PALETTE
-    const bg = isDark ? "#0f0f1a" : "#f8f9fc"
+    const bg = isDark ? "#0c1222" : "#f5f7fa"
     const glowColor1 = isDark
-        ? "rgba(108, 92, 231, 0.08)"
-        : "rgba(108, 92, 231, 0.14)"
+        ? "rgba(45, 212, 191, 0.08)"
+        : "rgba(13, 148, 136, 0.12)"
     const glowColor2 = isDark
-        ? "rgba(236, 72, 153, 0.05)"
-        : "rgba(168, 85, 247, 0.10)"
-    const dotColor = isDark ? "#6c5ce7" : "#a855f7"
-    const orbitColor = isDark ? "#252542" : "#dcd6f7"
+        ? "rgba(251, 191, 36, 0.05)"
+        : "rgba(245, 158, 11, 0.08)"
+    const dotColor = isDark ? "#2dd4bf" : "#0d9488"
+    const orbitColor = isDark ? "#1e2a40" : "#c7f0eb"
 
     return (
         <div

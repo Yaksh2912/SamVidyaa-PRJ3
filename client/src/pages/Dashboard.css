@@ -360,11 +360,11 @@
 }
 
 .stat-card:nth-child(2)::before {
-  background: var(--gradient-purple);
+  background: var(--gradient-teal);
 }
 
 .stat-card:nth-child(3)::before {
-  background: var(--gradient-pink);
+  background: var(--gradient-amber);
 }
 
 .stat-card:nth-child(4)::before {
@@ -394,13 +394,13 @@
 }
 
 .stat-card:nth-child(2) .stat-icon {
-  background: var(--gradient-purple);
-  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
+  background: var(--gradient-teal);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
 }
 
 .stat-card:nth-child(3) .stat-icon {
-  background: var(--gradient-pink);
-  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+  background: var(--gradient-amber);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }
 
 .stat-card:nth-child(4) .stat-icon {
@@ -972,7 +972,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--gradient-purple);
+  background: var(--gradient-teal);
   opacity: 0.5;
   transition: opacity 0.3s ease;
 }

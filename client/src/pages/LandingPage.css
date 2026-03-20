@@ -99,14 +99,14 @@ html {
   padding: 0.55rem 1.25rem;
   border-radius: 980px;
   font-weight: 600;
-  box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+  box-shadow: 0 4px 15px rgba(13, 148, 136, 0.3);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   -webkit-text-fill-color: white;
 }
 
 .nav-link.btn-primary:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 25px rgba(108, 92, 231, 0.4);
+  box-shadow: 0 6px 25px rgba(13, 148, 136, 0.4);
 }
 
 .nav-controls {
@@ -132,7 +132,7 @@ html {
 
 .language-selector:hover {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
 }
 
 .theme-toggle {
@@ -154,7 +154,7 @@ html {
 .theme-toggle:hover {
   border-color: var(--accent-primary);
   color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
 }
 
 /* ─── Hero Wrapper — Shader Background Container ─── */
@@ -187,7 +187,7 @@ html {
   transform: translateX(-50%);
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(108, 92, 231, 0.25) 0%, rgba(236, 72, 153, 0.12) 40%, transparent 70%);
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.2) 0%, rgba(245, 158, 11, 0.1) 40%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
   z-index: -1;
@@ -208,18 +208,18 @@ html {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: 1.5rem;
-  filter: drop-shadow(0 0 20px rgba(108, 92, 231, 0.25));
+  filter: drop-shadow(0 0 20px rgba(13, 148, 136, 0.25));
 }
 
 /* Dark theme: white→purple→pink with stronger glow */
 [data-theme="dark"] .hero-title {
-  background: linear-gradient(135deg, #ffffff 0%, #b98df7 50%, #ec4899 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #5eead4 50%, #fbbf24 100%);
   background-size: 200% 200%;
   animation: gradientShift 6s ease infinite;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 0 30px rgba(108, 92, 231, 0.45));
+  filter: drop-shadow(0 0 30px rgba(45, 212, 191, 0.45));
 }
 
 .hero-subtitle {
@@ -268,7 +268,7 @@ html {
 .btn-primary {
   background: var(--accent-gradient);
   color: white;
-  box-shadow: 0 4px 20px rgba(108, 92, 231, 0.35);
+  box-shadow: 0 4px 20px rgba(13, 148, 136, 0.35);
   position: relative;
   overflow: hidden;
 }
@@ -284,7 +284,7 @@ html {
 
 .btn-primary:hover {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 30px rgba(108, 92, 231, 0.45);
+  box-shadow: 0 8px 30px rgba(13, 148, 136, 0.45);
 }
 
 .btn-primary:hover::after {
@@ -323,7 +323,7 @@ html {
   -webkit-backdrop-filter: blur(20px);
   border-radius: 24px;
   padding: 0;
-  border: 1px solid rgba(108, 92, 231, 0.12);
+  border: 1px solid rgba(13, 148, 136, 0.1);
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 0.4s ease,
     border-color 0.3s ease;
@@ -332,35 +332,35 @@ html {
   display: flex;
   flex-direction: column;
   text-align: left;
-  box-shadow: 0 4px 24px rgba(108, 92, 231, 0.07);
+  box-shadow: 0 4px 24px rgba(13, 148, 136, 0.06);
 }
 
 [data-theme="dark"] .feature-card {
-  background: rgba(18, 15, 35, 0.7);
-  border-color: rgba(108, 92, 231, 0.18);
+  background: rgba(12, 18, 34, 0.7);
+  border-color: rgba(13, 148, 136, 0.15);
 }
 
 .feature-card:hover {
   transform: translateY(-10px) scale(1.01);
-  box-shadow: 0 24px 60px rgba(108, 92, 231, 0.18);
-  border-color: rgba(108, 92, 231, 0.3);
+  box-shadow: 0 24px 60px rgba(13, 148, 136, 0.15);
+  border-color: rgba(13, 148, 136, 0.25);
 }
 
 /* ── Gradient accent bar at the top ── */
 .feature-card__accent {
   height: 4px;
   width: 100%;
-  background: linear-gradient(90deg, #6c5ce7, #a855f7);
+  background: linear-gradient(90deg, #0d9488, #14b8a6);
   flex-shrink: 0;
   transition: height 0.3s ease;
 }
 
 .feature-card__accent--teacher {
-  background: linear-gradient(90deg, #ec4899, #f43f5e);
+  background: linear-gradient(90deg, #f59e0b, #d97706);
 }
 
 .feature-card__accent--admin {
-  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
 }
 
 .feature-card:hover .feature-card__accent {
@@ -385,23 +385,23 @@ html {
   justify-content: center;
   font-size: 1.3rem;
   margin-bottom: 1rem;
-  background: linear-gradient(135deg, rgba(108, 92, 231, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%);
-  color: #6c5ce7;
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.12) 0%, rgba(20, 184, 166, 0.08) 100%);
+  color: #0d9488;
   padding: 0.75rem;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 4px 14px rgba(108, 92, 231, 0.12);
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.1);
 }
 
 .feature-card__icon-wrap--teacher {
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.15) 0%, rgba(244, 63, 94, 0.1) 100%);
-  color: #ec4899;
-  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.12);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.08) 100%);
+  color: #f59e0b;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.1);
 }
 
 .feature-card__icon-wrap--admin {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.08) 100%);
   color: #3b82f6;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.1);
 }
 
 .feature-card:hover .feature-card__icon-wrap {
@@ -414,13 +414,13 @@ html {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #6c5ce7;
+  color: #0d9488;
   margin-bottom: 0.5rem;
   opacity: 0.85;
 }
 
 .feature-card--teacher .feature-card__tag {
-  color: #ec4899;
+  color: #f59e0b;
 }
 
 .feature-card--admin .feature-card__tag {
@@ -479,12 +479,12 @@ html {
 
 .feature-card__list li svg {
   flex-shrink: 0;
-  color: #6c5ce7;
+  color: #0d9488;
   font-size: 1rem;
 }
 
 .feature-card--teacher .feature-card__list li svg {
-  color: #ec4899;
+  color: #f59e0b;
 }
 
 .feature-card--admin .feature-card__list li svg {
@@ -503,38 +503,38 @@ html {
   text-decoration: none;
   transition: all 0.25s ease;
   width: fit-content;
-  background: linear-gradient(135deg, rgba(108, 92, 231, 0.12), rgba(168, 85, 247, 0.08));
-  color: #6c5ce7;
-  border: 1px solid rgba(108, 92, 231, 0.2);
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.1), rgba(20, 184, 166, 0.06));
+  color: #0d9488;
+  border: 1px solid rgba(13, 148, 136, 0.18);
 }
 
 .feature-card__cta--teacher {
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.12), rgba(244, 63, 94, 0.08));
-  color: #ec4899;
-  border-color: rgba(236, 72, 153, 0.2);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.06));
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.18);
 }
 
 .feature-card__cta--admin {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(99, 102, 241, 0.08));
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.06));
   color: #3b82f6;
-  border-color: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.18);
 }
 
 .feature-card__cta:hover {
-  background: linear-gradient(135deg, #6c5ce7, #a855f7);
+  background: linear-gradient(135deg, #0d9488, #14b8a6);
   color: white;
   border-color: transparent;
   transform: translateX(3px);
-  box-shadow: 0 6px 20px rgba(108, 92, 231, 0.3);
+  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.3);
 }
 
 .feature-card__cta--teacher:hover {
-  background: linear-gradient(135deg, #ec4899, #f43f5e);
-  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.3);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3);
 }
 
 .feature-card__cta--admin:hover {
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
 }
 
@@ -735,7 +735,7 @@ html {
 .contact-form textarea:focus {
   background: var(--bg-secondary);
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
   outline: none;
 }
 

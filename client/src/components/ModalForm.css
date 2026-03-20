@@ -9,7 +9,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(15, 15, 26, 0.6);
+    background: rgba(12, 18, 34, 0.6);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     display: flex;
@@ -122,7 +122,7 @@
     outline: none;
     border-color: var(--accent-primary);
     background: var(--bg-secondary);
-    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
 }
 
 .form-group textarea {
@@ -203,12 +203,12 @@
     font-weight: 600;
     font-family: inherit;
     transition: all 0.3s ease;
-    box-shadow: 0 3px 10px rgba(108, 92, 231, 0.25);
+    box-shadow: 0 3px 10px rgba(13, 148, 136, 0.2);
 }
 
 .btn-small:hover {
     transform: translateY(-1px);
-    box-shadow: 0 5px 15px rgba(108, 92, 231, 0.35);
+    box-shadow: 0 5px 15px rgba(13, 148, 136, 0.3);
 }
 
 .btn-text-danger {
