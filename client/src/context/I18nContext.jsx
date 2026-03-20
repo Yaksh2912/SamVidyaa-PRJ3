@@ -74,7 +74,44 @@ const translations = {
       successMessage: 'Thank you for contacting us! We\'ll get back to you soon.'
     },
     footer: {
-      copyright: '© 2024 SamVidyaa. All rights reserved.'
+      copyright: '© 2024 SamVidyaa. All rights reserved.',
+      tagline: 'Empowering education through technology.',
+      product: 'Product',
+      productLinks: ['Features', 'Pricing', 'Integrations', 'Changelog'],
+      company: 'Company',
+      companyLinks: ['About', 'Blog', 'Careers', 'Press'],
+      support: 'Support',
+      supportLinks: ['Help Center', 'Documentation', 'Status', 'Contact']
+    },
+    stats: {
+      students: '500+',
+      studentsLabel: 'Active Students',
+      courses: '50+',
+      coursesLabel: 'Courses',
+      satisfaction: '98%',
+      satisfactionLabel: 'Satisfaction',
+      support: '24/7',
+      supportLabel: 'Support'
+    },
+    howItWorks: {
+      title: 'How It',
+      titleHighlight: 'Works',
+      subtitle: 'Get started in three simple steps',
+      steps: [
+        { number: '01', title: 'Create Account', desc: 'Sign up in seconds with your college email and choose your role.' },
+        { number: '02', title: 'Explore Courses', desc: 'Browse available courses, enroll, and access all learning materials.' },
+        { number: '03', title: 'Start Learning', desc: 'Complete tasks, earn points, and track your progress on the leaderboard.' }
+      ]
+    },
+    testimonials: {
+      title: 'What People',
+      titleHighlight: 'Say',
+      subtitle: 'Hear from our students and teachers',
+      items: [
+        { quote: 'SamVidyaa transformed how I manage my coursework. The point system keeps me motivated!', name: 'Priya Sharma', role: 'Computer Science Student' },
+        { quote: 'Creating and managing courses has never been easier. The dashboard is incredibly intuitive.', name: 'Dr. Rajesh Kumar', role: 'Professor, IT Department' },
+        { quote: 'I love the gamification features. Competing on the leaderboard makes studying fun!', name: 'Arjun Patel', role: 'Electronics Student' }
+      ]
     },
     auth: {
       login: {
@@ -298,7 +335,44 @@ const translations = {
       successMessage: 'हमसे संपर्क करने के लिए धन्यवाद! हम जल्द ही आपसे संपर्क करेंगे।'
     },
     footer: {
-      copyright: '© 2024 SamVidyaa. सभी अधिकार सुरक्षित।'
+      copyright: '© 2024 SamVidyaa. सभी अधिकार सुरक्षित।',
+      tagline: 'प्रौद्योगिकी के माध्यम से शिक्षा को सशक्त बनाना।',
+      product: 'उत्पाद',
+      productLinks: ['विशेषताएं', 'मूल्य निर्धारण', 'एकीकरण', 'परिवर्तन लॉग'],
+      company: 'कंपनी',
+      companyLinks: ['हमारे बारे में', 'ब्लॉग', 'करियर', 'प्रेस'],
+      support: 'सहायता',
+      supportLinks: ['सहायता केंद्र', 'दस्तावेज़ीकरण', 'स्थिति', 'संपर्क']
+    },
+    stats: {
+      students: '500+',
+      studentsLabel: 'सक्रिय छात्र',
+      courses: '50+',
+      coursesLabel: 'पाठ्यक्रम',
+      satisfaction: '98%',
+      satisfactionLabel: 'संतुष्टि',
+      support: '24/7',
+      supportLabel: 'सहायता'
+    },
+    howItWorks: {
+      title: 'यह कैसे',
+      titleHighlight: 'काम करता है',
+      subtitle: 'तीन सरल चरणों में शुरू करें',
+      steps: [
+        { number: '01', title: 'खाता बनाएं', desc: 'अपने कॉलेज ईमेल से सेकंडों में साइन अप करें और अपनी भूमिका चुनें।' },
+        { number: '02', title: 'पाठ्यक्रम खोजें', desc: 'उपलब्ध पाठ्यक्रमों को ब्राउज़ करें, नामांकन करें, और सभी शिक्षण सामग्री तक पहुंचें।' },
+        { number: '03', title: 'सीखना शुरू करें', desc: 'कार्य पूरे करें, अंक अर्जित करें, और लीडरबोर्ड पर अपनी प्रगति ट्रैक करें।' }
+      ]
+    },
+    testimonials: {
+      title: 'लोग क्या',
+      titleHighlight: 'कहते हैं',
+      subtitle: 'हमारे छात्रों और शिक्षकों से सुनें',
+      items: [
+        { quote: 'SamVidyaa ने मेरे पाठ्यक्रम प्रबंधन को बदल दिया। पॉइंट सिस्टम मुझे प्रेरित रखता है!', name: 'प्रिया शर्मा', role: 'कंप्यूटर साइंस छात्रा' },
+        { quote: 'पाठ्यक्रम बनाना और प्रबंधित करना इतना आसान कभी नहीं रहा। डैशबोर्ड अविश्वसनीय रूप से सहज है।', name: 'डॉ. राजेश कुमार', role: 'प्रोफेसर, आईटी विभाग' },
+        { quote: 'मुझे गेमिफ़िकेशन सुविधाएं बहुत पसंद हैं। लीडरबोर्ड पर प्रतिस्पर्धा पढ़ाई को मज़ेदार बनाती है!', name: 'अर्जुन पटेल', role: 'इलेक्ट्रॉनिक्स छात्र' }
+      ]
     },
     auth: {
       login: {
