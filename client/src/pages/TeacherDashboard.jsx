@@ -46,6 +46,7 @@ function TeacherDashboard() {
   // Handout state
   const [handoutUploading, setHandoutUploading] = React.useState(false)
   const handoutInputRef = React.useRef(null)
+  const [activeTab, setActiveTab] = React.useState('Dashboard')
 
   const [stats, setStats] = React.useState({
     activeClasses: 0,
@@ -91,7 +92,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`http://localhost:5001/api/modules?course_id=${courseId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/modules?course_id=${courseId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
@@ -110,7 +111,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`http://localhost:5001/api/tasks?module_id=${moduleId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/tasks?module_id=${moduleId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
@@ -129,7 +130,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`http://localhost:5001/api/enrollments/course/${courseId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/enrollments/course/${courseId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
@@ -151,7 +152,7 @@ function TeacherDashboard() {
       const userStr = localStorage.getItem('user');
       const token = userStr ? JSON.parse(userStr).token : null;
 
-      const response = await fetch(`http://localhost:5001/api/enrollments/${enrollmentId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/enrollments/${enrollmentId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -240,7 +241,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`http://localhost:5001/api/courses/${courseId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -262,7 +263,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`http://localhost:5001/api/modules/${moduleId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/modules/${moduleId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -288,7 +289,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`http://localhost:5001/api/tasks/${taskId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -315,7 +316,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`http://localhost:5001/api/courses/${courseId}/export`, {
+      const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}/export`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
 
@@ -344,7 +345,7 @@ function TeacherDashboard() {
     try {
       const userStr = localStorage.getItem('user')
       const token = userStr ? JSON.parse(userStr).token : null
-      const response = await fetch(`http://localhost:5001/api/modules/${moduleId}/export`, {
+      const response = await fetch(`${API_BASE_URL}/api/modules/${moduleId}/export`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
 
@@ -448,372 +449,381 @@ function TeacherDashboard() {
   const t = translations.dashboard.teacher
 
   return (
-    <div className="dashboard" data-theme={theme}>
-      <nav className="dashboard-nav">
-        <div className="nav-content">
+    <div className="dashboard-layout" data-theme={theme}>
+      {/* SIDEBAR */}
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-logo">
           <h1 className="dashboard-title">{t.title}</h1>
-          <div className="nav-actions">
-            <div className="nav-controls">
-              <select
-                className="language-selector"
-                value={language}
-                onChange={(e) => changeLanguage(e.target.value)}
-              >
-                <option value="en">EN</option>
-                <option value="hi">हिं</option>
-              </select>
-              <button
-                className="theme-toggle"
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-              >
-                {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
-              </button>
+        </div>
+        
+        <nav className="sidebar-nav">
+          <button className={`sidebar-link ${activeTab === 'Dashboard' ? 'active' : ''}`} onClick={() => { setActiveTab('Dashboard'); handleBack(); }}>
+            <HiChartBar className="sidebar-icon" /> Dashboard
+          </button>
+          <button className={`sidebar-link ${activeTab === 'My Courses' ? 'active' : ''}`} onClick={() => setActiveTab('My Courses')}>
+            <HiBookOpen className="sidebar-icon" /> My Courses
+          </button>
+        </nav>
+
+        <div className="sidebar-bottom">
+          <div className="theme-toggle-row">
+            <span className="text-secondary" style={{ fontSize: '0.85rem', fontWeight: 500 }}>Theme</span>
+            <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+              {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
+            </button>
+          </div>
+          <div className="sidebar-profile">
+            <div className="profile-info">
+              <div className="profile-avatar">{user?.name ? user.name.charAt(0).toUpperCase() : 'T'}</div>
+              <div className="profile-text">
+                <span className="profile-name">{user?.name || 'Teacher'}</span>
+                <span className="profile-role">Teacher</span>
+              </div>
             </div>
-            <span className="user-info">{t.welcome}, {user?.name || 'Teacher'}</span>
-            <button onClick={handleLogout} className="btn btn-secondary">
-              {t.logout}
+            <button onClick={handleLogout} className="btn-logout" title="Logout">
+              <HiArrowDownTray style={{ transform: 'rotate(-90deg)', fontSize: '1.2rem' }} />
             </button>
           </div>
         </div>
-      </nav>
+      </aside>
 
-      <main className="dashboard-main">
-        <div className="dashboard-header">
-          <h2>{t.header}</h2>
-          <p>{t.subtitle}</p>
-        </div>
+      {/* MAIN CONTENT */}
+      <main className="dashboard-content">
+        <header className="dashboard-topbar">
+          <div className="topbar-left">
+            <h2 className="topbar-title">
+              {activeTab === 'Dashboard' ? `Welcome Back, ${user?.name || 'Teacher'}` :
+               activeTab === 'My Courses' ? (selectedCourse ? selectedCourse.course_name : 'My Courses') : activeTab}
+            </h2>
+          </div>
+          <div className="topbar-right">
+            <select
+              className="language-selector"
+              value={language}
+              onChange={(e) => changeLanguage(e.target.value)}
+            >
+              <option value="en">EN</option>
+              <option value="hi">हिं</option>
+            </select>
+          </div>
+        </header>
 
-        <div className="stats-grid">
-          <motion.div
-            className="stat-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <div className="stat-icon"><HiUsers /></div>
-            <div className="stat-info">
-              <h3>{t.stats.totalStudents}</h3>
-              <p className="stat-number">{stats.totalStudents}</p>
-            </div>
-          </motion.div>
-          <motion.div
-            className="stat-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <div className="stat-icon"><HiBookOpen /></div>
-            <div className="stat-info">
-              <h3>{t.stats.activeClasses}</h3>
-              <p className="stat-number">{stats.activeClasses}</p>
-            </div>
-          </motion.div>
-          <motion.div
-            className="stat-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <div className="stat-icon"><HiDocumentText /></div>
-            <div className="stat-info">
-              <h3>{t.stats.pendingGrading}</h3>
-              <p className="stat-number">{stats.pendingGrading}</p>
-            </div>
-          </motion.div>
-          <motion.div
-            className="stat-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <div className="stat-icon"><HiChartBar /></div>
-            <div className="stat-info">
-              <h3>{t.stats.avgPerformance}</h3>
-              <p className="stat-number">{stats.avgPerformance}</p>
-            </div>
-          </motion.div>
-        </div>
-
-
-
-
-        {!selectedCourse ? (
-          /* COURSE LIST VIEW */
-          <div className="courses-section">
-            <div className="section-header">
-              <h3>My Courses</h3>
-              <button className="btn btn-primary" onClick={() => setShowCourseForm(true)}>
-                <HiFolderPlus /> Create Course
-              </button>
-            </div>
-            <div className="courses-grid">
-              {courses.length === 0 ? <p className="no-data">No courses created yet.</p> : courses.map(course => (
-                <motion.div
-                  key={course._id}
-                  className="course-card"
-                  whileHover={{ y: -5 }}
-                  onClick={() => handleCourseSelect(course)}
-                >
-                  <div className="course-header">
-                    <span className="course-code">{course.course_code}</span>
-                    <button className="btn-icon delete-btn" onClick={(e) => handleDeleteCourse(e, course._id)} title="Delete Course">
-                      <HiTrash />
-                    </button>
-                  </div>
-                  <h4>{course.course_name}</h4>
-                  <p>{course.description}</p>
-                  <div className="course-meta">
-                    <span>{course.subject}</span>
-                    <span>Q: {course.course_test_questions} | {course.points || 0} pts</span>
+        <div className="dashboard-workspace">
+          {activeTab === 'Dashboard' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
+              <div className="workspace-panel-header">
+                <h3>Quick Stats</h3>
+              </div>
+              <div className="stats-grid">
+                <motion.div className="stat-card" whileHover={{ y: -4 }}>
+                  <div className="stat-icon"><HiUsers /></div>
+                  <div className="stat-info">
+                    <h3>{t.stats.totalStudents}</h3>
+                    <p className="stat-number">{stats.totalStudents}</p>
                   </div>
                 </motion.div>
-              ))}
-            </div>
-          </div>
-        ) : !selectedModule ? (
-          /* MODULE LIST VIEW */
-          <div className="modules-view">
-            <div className="view-header">
-              <button className="btn btn-secondary" onClick={handleBack}>
-                ← Back to Courses
-              </button>
-              <div className="view-title-row">
-                <div className="view-title-info">
-                  <h2>{selectedCourse.course_name} <span className="course-code-large">({selectedCourse.course_code})</span></h2>
-                  <p style={{ color: 'var(--text-secondary)' }}>{selectedCourse.description}</p>
-                </div>
-                <div className="course-actions">
-                  <button className="btn btn-outline" onClick={() => handleCourseExport(selectedCourse._id, selectedCourse.course_code)} title="Export Course">
-                    <HiArrowDownTray /> Export Course
-                  </button>
-                  <button className="btn btn-secondary" onClick={handleViewStudents}>
-                    <HiUserGroup /> Students
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => setShowRewardsModal(true)}>
-                    <HiGift /> Rewards
-                  </button>
-                  <button className="btn btn-primary" onClick={() => setShowModuleForm(true)}>
-                    <HiFolderPlus /> Add Module
-                  </button>
-                </div>
-
-                {/* Hidden file input for handout */}
-                <input
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  style={{ display: 'none' }}
-                  ref={handoutInputRef}
-                  onChange={handleHandoutUpload}
-                />
+                <motion.div className="stat-card" whileHover={{ y: -4 }}>
+                  <div className="stat-icon"><HiBookOpen /></div>
+                  <div className="stat-info">
+                    <h3>{t.stats.activeClasses}</h3>
+                    <p className="stat-number">{stats.activeClasses}</p>
+                  </div>
+                </motion.div>
+                <motion.div className="stat-card" whileHover={{ y: -4 }}>
+                  <div className="stat-icon"><HiDocumentText /></div>
+                  <div className="stat-info">
+                    <h3>{t.stats.pendingGrading}</h3>
+                    <p className="stat-number">{stats.pendingGrading}</p>
+                  </div>
+                </motion.div>
+                <motion.div className="stat-card" whileHover={{ y: -4 }}>
+                  <div className="stat-icon"><HiChartBar /></div>
+                  <div className="stat-info">
+                    <h3>{t.stats.avgPerformance}</h3>
+                    <p className="stat-number">{stats.avgPerformance}</p>
+                  </div>
+                </motion.div>
               </div>
-            </div>
 
-            {/* Handout section */}
-            <div style={{
-              background: 'var(--bg-tertiary)',
-              borderRadius: 'var(--border-radius-sm)',
-              padding: '0.9rem 1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
-              flexWrap: 'wrap',
-              marginBottom: '1.25rem',
-              border: selectedCourse.handout_path ? '1px solid var(--accent-green, #10b981)' : '1px dashed var(--border-color)',
-            }}>
-              <HiPaperClip style={{ flexShrink: 0, color: selectedCourse.handout_path ? 'var(--accent-green, #10b981)' : 'var(--text-tertiary)' }} />
-              {selectedCourse.handout_path ? (
-                <>
-                  <span style={{ flex: 1, fontWeight: 500, fontSize: '0.9rem' }}>
-                    <a
-                      href={`${API_BASE_URL.replace('/api', '')}/${selectedCourse.handout_path.replace(/\\/g, '/')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--accent-blue, #3b82f6)', textDecoration: 'underline' }}
-                    >
-                      {selectedCourse.handout_filename}
-                    </a>
-                  </span>
-                  <button
-                    className="btn btn-outline"
-                    style={{ fontSize: '0.82rem', padding: '0.3rem 0.8rem' }}
-                    onClick={() => handoutInputRef.current?.click()}
-                    disabled={handoutUploading}
-                  >
-                    {handoutUploading ? 'Uploading…' : '↑ Replace'}
-                  </button>
-                  <button
-                    className="btn btn-danger"
-                    style={{ fontSize: '0.82rem', padding: '0.3rem 0.8rem' }}
-                    onClick={handleHandoutDelete}
-                  >
-                    <HiTrash /> Remove
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span style={{ flex: 1, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No handout uploaded</span>
-                  <button
-                    className="btn btn-outline"
-                    style={{ fontSize: '0.82rem', padding: '0.3rem 0.9rem' }}
-                    onClick={() => handoutInputRef.current?.click()}
-                    disabled={handoutUploading}
-                  >
-                    <HiPaperClip /> {handoutUploading ? 'Uploading…' : 'Upload Handout (PDF)'}
-                  </button>
-                </>
-              )}
-            </div>
+              <div className="recent-activity mt-4">
+                <h3>{t.activity.title}</h3>
+                <div className="activity-list">
+                  <div className="activity-item">
+                    <span className="activity-time">2 hours ago</span>
+                    <span className="activity-text">John Doe {t.activity.submitted} Lab 5</span>
+                  </div>
+                  <div className="activity-item">
+                    <span className="activity-time">5 hours ago</span>
+                    <span className="activity-text">Jane Smith {t.activity.submitted} Lab 5</span>
+                  </div>
+                  <div className="activity-item">
+                    <span className="activity-time">{t.activity.dayAgo}</span>
+                    <span className="activity-text">Bob Johnson {t.activity.submitted} Lab 4</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
-            <div className="modules-section">
-              <h3>Modules</h3>
-              {loadingModules ? <p>Loading modules...</p> : (
-                <div className="modules-grid">
-                  {modules.length === 0 ? <p className="no-modules">No modules in this course.</p> : modules.map(module => (
-                    <div key={module._id} className="module-card">
-                      <div className="module-info">
-                        <h4>{module.module_name} <span className="module-order">#{module.module_order}</span></h4>
-                        <p>{module.description}</p>
-                        <div className="module-meta">
-                          <span className="file-count">{module.files.length} Files</span>
-                          <span>{module.tasks_per_module} Tasks</span>
-                          <span>{module.points || 0} pts</span>
+          {activeTab === 'My Courses' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
+              {!selectedCourse ? (
+                /* COURSE LIST VIEW */
+                <div className="courses-section">
+                  <div className="section-header">
+                    <h3>My Courses</h3>
+                    <button className="btn btn-primary" onClick={() => setShowCourseForm(true)}>
+                      <HiFolderPlus /> Create Course
+                    </button>
+                  </div>
+                  <div className="courses-grid">
+                    {courses.length === 0 ? <p className="no-data">No courses created yet.</p> : courses.map(course => (
+                      <motion.div
+                        key={course._id}
+                        className="course-card"
+                        whileHover={{ y: -5 }}
+                        onClick={() => handleCourseSelect(course)}
+                      >
+                        <div className="course-header">
+                          <span className="course-code">{course.course_code}</span>
+                          <button className="btn-icon delete-btn" onClick={(e) => handleDeleteCourse(e, course._id)} title="Delete Course">
+                            <HiTrash />
+                          </button>
                         </div>
+                        <h4>{course.course_name}</h4>
+                        <p>{course.description}</p>
+                        <div className="course-meta">
+                          <span>{course.subject}</span>
+                          <span>Q: {course.course_test_questions} | {course.points || 0} pts</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              ) : !selectedModule ? (
+                /* MODULE LIST VIEW */
+                <div className="modules-view">
+                  <div className="view-header">
+                    <button className="btn btn-secondary" onClick={handleBack}>
+                      ← Back to Courses
+                    </button>
+                    <div className="view-title-row">
+                      <div className="view-title-info">
+                        <h2>{selectedCourse.course_name} <span className="course-code-large">({selectedCourse.course_code})</span></h2>
+                        <p style={{ color: 'var(--text-secondary)' }}>{selectedCourse.description}</p>
                       </div>
-                      <div className="module-actions">
-                        <button className="btn btn-outline" onClick={() => handleModuleExport(module._id, module.module_name)} title="Export Module">
-                          <HiArrowDownTray /> Export
+                      <div className="course-actions">
+                        <button className="btn btn-outline" onClick={() => handleCourseExport(selectedCourse._id, selectedCourse.course_code)} title="Export Course">
+                          <HiArrowDownTray /> Export Course
                         </button>
-                        <button className="btn btn-outline" onClick={() => handleModuleSelect(module)} title="View Tasks">
-                          <HiListBullet /> Tasks
+                        <button className="btn btn-secondary" onClick={handleViewStudents}>
+                          <HiUserGroup /> Students
                         </button>
-                        <button className="btn btn-outline" onClick={() => openTaskForm(module._id)} title="Add Task">
-                          <HiPlus /> Add
+                        <button className="btn btn-secondary" onClick={() => setShowRewardsModal(true)}>
+                          <HiGift /> Rewards
                         </button>
+                        <button className="btn btn-primary" onClick={() => setShowModuleForm(true)}>
+                          <HiFolderPlus /> Add Module
+                        </button>
+                      </div>
 
-                        <button className="btn btn-danger" onClick={() => handleDeleteModule(module._id)} title="Delete Module">
-                          <HiTrash />
-                        </button>
-                      </div>
+                      {/* Hidden file input for handout */}
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        style={{ display: 'none' }}
+                        ref={handoutInputRef}
+                        onChange={handleHandoutUpload}
+                      />
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          /* TASK LIST VIEW */
-          <div className="tasks-view">
-            <div className="view-header">
-              <button className="btn btn-secondary" onClick={handleBack}>
-                ← Back to Modules
-              </button>
-              <div className="view-title-row">
-                <div className="view-title-info">
-                  <h2>{selectedModule.module_name} <span className="module-order">Module #{selectedModule.module_order}</span></h2>
-                  <p style={{ color: 'var(--text-secondary)' }}>{selectedModule.description}</p>
-                </div>
-                <button className="btn btn-primary" onClick={() => openTaskForm(selectedModule._id)}>
-                  <HiPlus /> Create Task
-                </button>
-              </div>
-            </div>
+                  </div>
 
-            <div className="modules-section">
-              <h3>Tasks</h3>
-              {loadingTasks ? <p>Loading tasks...</p> : (
-                <div className="modules-grid">
-                  {tasks.length === 0 ? <p className="no-modules">No tasks in this module.</p> : tasks.map(task => (
-                    <div key={task._id} className="module-card">
-                      <div className="module-info">
-                        <h4>
-                          {task.task_name}
-                          <span style={{ fontSize: '0.8rem', marginLeft: '0.5rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                            {task.difficulty} | {task.points}pts
-                          </span>
-                        </h4>
-                        <p>{task.problem_statement}</p>
-                        <div className="module-meta">
-                          <span>Lang: {task.language}</span>
-                          <span>Time: {task.time_limit}m</span>
-                          <span>Tests: {task.test_cases_count}</span>
-                        </div>
-                        {task.constraints && (
-                          <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
-                            <strong>Constraints:</strong> {task.constraints}
-                          </p>
-                        )}
-                      </div>
-                      <div className="module-actions">
+                  {/* Handout section */}
+                  <div style={{
+                    background: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--border-radius-sm)',
+                    padding: '0.9rem 1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    flexWrap: 'wrap',
+                    marginBottom: '1.25rem',
+                    border: selectedCourse.handout_path ? '1px solid var(--accent-green, #10b981)' : '1px dashed var(--border-color)',
+                  }}>
+                    <HiPaperClip style={{ flexShrink: 0, color: selectedCourse.handout_path ? 'var(--accent-green, #10b981)' : 'var(--text-tertiary)' }} />
+                    {selectedCourse.handout_path ? (
+                      <>
+                        <span style={{ flex: 1, fontWeight: 500, fontSize: '0.9rem' }}>
+                          <a
+                            href={`${API_BASE_URL.replace('/api', '')}/${selectedCourse.handout_path.replace(/\\/g, '/')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: 'var(--accent-blue, #3b82f6)', textDecoration: 'underline' }}
+                          >
+                            {selectedCourse.handout_filename}
+                          </a>
+                        </span>
+                        <button
+                          className="btn btn-outline"
+                          style={{ fontSize: '0.82rem', padding: '0.3rem 0.8rem' }}
+                          onClick={() => handoutInputRef.current?.click()}
+                          disabled={handoutUploading}
+                        >
+                          {handoutUploading ? 'Uploading…' : '↑ Replace'}
+                        </button>
                         <button
                           className="btn btn-danger"
-                          onClick={() => handleDeleteTask(task._id, task.module_id)}
-                          title="Delete Task"
+                          style={{ fontSize: '0.82rem', padding: '0.3rem 0.8rem' }}
+                          onClick={handleHandoutDelete}
                         >
-                          <HiTrash />
+                          <HiTrash /> Remove
                         </button>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ flex: 1, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No handout uploaded</span>
+                        <button
+                          className="btn btn-outline"
+                          style={{ fontSize: '0.82rem', padding: '0.3rem 0.9rem' }}
+                          onClick={() => handoutInputRef.current?.click()}
+                          disabled={handoutUploading}
+                        >
+                          <HiPaperClip /> {handoutUploading ? 'Uploading…' : 'Upload Handout (PDF)'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="modules-section">
+                    <h3>Modules</h3>
+                    {loadingModules ? <p>Loading modules...</p> : (
+                      <div className="modules-grid">
+                        {modules.length === 0 ? <p className="no-modules">No modules in this course.</p> : modules.map(module => (
+                          <div key={module._id} className="module-card">
+                            <div className="module-info">
+                              <h4>{module.module_name} <span className="module-order">#{module.module_order}</span></h4>
+                              <p>{module.description}</p>
+                              <div className="module-meta">
+                                <span className="file-count">{module.files.length} Files</span>
+                                <span>{module.tasks_per_module} Tasks</span>
+                                <span>{module.points || 0} pts</span>
+                              </div>
+                            </div>
+                            <div className="module-actions">
+                              <button className="btn btn-outline" onClick={() => handleModuleExport(module._id, module.module_name)} title="Export Module">
+                                <HiArrowDownTray /> Export
+                              </button>
+                              <button className="btn btn-outline" onClick={() => handleModuleSelect(module)} title="View Tasks">
+                                <HiListBullet /> Tasks
+                              </button>
+                              <button className="btn btn-outline" onClick={() => openTaskForm(module._id)} title="Add Task">
+                                <HiPlus /> Add
+                              </button>
+
+                              <button className="btn btn-danger" onClick={() => handleDeleteModule(module._id)} title="Delete Module">
+                                <HiTrash />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* TASK LIST VIEW */
+                <div className="tasks-view">
+                  <div className="view-header">
+                    <button className="btn btn-secondary" onClick={handleBack}>
+                      ← Back to Modules
+                    </button>
+                    <div className="view-title-row">
+                      <div className="view-title-info">
+                        <h2>{selectedModule.module_name} <span className="module-order">Module #{selectedModule.module_order}</span></h2>
+                        <p style={{ color: 'var(--text-secondary)' }}>{selectedModule.description}</p>
+                      </div>
+                      <button className="btn btn-primary" onClick={() => openTaskForm(selectedModule._id)}>
+                        <HiPlus /> Create Task
+                      </button>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="modules-section">
+                    <h3>Tasks</h3>
+                    {loadingTasks ? <p>Loading tasks...</p> : (
+                      <div className="modules-grid">
+                        {tasks.length === 0 ? <p className="no-modules">No tasks in this module.</p> : tasks.map(task => (
+                          <div key={task._id} className="module-card">
+                            <div className="module-info">
+                              <h4>
+                                {task.task_name}
+                                <span style={{ fontSize: '0.8rem', marginLeft: '0.5rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                                  {task.difficulty} | {task.points}pts
+                                </span>
+                              </h4>
+                              <p>{task.problem_statement}</p>
+                              <div className="module-meta">
+                                <span>Lang: {task.language}</span>
+                                <span>Time: {task.time_limit}m</span>
+                                <span>Tests: {task.test_cases_count}</span>
+                              </div>
+                              {task.constraints && (
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
+                                  <strong>Constraints:</strong> {task.constraints}
+                                </p>
+                              )}
+                            </div>
+                            <div className="module-actions">
+                              <button
+                                className="btn btn-danger"
+                                onClick={() => handleDeleteTask(task._id, task.module_id)}
+                                title="Delete Task"
+                              >
+                                <HiTrash />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
 
-        {showCourseForm && (
-          <CreateCourseForm
-            onClose={() => setShowCourseForm(false)}
-            onCourseCreated={handleCourseCreated}
-          />
-        )}
-
-        {showModuleForm && selectedCourse && (
-          <CreateModuleForm
-            onClose={() => setShowModuleForm(false)}
-            onModuleCreated={handleModuleCreated}
-            courseId={selectedCourse._id}
-          />
-        )}
-
-        {showTaskForm && selectedModuleForTask && (
-          <CreateTaskForm
-            onClose={() => setShowTaskForm(false)}
-            onTaskCreated={handleTaskCreated}
-            moduleId={selectedModuleForTask}
-          />
-        )}
-
-        {showRewardsModal && selectedCourse && (
-          <ManageRewardsModal
-            course={selectedCourse}
-            onClose={() => setShowRewardsModal(false)}
-          />
-        )}
-
-        <motion.div
-          className="recent-activity"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.9 }}
-        >
-          <h3>{t.activity.title}</h3>
-          <div className="activity-list">
-            <div className="activity-item">
-              <span className="activity-time">2 hours ago</span>
-              <span className="activity-text">John Doe {t.activity.submitted} Lab 5</span>
-            </div>
-            <div className="activity-item">
-              <span className="activity-time">5 hours ago</span>
-              <span className="activity-text">Jane Smith {t.activity.submitted} Lab 5</span>
-            </div>
-            <div className="activity-item">
-              <span className="activity-time">{t.activity.dayAgo}</span>
-              <span className="activity-text">Bob Johnson {t.activity.submitted} Lab 4</span>
-            </div>
-          </div>
-        </motion.div>
+        </div>
       </main>
+
+      {showCourseForm && (
+        <CreateCourseForm
+          onClose={() => setShowCourseForm(false)}
+          onCourseCreated={handleCourseCreated}
+        />
+      )}
+
+      {showModuleForm && selectedCourse && (
+        <CreateModuleForm
+          onClose={() => setShowModuleForm(false)}
+          onModuleCreated={handleModuleCreated}
+          courseId={selectedCourse._id}
+        />
+      )}
+
+      {showTaskForm && selectedModuleForTask && (
+        <CreateTaskForm
+          onClose={() => setShowTaskForm(false)}
+          onTaskCreated={handleTaskCreated}
+          moduleId={selectedModuleForTask}
+        />
+      )}
+
+      {showRewardsModal && selectedCourse && (
+        <ManageRewardsModal
+          course={selectedCourse}
+          onClose={() => setShowRewardsModal(false)}
+        />
+      )}
 
       {/* STUDENTS POPUP MODAL */}
       {viewingStudents && selectedCourse && (

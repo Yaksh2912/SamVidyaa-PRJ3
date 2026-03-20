@@ -75,7 +75,7 @@ function StudentDashboard() {
       // We only consider "Active" or "Pending" enrollments as "taking a slot". 
       // Rejected/Dropped should appear in "Available" so they can try again.
       const activeEnrollmentIds = enrolledData
-        .filter(e => ['ACTIVE', 'APPROVED', 'PENDING'].includes(e.status))
+        .filter(e => e.course_id && ['ACTIVE', 'APPROVED', 'PENDING'].includes(e.status))
         .map(e => e.course_id._id);
 
       const available = allCourses.filter(c => !activeEnrollmentIds.includes(c._id) && c.is_active !== false); // Assuming default active if field missing
@@ -83,7 +83,7 @@ function StudentDashboard() {
 
       // Filter Enrolled Courses to only show Active/Pending/Approved - Hide Rejected/Dropped to "archive" them essentially
       // unless we want a "History" tab later. For now, user wants them "back in available", which implies removed from here.
-      setEnrolledCourses(enrolledData.filter(e => ['ACTIVE', 'APPROVED', 'PENDING'].includes(e.status)));
+      setEnrolledCourses(enrolledData.filter(e => e.course_id && ['ACTIVE', 'APPROVED', 'PENDING'].includes(e.status)));
 
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
