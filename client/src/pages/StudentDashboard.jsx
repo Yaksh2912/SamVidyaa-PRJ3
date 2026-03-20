@@ -24,6 +24,7 @@ function StudentDashboard() {
   const [userPoints, setUserPoints] = useState(0);
   const [claimingReward, setClaimingReward] = useState(null);
   const [showPointShop, setShowPointShop] = useState(false);
+  const [activeTab, setActiveTab] = useState('Dashboard');
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courseModules, setCourseModules] = useState([]);
@@ -277,392 +278,361 @@ function StudentDashboard() {
   const t = translations.dashboard.student
 
   return (
-    <div className="dashboard" data-theme={theme}>
-      <nav className="dashboard-nav">
-        <div className="nav-content">
+    <div className="dashboard-layout" data-theme={theme}>
+      {/* SIDEBAR */}
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-logo">
           <h1 className="dashboard-title">{t.title}</h1>
-          <div className="nav-actions">
-            <div className="nav-controls">
-              <select
-                className="language-selector"
-                value={language}
-                onChange={(e) => changeLanguage(e.target.value)}
-              >
-                <option value="en">EN</option>
-                <option value="hi">हिं</option>
-              </select>
-              <button
-                className="theme-toggle"
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-              >
-                {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
-              </button>
+        </div>
+        
+        <nav className="sidebar-nav">
+          <button className={`sidebar-link ${activeTab === 'Dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('Dashboard')}>
+            <HiStar className="sidebar-icon" /> Dashboard
+          </button>
+          <button className={`sidebar-link ${activeTab === 'My Courses' ? 'active' : ''}`} onClick={() => setActiveTab('My Courses')}>
+            <HiBookOpen className="sidebar-icon" /> My Courses
+          </button>
+          <button className={`sidebar-link ${activeTab === 'Available Courses' ? 'active' : ''}`} onClick={() => setActiveTab('Available Courses')}>
+            <HiPlusCircle className="sidebar-icon" /> Available Courses
+          </button>
+          <button className={`sidebar-link ${activeTab === 'Point Shop' ? 'active' : ''}`} onClick={() => setActiveTab('Point Shop')}>
+            <HiShoppingCart className="sidebar-icon" /> Point Shop
+          </button>
+          <button className={`sidebar-link ${activeTab === 'Rankings' ? 'active' : ''}`} onClick={() => setActiveTab('Rankings')}>
+            <HiTrophy className="sidebar-icon" /> Rankings
+          </button>
+        </nav>
+
+        <div className="sidebar-bottom">
+          <div className="theme-toggle-row">
+            <span className="text-secondary" style={{ fontSize: '0.85rem', fontWeight: 500 }}>Theme</span>
+            <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+              {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
+            </button>
+          </div>
+          <div className="sidebar-profile">
+            <div className="profile-info">
+              <div className="profile-avatar">{user?.name ? user.name.charAt(0).toUpperCase() : 'S'}</div>
+              <div className="profile-text">
+                <span className="profile-name">{user?.name || 'Student'}</span>
+                <span className="profile-role">Student</span>
+              </div>
             </div>
-            <div className="points-badge" onClick={() => setShowPointShop(!showPointShop)} title="Open Point Shop">
-              <HiStar className="points-badge-icon" />
-              <span className="points-badge-value">{userPoints}</span>
-              <span className="points-badge-label">pts</span>
-            </div>
-            <span className="user-info">{t.welcome}, {user?.name || 'Student'}</span>
-            <button onClick={handleLogout} className="btn btn-secondary">
-              {t.logout}
+            <button onClick={handleLogout} className="btn-logout" title="Logout">
+              <HiArrowDownTray style={{ transform: 'rotate(-90deg)', fontSize: '1.2rem' }} />
             </button>
           </div>
         </div>
-      </nav>
+      </aside>
 
-      <main className="dashboard-main">
-        <div className="dashboard-header">
-          <h2>{t.header}</h2>
-          <p>{t.subtitle}</p>
-        </div>
+      {/* MAIN CONTENT */}
+      <main className="dashboard-content">
+        {/* MAIN HEADER */}
+        <header className="dashboard-topbar">
+          <div className="topbar-left">
+            <h2 className="topbar-title">
+              {activeTab === 'Dashboard' ? `Welcome Back, ${user?.name || 'Student'}` : activeTab}
+            </h2>
+          </div>
+          <div className="topbar-right">
+            <select
+              className="language-selector"
+              value={language}
+              onChange={(e) => changeLanguage(e.target.value)}
+            >
+              <option value="en">EN</option>
+              <option value="hi">हिं</option>
+            </select>
+            <div 
+              className="points-badge-premium" 
+              onClick={() => setActiveTab('Point Shop')} 
+              title="Open Point Shop"
+            >
+              <HiStar className="premium-star" />
+              <div className="premium-points-info">
+                <span className="premium-points-value">{userPoints}</span>
+                <span className="premium-points-label">Total Points</span>
+              </div>
+            </div>
+          </div>
+        </header>
 
-        <div className="stats-grid">
-          <motion.div
-            className="stat-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <div className="stat-icon">
-              <HiBookOpen />
-            </div>
-            <div className="stat-info">
-              <h3>Enrolled Courses</h3>
-              <p className="stat-number">{enrolledCourses.filter(e => e.status === 'ACTIVE' || e.status === 'APPROVED').length}</p>
-            </div>
-          </motion.div>
-          <motion.div
-            className="stat-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <div className="stat-icon">
-              <HiClock />
-            </div>
-            <div className="stat-info">
-              <h3>Pending Requests</h3>
-              <p className="stat-number">{enrolledCourses.filter(e => e.status === 'PENDING').length}</p>
-            </div>
-          </motion.div>
-          <motion.div
-            className="stat-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <div className="stat-icon">
-              <HiPlusCircle />
-            </div>
-            <div className="stat-info">
-              <h3>Available</h3>
-              <p className="stat-number">{availableCourses.length}</p>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* ENROLLED COURSES SECTION */}
-        <div className="dashboard-section mt-4">
-          <h3>My Courses</h3>
-          {loading ? <p>Loading...</p> : enrolledCourses.length === 0 ? (
-            <p className="empty-state">You are not enrolled in any courses yet.</p>
-          ) : (
-            <div className="modules-grid">
-              {enrolledCourses.map((enrollment) => (
-                <div key={enrollment._id} className="module-card">
-                  <div className="module-info">
-                    <h4>
-                      {enrollment.course_id.course_name}
-                      <span className={`status-badge ${enrollment.status.toLowerCase()}`}>
-                        {enrollment.status}
-                      </span>
-                    </h4>
-                    <p className="text-secondary">{enrollment.course_id.course_code}</p>
-                    <p>{enrollment.course_id.description}</p>
-                    <div className="module-meta">
-                      <span>Instructor: {enrollment.course_id.instructor ? enrollment.course_id.instructor.name : 'Unknown'}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
-                      <button
-                        className="btn btn-primary"
-                        disabled={enrollment.status !== 'ACTIVE' && enrollment.status !== 'APPROVED'}
-                        onClick={() => handleViewCourse(enrollment.course_id)}
-                      >
-                        {enrollment.status === 'PENDING' ? 'Request Pending' : enrollment.status === 'REJECTED' ? 'Not Enrolled' : 'View Course'}
-                      </button>
-                      {(enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') && enrollment.course_id.handout_path && (
-                        <>
-                          <a
-                            className="btn btn-outline"
-                            href={`${API_BASE_URL.replace('/api', '')}/${enrollment.course_id.handout_path.replace(/\\/g, '/')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.88rem' }}
-                          >
-                            <HiPaperClip /> View Handout
-                          </a>
-                          <button
-                            className="btn btn-outline"
-                            onClick={() => handleHandoutDownload(enrollment.course_id.handout_path, enrollment.course_id.handout_filename)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.88rem' }}
-                          >
-                            <HiArrowDownTray /> Download
-                          </button>
-                        </>
-                      )}
-                    </div>
+        {/* WORKSPACE */}
+        <div className="dashboard-workspace">
+          {activeTab === 'Dashboard' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
+              <div className="workspace-panel-header">
+                <h3>Quick Stats</h3>
+              </div>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-icon"><HiBookOpen /></div>
+                  <div className="stat-info">
+                    <h3>Enrolled Courses</h3>
+                    <p className="stat-number">{enrolledCourses.filter(e => e.status === 'ACTIVE' || e.status === 'APPROVED').length}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* AVAILABLE COURSES SECTION */}
-        <div className="dashboard-section mt-5">
-          <h3>Available Courses</h3>
-          {loading ? <p>Loading...</p> : availableCourses.length === 0 ? (
-            <p className="empty-state">No new courses available at the moment.</p>
-          ) : (
-            <div className="modules-grid">
-              {availableCourses.map((course) => (
-                <div key={course._id} className="module-card available">
-                  <div className="module-info">
-                    <h4>{course.course_name}</h4>
-                    <p className="text-secondary">{course.course_code}</p>
-                    <p>{course.description}</p>
-                    <div className="module-meta">
-                      <span>Subject: {course.subject}</span>
-                      <span>Instructor: {course.instructor ? course.instructor.name : 'Unknown'}</span>
-                    </div>
-                    <button
-                      className="btn btn-secondary mt-2"
-                      onClick={() => handleEnroll(course._id)}
-                      disabled={enrollLoading === course._id}
-                    >
-                      {enrollLoading === course._id ? 'Requesting...' : 'Request Enrollment'}
-                    </button>
+                <div className="stat-card">
+                  <div className="stat-icon"><HiClock /></div>
+                  <div className="stat-info">
+                    <h3>Pending Requests</h3>
+                    <p className="stat-number">{enrolledCourses.filter(e => e.status === 'PENDING').length}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* POINT SHOP SECTION */}
-        <motion.div
-          className="dashboard-section point-shop-section mt-5"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.7 }}
-        >
-          <div className="point-shop-header">
-            <div className="point-shop-title-row">
-              <HiShoppingCart className="point-shop-icon" />
-              <h3>Point Shop</h3>
-            </div>
-            <div className="point-shop-balance">
-              <HiStar className="balance-star" />
-              <span className="balance-amount">{userPoints}</span>
-              <span className="balance-label">points available</span>
-            </div>
-          </div>
-
-          <div className="point-shop-earn-row">
-            <button className="btn btn-earn-points" onClick={() => handleAddPoints(50)}>
-              <HiBolt /> Earn 50 Points (Test)
-            </button>
-          </div>
-
-          <div className="rewards-grid">
-            {loadingRewards ? (
-              <p style={{ color: 'var(--text-secondary)' }}>Loading fresh rewards...</p>
-            ) : rewards.length === 0 ? (
-              <p className="empty-state">No custom rewards available. Keep an eye out for updates from your teachers!</p>
-            ) : rewards.map((reward) => (
-              <motion.div
-                key={reward._id}
-                className={`reward-card ${userPoints < reward.cost ? 'locked' : ''}`}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="reward-card-icon">{MAP_ICONS[reward.icon_name] || <HiGift />}</div>
-                <div className="reward-card-body">
-                  <h4 className="reward-card-name" style={{ marginBottom: '0.15rem' }}>{reward.name}</h4>
-                  {reward.course_id && (
-                    <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
-                      Course: {reward.course_id.course_name}
-                    </span>
-                  )}
-                  <p className="reward-card-desc">{reward.description}</p>
+                <div className="stat-card">
+                  <div className="stat-icon"><HiPlusCircle /></div>
+                  <div className="stat-info">
+                    <h3>Available</h3>
+                    <p className="stat-number">{availableCourses.length}</p>
+                  </div>
                 </div>
-                <div className="reward-card-footer">
-                  <span className="reward-cost"><HiStar /> {reward.cost} pts</span>
-                  <button
-                    className="btn btn-claim"
-                    disabled={userPoints < reward.cost || claimingReward === reward._id}
-                    onClick={() => handleClaimReward(reward)}
-                  >
-                    {claimingReward === reward._id ? 'Claiming...' : userPoints < reward.cost ? 'Not enough' : 'Claim'}
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Rankings Mock Data */}
-        <motion.div
-          className="rankings-section"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 1.0 }}
-        >
-          <div className="rankings-header">
-            <h3>{t.leaderboard?.title || "Class Rankings"}</h3>
-            <div className="stat-icon stat-icon-sm">
-              <HiTrophy />
-            </div>
-          </div>
-          <div className="ranking-list">
-            {[
-              { rank: 1, name: "Alice Johnson", score: 2850, avatar: "AJ" },
-              { rank: 2, name: "Bob Smith", score: 2720, avatar: "BS" },
-              { rank: 3, name: user?.name || "Student", score: 2650, avatar: "ME", isCurrentUser: true },
-              { rank: 4, name: "David Wilson", score: 2580, avatar: "DW" },
-              { rank: 5, name: "Eva Brown", score: 2450, avatar: "EB" },
-            ].map((student) => (
-              <div
-                key={student.rank}
-                className={`ranking-item ${student.isCurrentUser ? 'current-user' : ''} ${student.rank <= 3 ? 'top-3' : ''}`}
-              >
-                <div className="rank-badge">{student.rank}</div>
-                <div className="rank-avatar">{student.avatar}</div>
-                <div className="rank-info">
-                  <span className="rank-name">
-                    {student.isCurrentUser ? `${student.name} (${t.leaderboard?.yourRank || "You"})` : student.name}
-                  </span>
-                </div>
-                <div className="rank-score">
-                  {student.score} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{t.leaderboard?.points || "pts"}</span>
+                <div className="stat-card">
+                  <div className="stat-icon"><HiStar /></div>
+                  <div className="stat-info">
+                    <h3>Points Earned</h3>
+                    <p className="stat-number">{userPoints}</p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </motion.div>
+            </motion.div>
+          )}
+
+          {activeTab === 'My Courses' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
+              <div className="workspace-panel-header">
+                <h3>My Backpack</h3>
+              </div>
+              {loading ? <p>Loading...</p> : enrolledCourses.length === 0 ? (
+                <p className="empty-state">You are not enrolled in any courses yet.</p>
+              ) : (
+                <div className="modules-grid">
+                  {enrolledCourses.map((enrollment) => (
+                    <div key={enrollment._id} className="module-card">
+                      <div className="module-info">
+                        <h4>
+                          {enrollment.course_id.course_name}
+                          <span className={`status-badge ${enrollment.status.toLowerCase()}`}>
+                            {enrollment.status}
+                          </span>
+                        </h4>
+                        <p className="text-secondary">{enrollment.course_id.course_code}</p>
+                        <p>{enrollment.course_id.description}</p>
+                        <div className="module-meta">
+                          <span>Instructor: {enrollment.course_id.instructor ? enrollment.course_id.instructor.name : 'Unknown'}</span>
+                        </div>
+                        <div className="course-card-actions">
+                          <button
+                            className="btn btn-primary"
+                            disabled={enrollment.status !== 'ACTIVE' && enrollment.status !== 'APPROVED'}
+                            onClick={() => handleViewCourse(enrollment.course_id)}
+                          >
+                            {enrollment.status === 'PENDING' ? 'Request Pending' : enrollment.status === 'REJECTED' ? 'Not Enrolled' : 'View Course'}
+                          </button>
+                          {(enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') && enrollment.course_id.handout_path && (
+                            <>
+                              <a
+                                className="btn btn-outline"
+                                href={`${API_BASE_URL.replace('/api', '')}/${enrollment.course_id.handout_path.replace(/\\/g, '/')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <HiPaperClip /> View Handout
+                              </a>
+                              <button
+                                className="btn btn-outline"
+                                onClick={() => handleHandoutDownload(enrollment.course_id.handout_path, enrollment.course_id.handout_filename)}
+                              >
+                                <HiArrowDownTray /> Download
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'Available Courses' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
+              <div className="workspace-panel-header">
+                <h3>Course Catalog</h3>
+              </div>
+              {loading ? <p>Loading...</p> : availableCourses.length === 0 ? (
+                <p className="empty-state">No new courses available at the moment.</p>
+              ) : (
+                <div className="modules-grid">
+                  {availableCourses.map((course) => (
+                    <div key={course._id} className="module-card available">
+                      <div className="module-info">
+                        <h4>{course.course_name}</h4>
+                        <p className="text-secondary">{course.course_code}</p>
+                        <p>{course.description}</p>
+                        <div className="module-meta">
+                          <span>Subject: {course.subject}</span>
+                          <span>Instructor: {course.instructor ? course.instructor.name : 'Unknown'}</span>
+                        </div>
+                        <div className="course-card-actions">
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => handleEnroll(course._id)}
+                            disabled={enrollLoading === course._id}
+                          >
+                            {enrollLoading === course._id ? 'Requesting...' : 'Request Enrollment'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'Point Shop' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel point-shop-panel">
+              <div className="workspace-panel-header">
+                <h3>Fun Zone Rewards</h3>
+                <button className="btn btn-earn-points" onClick={() => handleAddPoints(50)}>
+                  <HiBolt /> Earn 50 Points (Test)
+                </button>
+              </div>
+              <div className="rewards-grid">
+                {loadingRewards ? (
+                  <p style={{ color: 'var(--text-secondary)' }}>Loading fresh rewards...</p>
+                ) : rewards.length === 0 ? (
+                  <p className="empty-state">No custom rewards available. Keep an eye out for updates from your teachers!</p>
+                ) : rewards.map((reward) => (
+                  <motion.div
+                    key={reward._id}
+                    className={`reward-card ${userPoints < reward.cost ? 'locked' : 'unlocked'}`}
+                    whileHover={{ scale: 1.02, y: -4 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="reward-card-icon">{MAP_ICONS[reward.icon_name] || <HiGift />}</div>
+                    <div className="reward-card-body">
+                      <h4 className="reward-card-name" style={{ marginBottom: '0.15rem' }}>{reward.name}</h4>
+                      {reward.course_id && (
+                        <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
+                          Course: {reward.course_id.course_name}
+                        </span>
+                      )}
+                      <p className="reward-card-desc">{reward.description}</p>
+                    </div>
+                    <div className="reward-card-footer">
+                      <span className="reward-cost"><HiStar /> {reward.cost} pts</span>
+                      <button
+                        className="btn btn-claim"
+                        disabled={userPoints < reward.cost || claimingReward === reward._id}
+                        onClick={() => handleClaimReward(reward)}
+                      >
+                        {claimingReward === reward._id ? 'Claiming...' : userPoints < reward.cost ? 'Locked' : 'Claim'}
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'Rankings' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
+              <div className="workspace-panel-header">
+                <h3>{t.leaderboard?.title || "Class Rankings"}</h3>
+              </div>
+              <div className="ranking-list">
+                {[
+                  { rank: 1, name: "Alice Johnson", score: 2850, avatar: "AJ" },
+                  { rank: 2, name: "Bob Smith", score: 2720, avatar: "BS" },
+                  { rank: 3, name: user?.name || "Student", score: 2650, avatar: "ME", isCurrentUser: true },
+                  { rank: 4, name: "David Wilson", score: 2580, avatar: "DW" },
+                  { rank: 5, name: "Eva Brown", score: 2450, avatar: "EB" },
+                ].map((student) => (
+                  <div
+                    key={student.rank}
+                    className={`ranking-item ${student.isCurrentUser ? 'current-user' : ''} ${student.rank <= 3 ? 'top-3' : ''}`}
+                  >
+                    <div className="rank-badge">{student.rank}</div>
+                    <div className="rank-avatar">{student.avatar}</div>
+                    <div className="rank-info">
+                      <span className="rank-name">
+                        {student.isCurrentUser ? `${student.name} (${t.leaderboard?.yourRank || "You"})` : student.name}
+                      </span>
+                    </div>
+                    <div className="rank-score">
+                      {student.score} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{t.leaderboard?.points || "pts"}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </div>
       </main>
 
-      {/* COURSE DETAILS MODAL */}
+      {/* NEUMORPHIC COURSE DETAILS MODAL */}
       {selectedCourse && (
-        <div className="modal-overlay" onClick={() => setSelectedCourse(null)}>
-          <div
-            className="modal-content"
-            style={{ maxWidth: '800px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+        <div className="neumorphic-modal-overlay" onClick={() => setSelectedCourse(null)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="neumorphic-modal-content"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '1rem' }}>
+            <div className="neumorphic-modal-header">
               <div>
-                <h2 style={{ marginBottom: '0.25rem', color: 'var(--text-primary)' }}>
-                  {selectedCourse.course_name}
-                </h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                  {selectedCourse.course_code} | <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{selectedCourse.points || 0} Course Points</span>
+                <h2>{selectedCourse.course_name}</h2>
+                <p className="course-code-subtitle">
+                  {selectedCourse.course_code} | <span>{selectedCourse.points || 0} Course Points</span>
                 </p>
               </div>
-              <button className="btn btn-secondary" onClick={() => setSelectedCourse(null)}>Close</button>
+              <button className="btn-neumorphic-close" onClick={() => setSelectedCourse(null)}>Close</button>
             </div>
 
-            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '0.5rem' }}>
+            <div className="neumorphic-modal-body">
               {modalLoading ? (
-                <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading syllabus...</p>
+                <p className="loading-text">Loading syllabus...</p>
               ) : courseModules.length === 0 ? (
                 <p className="empty-state">No modules available for this course yet.</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="neumorphic-modules">
                   {courseModules.map((module) => (
-                    <div key={module._id} style={{
-                      background: 'var(--bg-tertiary)',
-                      borderRadius: 'var(--border-radius-md)',
-                      border: '1px solid var(--border-light)',
-                      overflow: 'hidden'
-                    }}>
+                    <div key={module._id} className={`neumorphic-module-card ${expandedModule === module._id ? 'expanded' : ''}`}>
                       <div
-                        style={{
-                          padding: '1.25rem',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          background: expandedModule === module._id ? 'var(--bg-secondary)' : 'transparent',
-                          transition: 'background 0.2s ease'
-                        }}
+                        className="neumorphic-module-header"
                         onClick={() => toggleModule(module._id)}
                       >
                         <div>
-                          <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.1rem' }}>
-                            {module.module_order}. {module.module_name}
-                          </h4>
-                          <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                            {module.description}
-                          </p>
+                          <h4>{module.module_order}. {module.module_name}</h4>
+                          <p>{module.description}</p>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <span style={{
-                            background: 'var(--accent-gradient-subtle)',
-                            color: 'var(--accent-primary)',
-                            padding: '0.3rem 0.8rem',
-                            borderRadius: '980px',
-                            fontWeight: 600,
-                            fontSize: '0.85rem'
-                          }}>
-                            {module.points || 0} pts
-                          </span>
+                        <div className="module-points-badge">
+                          {module.points || 0} pts
                         </div>
                       </div>
 
                       {expandedModule === module._id && (
-                        <div style={{ padding: '1.25rem', borderTop: '1px solid var(--border-light)', background: 'var(--glass-bg)' }}>
-                          <h5 style={{ marginBottom: '1rem', color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-                            Tasks ({courseTasks[module._id]?.length || 0})
-                          </h5>
+                        <div className="neumorphic-module-tasks">
+                          <h5>Tasks ({courseTasks[module._id]?.length || 0})</h5>
                           
                           {!courseTasks[module._id] ? (
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Loading tasks...</p>
+                            <p className="loading-tasks">Loading tasks...</p>
                           ) : courseTasks[module._id].length === 0 ? (
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No tasks assigned yet.</p>
+                            <p className="loading-tasks">No tasks assigned yet.</p>
                           ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <div className="neumorphic-task-list">
                               {courseTasks[module._id].map(task => (
-                                <div key={task._id} style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  padding: '0.8rem 1rem',
-                                  background: 'var(--bg-primary)',
-                                  borderRadius: 'var(--border-radius-sm)',
-                                  border: '1px solid var(--border-light)'
-                                }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                    <div>
-                                      <span style={{ display: 'block', fontWeight: 600, color: 'var(--text-primary)' }}>{task.task_name}</span>
-                                      <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-                                        {task.difficulty} | {task.language} | {task.time_limit}m
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                    <span style={{
-                                      color: '#fbbf24',
-                                      fontWeight: 700,
-                                      fontSize: '0.9rem',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '0.25rem'
-                                    }}>
-                                      <HiStar /> {task.points} pts
+                                <div key={task._id} className="neumorphic-task-item">
+                                  <div className="task-info">
+                                    <span className="task-name">{task.task_name}</span>
+                                    <span className="task-meta">
+                                      <span className={`diff-${task.difficulty.toLowerCase()}`}>{task.difficulty}</span> | {task.language} | <HiClock/> {task.time_limit}m
                                     </span>
+                                  </div>
+                                  <div className="task-points">
+                                    <HiStar /> {task.points} pts
                                   </div>
                                 </div>
                               ))}
@@ -675,7 +645,7 @@ function StudentDashboard() {
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
