@@ -1,6 +1,7 @@
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
 const Course = require('../models/Course');
+const xlsx = require('xlsx');
 
 // @desc    Enroll a student in a course
 // @route   POST /api/enrollments
@@ -178,10 +179,103 @@ const bulkEnrollByRange = async (req, res) => {
     }
 };
 
+// @desc    Bulk enroll students from Excel file
+// @route   POST /api/enrollments/excel-upload
+// @access  Private (Instructor)
+const bulkEnrollByExcel = async (req, res) => {
+    try {
+        const { course_id } = req.body;
+
+        if (!course_id) {
+            return res.status(400).json({ message: 'Course ID is required' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'Excel file is required' });
+        }
+
+        // Parse excel buffer
+        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const data = xlsx.utils.sheet_to_json(worksheet);
+
+        let enrolled = 0;
+        let skipped = 0;
+        let not_found = 0;
+
+        for (const row of data) {
+            // Normalize keys to find email and enrollment number loosely
+            const normalizedRow = {};
+            for (const key in row) {
+                normalizedRow[key.toString().toLowerCase().replace(/[^a-z0-9]/g, '')] = row[key];
+            }
+
+            const email = normalizedRow['email'];
+            const enrollmentNumber = normalizedRow['enrolmentnumber'] || normalizedRow['enrollmentnumber'];
+
+            if (!email || !enrollmentNumber) {
+                // If row doesn't have required fields, skip it
+                continue;
+            }
+
+            // Find student
+            const student = await User.findOne({
+                role: 'STUDENT',
+                email: email,
+                // Match either string or number format by using $regex or just exact match. Usually exact match.
+                // We'll enforce string match assuming enrollment_number is string
+                enrollment_number: enrollmentNumber.toString()
+            });
+
+            if (!student) {
+                not_found++;
+                continue;
+            }
+
+            try {
+                const existing = await Enrollment.findOne({ course_id, student_id: student._id });
+                if (existing) {
+                    // If previously rejected/dropped, re-activate
+                    if (existing.status === 'REJECTED' || existing.status === 'DROPPED') {
+                        existing.status = 'ACTIVE';
+                        await existing.save();
+                        enrolled++;
+                    } else {
+                        skipped++;
+                    }
+                } else {
+                    await Enrollment.create({
+                        course_id,
+                        student_id: student._id,
+                        status: 'ACTIVE'
+                    });
+                    enrolled++;
+                }
+            } catch (err) {
+                skipped++;
+            }
+        }
+
+        res.status(200).json({
+            message: `Excel enrollment processed`,
+            enrolled,
+            skipped,
+            not_found,
+            total_processed: data.length
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Excel bulk enrollment failed' });
+    }
+};
+
 module.exports = {
     enrollStudent,
     getEnrolledStudents,
     getStudentEnrollments,
     updateEnrollmentStatus,
-    bulkEnrollByRange
+    bulkEnrollByRange,
+    bulkEnrollByExcel
 };
