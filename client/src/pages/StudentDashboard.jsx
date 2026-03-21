@@ -7,7 +7,8 @@ import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
 import CompleteTaskModal from '../components/CompleteTaskModal'
-import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification } from 'react-icons/hi2'
+import AskCollaborationModal from '../components/AskCollaborationModal'
+import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification, HiUserGroup, HiCheck, HiXMark } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import './Dashboard.css'
 
@@ -58,6 +59,10 @@ function StudentDashboard() {
 
   const [rewards, setRewards] = useState([]);
   const [loadingRewards, setLoadingRewards] = useState(true);
+
+  // Collaboration State
+  const [collaborations, setCollaborations] = useState({ incoming: [], outgoing: [] });
+  const [collabModalTask, setCollabModalTask] = useState(null);
 
   // Mapping of icon names to actual components
   const MAP_ICONS = {
@@ -113,6 +118,23 @@ function StudentDashboard() {
       console.error("Error fetching dashboard data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCollaborations = async () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      if (!token) return;
+      const res = await fetch(`${API_BASE_URL}/api/collaborations/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCollaborations(data);
+      }
+    } catch (error) {
+      console.error('Error fetching collaborations:', error);
     }
   };
 
@@ -241,6 +263,26 @@ function StudentDashboard() {
     }
   };
 
+  const handleRespondCollab = async (collabId, status) => {
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      const res = await fetch(`${API_BASE_URL}/api/collaborations/${collabId}/respond`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        fetchCollaborations(); // Refresh list
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Failed to update request');
+      }
+    } catch (error) {
+      console.error('Respond collab error:', error);
+    }
+  };
+
   const handleViewCourse = async (course) => {
     setSelectedCourse(course);
     setModalLoading(true);
@@ -290,6 +332,7 @@ function StudentDashboard() {
     fetchData();
     fetchUserPoints();
     fetchRewards();
+    fetchCollaborations();
   }, []);
 
   const handleHandoutDownload = async (handoutPath, filename) => {
@@ -465,6 +508,37 @@ function StudentDashboard() {
                   </div>
                 </div>
               </div>
+
+              {collaborations.incoming.length > 0 && (
+                <div className="collabs-section" style={{ marginTop: '2rem' }}>
+                  <h3 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Pending Collaboration Requests</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {collaborations.incoming.map(req => (
+                      <div key={req._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--accent-primary)' }}>
+                        <div>
+                          <strong style={{ color: 'var(--text-primary)' }}>{req.requester.name}</strong> wants to team up for <strong style={{ color: 'var(--accent-primary)' }}>{req.task_id.task_name}</strong> in {req.course_id.course_name}.
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button 
+                            className="btn btn-primary" 
+                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                            onClick={() => handleRespondCollab(req._id, 'ACCEPTED')}
+                          >
+                            <HiCheck style={{ marginRight: '4px' }}/> Accept
+                          </button>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                            onClick={() => handleRespondCollab(req._id, 'REJECTED')}
+                          >
+                            <HiXMark style={{ marginRight: '4px' }}/> Decline
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -782,13 +856,27 @@ function StudentDashboard() {
                                     <span className="task-name">{task.task_name}</span>
                                     <span className="task-meta">
                                       <span className={`diff-${task.difficulty.toLowerCase()}`}>{task.difficulty}</span> | {task.language} | <HiClock/> {task.time_limit}m
-                                      {task.allow_collaboration && <span style={{ marginLeft: '10px', color: 'var(--accent-blue)', fontWeight: 600 }}>• Teamwork Allowed</span>}
+                                      {task.allow_collaboration && <span style={{ marginLeft: '10px', color: '#3b82f6', fontWeight: 600 }}>• Teamwork Allowed</span>}
                                     </span>
                                   </div>
-                                  <div className="task-actions">
+                                  <div className="task-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                     <div className="task-points">
                                       <HiStar /> {task.points} pts
                                     </div>
+                                    {task.allow_collaboration && (
+                                      <button 
+                                        type="button"
+                                        className="btn btn-outline"
+                                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', borderColor: '#3b82f6', color: '#3b82f6' }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          setCollabModalTask(task);
+                                        }}
+                                      >
+                                        <HiUserGroup /> Ask for Collaboration
+                                      </button>
+                                    )}
                                     <button 
                                       type="button"
                                       className="btn btn-primary task-complete-btn"
@@ -818,6 +906,14 @@ function StudentDashboard() {
           courseId={selectedCourse._id}
           onClose={() => setCompletingTask(null)}
           onComplete={handleTaskCompleteSuccess}
+        />
+      )}
+
+      {collabModalTask && selectedCourse && (
+        <AskCollaborationModal 
+          task={collabModalTask}
+          courseId={selectedCourse._id}
+          onClose={() => setCollabModalTask(null)}
         />
       )}
     </div>
