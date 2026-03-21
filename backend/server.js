@@ -28,6 +28,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/rewards', rewardRoutes);
 app.use('/api/enrollments', require('./routes/enrollmentRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/leaderboard', require('./routes/leaderboardRoutes'));
 
 const PORT = process.env.PORT || 5001;
 

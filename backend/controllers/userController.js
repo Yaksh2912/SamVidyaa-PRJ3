@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Reward = require('../models/Reward');
+const PointTransaction = require('../models/PointTransaction');
 
 // @desc    Get current user's points
 // @route   GET /api/users/me/points
@@ -52,6 +53,12 @@ const claimReward = async (req, res) => {
         user.points = (user.points || 0) - cost;
         await user.save();
 
+        await PointTransaction.create({
+            user_id: user._id,
+            amount: -cost,
+            reason: `Claimed reward: ${rewardName}`
+        });
+
         res.json({
             message: `Successfully claimed "${rewardName}"!`,
             points: user.points,
@@ -80,6 +87,12 @@ const addPoints = async (req, res) => {
 
         user.points = (user.points || 0) + amount;
         await user.save();
+
+        await PointTransaction.create({
+            user_id: user._id,
+            amount: amount,
+            reason: 'Earned points'
+        });
 
         res.json({
             message: `Added ${amount} points!`,

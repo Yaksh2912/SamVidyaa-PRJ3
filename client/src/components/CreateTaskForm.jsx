@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import API_BASE_URL from '../config';
 import './ModalForm.css';
 
-function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
+function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
     const [formData, setFormData] = useState({
         task_name: '',
         problem_statement: '',
@@ -12,21 +12,47 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
         sample_output: '',
         difficulty: 'MEDIUM',
         points: 10,
+        allow_collaboration: false,
+        collab_percentage: 50,
         time_limit: 30,
         language: 'Python',
         constraints: ''
     });
 
-    // Test cases logic
     const [testCases, setTestCases] = useState([]);
     const [newTestCase, setNewTestCase] = useState({ input: '', expected_output: '', is_sample: false });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
 
+    useEffect(() => {
+        if (initialData) {
+            setFormData({
+                task_name: initialData.task_name || '',
+                problem_statement: initialData.problem_statement || '',
+                expected_output: initialData.expected_output || '',
+                sample_input: initialData.sample_input || '',
+                sample_output: initialData.sample_output || '',
+                difficulty: initialData.difficulty || 'MEDIUM',
+                points: initialData.points || 10,
+                allow_collaboration: initialData.allow_collaboration || false,
+                collab_percentage: initialData.collab_percentage || 50,
+                time_limit: initialData.time_limit || 30,
+                language: initialData.language || 'Python',
+                constraints: initialData.constraints || ''
+            });
+            if (initialData.test_cases) {
+                setTestCases(initialData.test_cases);
+            }
+        }
+    }, [initialData]);
+
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({ 
+            ...prev, 
+            [name]: type === 'checkbox' ? checked : value 
+        }));
     };
 
     const handleAddTestCase = () => {
@@ -64,8 +90,13 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
                 test_cases_count: testCases.length
             };
 
-            const response = await fetch(`${API_BASE_URL}/api/tasks`, {
-                method: 'POST',
+            const isEditing = !!initialData;
+            const url = isEditing 
+                ? `${API_BASE_URL}/api/tasks/${initialData._id}` 
+                : `${API_BASE_URL}/api/tasks`;
+            
+            const response = await fetch(url, {
+                method: isEditing ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -75,12 +106,12 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.message || 'Failed to create task');
+                throw new Error(data.message || `Failed to ${isEditing ? 'update' : 'create'} task`);
             }
 
-            const newTask = await response.json();
-            onTaskCreated(newTask);
-            alert("Task created successfully!");
+            const savedTask = await response.json();
+            onTaskCreated(savedTask, isEditing);
+            alert(`Task ${isEditing ? 'updated' : 'created'} successfully!`);
             onClose();
         } catch (err) {
             console.error(err);
@@ -97,7 +128,7 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
             >
-                <h2>Create New Task</h2>
+                <h2>{initialData ? 'Edit Task' : 'Create New Task'}</h2>
                 {error && <div className="error-message">{error}</div>}
                 <form onSubmit={handleSubmit} className="task-form">
                     <div className="form-group">
@@ -122,7 +153,7 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
                             </select>
                         </div>
                         <div className="form-group">
-                            <label>Points</label>
+                            <label>Base Points</label>
                             <input type="number" name="points" value={formData.points} onChange={handleChange} min="1" />
                         </div>
                         <div className="form-group">
@@ -138,6 +169,37 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
                                 <option value="C++">C++</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div className="form-row" style={{ alignItems: 'flex-start', background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+                        <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+                            <label className="checkbox-label" style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                <input 
+                                    type="checkbox" 
+                                    name="allow_collaboration"
+                                    checked={formData.allow_collaboration} 
+                                    onChange={handleChange}
+                                    style={{ transform: 'scale(1.2)' }}
+                                />
+                                Allow Collaboration
+                            </label>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem', marginLeft: '1.75rem' }}>If enabled, students can choose to share their reward points with peers who helped them.</p>
+                        </div>
+                        
+                        {formData.allow_collaboration && (
+                            <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+                                <label style={{ color: 'var(--accent-blue)' }}>Peer Share Percentage (%)</label>
+                                <input 
+                                    type="number" 
+                                    name="collab_percentage" 
+                                    value={formData.collab_percentage} 
+                                    onChange={handleChange} 
+                                    min="1" 
+                                    max="100" 
+                                    style={{ borderColor: 'var(--accent-blue)' }}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <div className="form-group">
@@ -223,7 +285,7 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId }) {
                     <div className="modal-actions">
                         <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
                         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                            {isSubmitting ? 'Creating...' : 'Create Task'}
+                            {isSubmitting ? 'Saving...' : (initialData ? 'Update Task' : 'Create Task')}
                         </button>
                     </div>
                 </form>

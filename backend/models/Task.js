@@ -36,6 +36,14 @@ const taskSchema = mongoose.Schema(
             type: Number,
             default: 10,
         },
+        allow_collaboration: {
+            type: Boolean,
+            default: false,
+        },
+        collab_percentage: {
+            type: Number,
+            default: 50,
+        },
         time_limit: {
             type: Number,
             default: 30, // minutes

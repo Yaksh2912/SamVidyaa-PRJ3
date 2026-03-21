@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
-import { HiUsers, HiBookOpen, HiDocumentText, HiChartBar, HiFolderPlus, HiArrowDownTray, HiTrash, HiPlus, HiListBullet, HiUserGroup, HiPaperClip, HiGift } from 'react-icons/hi2'
+import { HiUsers, HiBookOpen, HiDocumentText, HiChartBar, HiFolderPlus, HiArrowDownTray, HiTrash, HiPlus, HiListBullet, HiUserGroup, HiPaperClip, HiGift, HiStar } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import CreateModuleForm from '../components/CreateModuleForm'
 import CreateCourseForm from '../components/CreateCourseForm'
@@ -23,7 +23,8 @@ function TeacherDashboard() {
 
   const [showModuleForm, setShowModuleForm] = React.useState(false)
   const [showCourseForm, setShowCourseForm] = React.useState(false)
-  const [showTaskForm, setShowTaskForm] = React.useState(false) // For creating task
+  const [showTaskForm, setShowTaskForm] = React.useState(false) // For creating/editing task
+  const [editingTask, setEditingTask] = React.useState(null) // Holds task object when editing
 
   const [courses, setCourses] = React.useState([])
   const [selectedCourse, setSelectedCourse] = React.useState(null)
@@ -215,23 +216,29 @@ function TeacherDashboard() {
     setModules([newModule, ...modules])
   }
 
-  const handleTaskCreated = (newTask) => {
-    // If viewing the specific module, update task list
-    if (selectedModule && selectedModule._id === newTask.module_id) {
-      setTasks([...tasks, newTask]);
-    }
+  const handleTaskCreated = (taskData, isEditing = false) => {
+    if (isEditing) {
+      setTasks(tasks.map(t => t._id === taskData._id ? taskData : t))
+      setEditingTask(null)
+    } else {
+      // If viewing the specific module, update task list
+      if (selectedModule && selectedModule._id === taskData.module_id) {
+        setTasks([...tasks, taskData]);
+      }
 
-    // Update the module's task count in the module list
-    setModules(modules.map(m =>
-      m._id === newTask.module_id
-        ? { ...m, tasks_per_module: (m.tasks_per_module || 0) + 1 }
-        : m
-    ));
+      // Update the module's task count in the module list
+      setModules(modules.map(m =>
+        m._id === taskData.module_id
+          ? { ...m, tasks_per_module: (m.tasks_per_module || 0) + 1 }
+          : m
+      ));
+    }
   }
 
-  const openTaskForm = (moduleId) => {
-    setSelectedModuleForTask(moduleId);
-    setShowTaskForm(true);
+  const openTaskForm = (moduleId, taskToEdit = null) => {
+    setSelectedModuleForTask(moduleId)
+    setEditingTask(taskToEdit)
+    setShowTaskForm(true)
   }
 
   const handleDeleteCourse = async (e, courseId) => {
@@ -610,7 +617,7 @@ function TeacherDashboard() {
                     <div className="view-title-row">
                       <div className="view-title-info">
                         <h2>{selectedCourse.course_name} <span className="course-code-large">({selectedCourse.course_code})</span></h2>
-                        <p style={{ color: 'var(--text-secondary)' }}>{selectedCourse.description}</p>
+                        <p className="view-description">{selectedCourse.description}</p>
                       </div>
                       <div className="course-actions">
                         <button className="btn btn-outline" onClick={() => handleCourseExport(selectedCourse._id, selectedCourse.course_code)} title="Export Course">
@@ -639,52 +646,41 @@ function TeacherDashboard() {
                   </div>
 
                   {/* Handout section */}
-                  <div style={{
-                    background: 'var(--bg-tertiary)',
-                    borderRadius: 'var(--border-radius-sm)',
-                    padding: '0.9rem 1.25rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    flexWrap: 'wrap',
-                    marginBottom: '1.25rem',
-                    border: selectedCourse.handout_path ? '1px solid var(--accent-green, #10b981)' : '1px dashed var(--border-color)',
-                  }}>
-                    <HiPaperClip style={{ flexShrink: 0, color: selectedCourse.handout_path ? 'var(--accent-green, #10b981)' : 'var(--text-tertiary)' }} />
+                  <div className={`course-handout-panel ${selectedCourse.handout_path ? 'is-attached' : ''}`}>
+                    <HiPaperClip className="course-handout-icon" />
                     {selectedCourse.handout_path ? (
                       <>
-                        <span style={{ flex: 1, fontWeight: 500, fontSize: '0.9rem' }}>
+                        <span className="course-handout-content">
                           <a
+                            className="course-handout-link"
                             href={`${API_BASE_URL.replace('/api', '')}/${selectedCourse.handout_path.replace(/\\/g, '/')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ color: 'var(--accent-blue, #3b82f6)', textDecoration: 'underline' }}
                           >
                             {selectedCourse.handout_filename}
                           </a>
                         </span>
-                        <button
-                          className="btn btn-outline"
-                          style={{ fontSize: '0.82rem', padding: '0.3rem 0.8rem' }}
-                          onClick={() => handoutInputRef.current?.click()}
-                          disabled={handoutUploading}
-                        >
-                          {handoutUploading ? 'Uploading…' : '↑ Replace'}
-                        </button>
-                        <button
-                          className="btn btn-danger"
-                          style={{ fontSize: '0.82rem', padding: '0.3rem 0.8rem' }}
-                          onClick={handleHandoutDelete}
-                        >
-                          <HiTrash /> Remove
-                        </button>
+                        <div className="course-handout-actions">
+                          <button
+                            className="btn btn-outline"
+                            onClick={() => handoutInputRef.current?.click()}
+                            disabled={handoutUploading}
+                          >
+                            {handoutUploading ? 'Uploading…' : '↑ Replace'}
+                          </button>
+                          <button
+                            className="btn btn-danger"
+                            onClick={handleHandoutDelete}
+                          >
+                            <HiTrash /> Remove
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <>
-                        <span style={{ flex: 1, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No handout uploaded</span>
+                        <span className="course-handout-empty">No handout uploaded</span>
                         <button
                           className="btn btn-outline"
-                          style={{ fontSize: '0.82rem', padding: '0.3rem 0.9rem' }}
                           onClick={() => handoutInputRef.current?.click()}
                           disabled={handoutUploading}
                         >
@@ -740,9 +736,9 @@ function TeacherDashboard() {
                     <div className="view-title-row">
                       <div className="view-title-info">
                         <h2>{selectedModule.module_name} <span className="module-order">Module #{selectedModule.module_order}</span></h2>
-                        <p style={{ color: 'var(--text-secondary)' }}>{selectedModule.description}</p>
+                        <p className="view-description">{selectedModule.description}</p>
                       </div>
-                      <button className="btn btn-primary" onClick={() => openTaskForm(selectedModule._id)}>
+                      <button className="btn btn-primary" onClick={() => openTaskForm(selectedModule._id, null)}>
                         <HiPlus /> Create Task
                       </button>
                     </div>
@@ -757,7 +753,7 @@ function TeacherDashboard() {
                             <div className="module-info">
                               <h4>
                                 {task.task_name}
-                                <span style={{ fontSize: '0.8rem', marginLeft: '0.5rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                                <span className="task-summary-pill">
                                   {task.difficulty} | {task.points}pts
                                 </span>
                               </h4>
@@ -768,12 +764,20 @@ function TeacherDashboard() {
                                 <span>Tests: {task.test_cases_count}</span>
                               </div>
                               {task.constraints && (
-                                <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
+                                <p className="task-constraints">
                                   <strong>Constraints:</strong> {task.constraints}
                                 </p>
                               )}
                             </div>
                             <div className="module-actions">
+                              <button
+                                className="btn btn-outline"
+                                onClick={() => openTaskForm(task.module_id, task)}
+                                title="Edit Task"
+                                style={{ borderColor: 'var(--accent-blue)', color: 'var(--accent-blue)' }}
+                              >
+                                Edit
+                              </button>
                               <button
                                 className="btn btn-danger"
                                 onClick={() => handleDeleteTask(task._id, task.module_id)}
@@ -812,9 +816,10 @@ function TeacherDashboard() {
 
       {showTaskForm && selectedModuleForTask && (
         <CreateTaskForm
-          onClose={() => setShowTaskForm(false)}
+          onClose={() => { setShowTaskForm(false); setEditingTask(null); }}
           onTaskCreated={handleTaskCreated}
           moduleId={selectedModuleForTask}
+          initialData={editingTask}
         />
       )}
 
@@ -828,70 +833,49 @@ function TeacherDashboard() {
       {/* STUDENTS POPUP MODAL */}
       {viewingStudents && selectedCourse && (
         <div className="modal-overlay" onClick={() => { setViewingStudents(false); setStudents([]); }}>
-          <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
-              <div>
-                <h2 style={{ marginBottom: '0.25rem' }}>{selectedCourse.course_name}</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Enrolled Students ({students.length})</p>
+          <div className="modal-content course-students-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="students-modal-header">
+              <div className="students-modal-title">
+                <h2>{selectedCourse.course_name}</h2>
+                <p>Enrolled Students ({students.length})</p>
               </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button className="btn btn-primary" onClick={() => setShowAddStudentsModal(true)} style={{ fontSize: '0.9rem', padding: '0.55rem 1.1rem' }}>
+              <div className="students-modal-actions">
+                <button className="btn btn-primary" onClick={() => setShowAddStudentsModal(true)}>
                   <HiPlus /> Add Students
                 </button>
-                <button className="btn btn-secondary" onClick={() => { setViewingStudents(false); setStudents([]); }} style={{ fontSize: '0.9rem', padding: '0.55rem 1.1rem' }}>
+                <button className="btn btn-secondary" onClick={() => { setViewingStudents(false); setStudents([]); }}>
                   Close
                 </button>
               </div>
             </div>
 
-            <div style={{ overflowY: 'auto', flex: 1 }}>
-              {loadingStudents ? <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading students...</p> : (
+            <div className="students-modal-body">
+              {loadingStudents ? <p className="students-modal-loading">Loading students...</p> : (
                 students.length === 0 ? (
                   <p className="no-modules">No students enrolled yet.</p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <div className="students-list">
                     {students.map(student => (
-                      <div key={student._id} style={{
-                        background: 'var(--bg-tertiary)',
-                        borderRadius: 'var(--border-radius-sm)',
-                        padding: '1rem 1.25rem',
-                        borderLeft: `3px solid ${student.status === 'ACTIVE' ? 'var(--accent-green)' : student.status === 'PENDING' ? '#f59e0b' : 'var(--accent-red)'}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '1rem',
-                        transition: 'all 0.2s ease'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: 1, minWidth: 0 }}>
-                          <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>{student.name}</span>
-                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student.email}</span>
-                          <span style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{student.enrollment_number || 'N/A'}</span>
+                      <div key={student._id} className="student-row" data-status={student.status?.toLowerCase()}>
+                        <div className="student-main">
+                          <span className="student-name">{student.name}</span>
+                          <span className="student-email">{student.email}</span>
+                          <span className="student-enrollment">{student.enrollment_number || 'N/A'}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                          <span style={{
-                            color: student.status === 'PENDING' ? '#f59e0b' : student.status === 'ACTIVE' ? '#10b981' : '#ef4444',
-                            fontWeight: 700,
-                            fontSize: '0.72rem',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            background: student.status === 'ACTIVE' ? 'rgba(16,185,129,0.1)' : student.status === 'PENDING' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)',
-                            padding: '0.25rem 0.65rem',
-                            borderRadius: '980px'
-                          }}>
+                        <div className="student-actions">
+                          <span className={`student-status-chip ${student.status?.toLowerCase()}`}>
                             {student.status}
                           </span>
                           {student.status === 'PENDING' && (
                             <>
                               <button
                                 className="btn btn-primary"
-                                style={{ padding: '0.25rem 0.7rem', fontSize: '0.75rem' }}
                                 onClick={() => handleEnrollmentStatus(student.enrollment_id, 'ACTIVE')}
                               >
                                 Approve
                               </button>
                               <button
                                 className="btn btn-danger"
-                                style={{ padding: '0.25rem 0.7rem', fontSize: '0.75rem' }}
                                 onClick={() => handleEnrollmentStatus(student.enrollment_id, 'REJECTED')}
                               >
                                 Reject

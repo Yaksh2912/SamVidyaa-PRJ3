@@ -6,9 +6,26 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
+import CompleteTaskModal from '../components/CompleteTaskModal'
 import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import './Dashboard.css'
+
+const COURSE_GRADIENTS = [
+  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Deep Purple
+  'linear-gradient(135deg, #6B73FF 0%, #000DFF 100%)', // Deep Blue
+  'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', // Emerald
+  'linear-gradient(135deg, #FF8008 0%, #FFA080 100%)', // Orange/Peach
+  'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)', // Ruby Red
+  'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)'  // Night Sky
+];
+
+const getCourseGradient = (id) => {
+  if (!id) return COURSE_GRADIENTS[0];
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  return COURSE_GRADIENTS[Math.abs(hash) % COURSE_GRADIENTS.length];
+};
 
 function StudentDashboard() {
   const { theme } = useTheme()
@@ -26,10 +43,17 @@ function StudentDashboard() {
   const [showPointShop, setShowPointShop] = useState(false);
   const [activeTab, setActiveTab] = useState('Dashboard');
 
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [leaderboardType, setLeaderboardType] = useState('global'); // global, weekly, class, peers
+  const [selectedCourseForRanking, setSelectedCourseForRanking] = useState('');
+
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courseModules, setCourseModules] = useState([]);
   const [courseTasks, setCourseTasks] = useState({});
   const [expandedModule, setExpandedModule] = useState(null);
+
+  const [completingTask, setCompletingTask] = useState(null); // stores the task object to complete
   const [modalLoading, setModalLoading] = useState(false);
 
   const [rewards, setRewards] = useState([]);
@@ -140,17 +164,64 @@ function StudentDashboard() {
       const data = await res.json();
       if (res.ok) {
         setUserPoints(data.points);
-        alert(`🎉 ${data.message}`);
+        await fetchRewards(); // Update locked/unlocked states
+        alert(data.message);
       } else {
-        alert(data.message || 'Could not claim reward');
+        alert(data.message || 'Failed to claim reward');
       }
     } catch (error) {
-      console.error('Claim error:', error);
-      alert('Something went wrong');
+      console.error('Claim reward error:', error);
+      alert('Error claiming reward');
     } finally {
       setClaimingReward(null);
     }
   };
+
+  const handleTaskCompleteSuccess = (taskId, newPointsTotal) => {
+    setUserPoints(newPointsTotal);
+    // You can also mark the task as "done" locally in courseTasks if desired
+    // For now, simple visual alert is enough since there is no persistent 'completed' flag on tasks locally yet
+  };
+
+  const fetchLeaderboard = async () => {
+    setLoadingLeaderboard(true);
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      if (!token) return;
+
+      let endpoint = `/api/leaderboard/${leaderboardType}`;
+      if (leaderboardType === 'class') {
+        if (!selectedCourseForRanking) {
+          setLeaderboardData([]);
+          setLoadingLeaderboard(false);
+          return;
+        }
+        endpoint += `/${selectedCourseForRanking}`;
+      }
+
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLeaderboardData(data);
+      } else {
+        setLeaderboardData([]);
+      }
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+      setLeaderboardData([]);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'Rankings') {
+      fetchLeaderboard();
+    }
+  }, [activeTab, leaderboardType, selectedCourseForRanking]);
 
   const handleAddPoints = async (amount = 50) => {
     try {
@@ -405,51 +476,62 @@ function StudentDashboard() {
               {loading ? <p>Loading...</p> : enrolledCourses.length === 0 ? (
                 <p className="empty-state">You are not enrolled in any courses yet.</p>
               ) : (
-                <div className="modules-grid">
-                  {enrolledCourses.map((enrollment) => (
-                    <div key={enrollment._id} className="module-card">
-                      <div className="module-info">
-                        <h4>
-                          {enrollment.course_id.course_name}
-                          <span className={`status-badge ${enrollment.status.toLowerCase()}`}>
-                            {enrollment.status}
-                          </span>
-                        </h4>
-                        <p className="text-secondary">{enrollment.course_id.course_code}</p>
-                        <p>{enrollment.course_id.description}</p>
-                        <div className="module-meta">
-                          <span>Instructor: {enrollment.course_id.instructor ? enrollment.course_id.instructor.name : 'Unknown'}</span>
+                <div className="gc-course-grid">
+                  {enrolledCourses.map((enrollment) => {
+                    const course = enrollment.course_id;
+                    const instructorName = course.instructor ? course.instructor.name : 'Unknown';
+                    const initial = instructorName.charAt(0).toUpperCase();
+
+                    return (
+                      <div 
+                        key={enrollment._id} 
+                        className="gc-course-card"
+                        onClick={() => {
+                          if (enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') {
+                            handleViewCourse(course);
+                          }
+                        }}
+                      >
+                        <div className="gc-card-header" style={{ background: getCourseGradient(course._id) }}>
+                          <h3 title={course.course_name}>{course.course_name}</h3>
+                          <p className="gc-course-teacher">{instructorName} • {course.course_code}</p>
                         </div>
-                        <div className="course-card-actions">
-                          <button
-                            className="btn btn-primary"
-                            disabled={enrollment.status !== 'ACTIVE' && enrollment.status !== 'APPROVED'}
-                            onClick={() => handleViewCourse(enrollment.course_id)}
-                          >
-                            {enrollment.status === 'PENDING' ? 'Request Pending' : enrollment.status === 'REJECTED' ? 'Not Enrolled' : 'View Course'}
-                          </button>
-                          {(enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') && enrollment.course_id.handout_path && (
-                            <>
-                              <a
-                                className="btn btn-outline"
-                                href={`${API_BASE_URL.replace('/api', '')}/${enrollment.course_id.handout_path.replace(/\\/g, '/')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <HiPaperClip /> View Handout
-                              </a>
-                              <button
-                                className="btn btn-outline"
-                                onClick={() => handleHandoutDownload(enrollment.course_id.handout_path, enrollment.course_id.handout_filename)}
-                              >
-                                <HiArrowDownTray /> Download
-                              </button>
-                            </>
+                        <div className="gc-card-avatar">{initial}</div>
+                        
+                        <div className="gc-card-body">
+                           <p className="gc-course-desc">{course.description || "No description provided."}</p>
+                           <span className={`status-badge ${enrollment.status.toLowerCase()}`} style={{ marginTop: '0.5rem', display: 'inline-block' }}>
+                             {enrollment.status === 'PENDING' ? 'Request Pending' : enrollment.status === 'REJECTED' ? 'Not Enrolled' : 'Active'}
+                           </span>
+                        </div>
+
+                        <div className="gc-card-footer">
+                          {(enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') && course.handout_path && (
+                            <button
+                              className="btn-icon"
+                              title="Download Handout"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleHandoutDownload(course.handout_path, course.handout_filename);
+                              }}
+                            >
+                              <HiArrowDownTray size={20} />
+                            </button>
                           )}
+                          <button
+                            className="btn-icon"
+                            title="Open Course"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') handleViewCourse(course);
+                            }}
+                          >
+                            <HiBookOpen size={22} />
+                          </button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </motion.div>
@@ -463,29 +545,38 @@ function StudentDashboard() {
               {loading ? <p>Loading...</p> : availableCourses.length === 0 ? (
                 <p className="empty-state">No new courses available at the moment.</p>
               ) : (
-                <div className="modules-grid">
-                  {availableCourses.map((course) => (
-                    <div key={course._id} className="module-card available">
-                      <div className="module-info">
-                        <h4>{course.course_name}</h4>
-                        <p className="text-secondary">{course.course_code}</p>
-                        <p>{course.description}</p>
-                        <div className="module-meta">
-                          <span>Subject: {course.subject}</span>
-                          <span>Instructor: {course.instructor ? course.instructor.name : 'Unknown'}</span>
+                <div className="gc-course-grid">
+                  {availableCourses.map((course) => {
+                    const instructorName = course.instructor ? course.instructor.name : 'Unknown';
+                    const initial = instructorName.charAt(0).toUpperCase();
+
+                    return (
+                      <div key={course._id} className="gc-course-card" style={{ filter: 'grayscale(0.15)' }}>
+                        <div className="gc-card-header" style={{ background: getCourseGradient(course._id) }}>
+                          <h3 title={course.course_name}>{course.course_name}</h3>
+                          <p className="gc-course-teacher">{instructorName} • {course.course_code}</p>
                         </div>
-                        <div className="course-card-actions">
+                        <div className="gc-card-avatar">{initial}</div>
+                        
+                        <div className="gc-card-body">
+                           <p className="gc-course-desc">{course.description || "No description provided."}</p>
+                           <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Subject: {course.subject}</span>
+                        </div>
+
+                        <div className="gc-card-footer" style={{ borderTop: 'none', paddingBottom: '1.25rem' }}>
                           <button
                             className="btn btn-secondary"
+                            style={{ width: '100%' }}
                             onClick={() => handleEnroll(course._id)}
                             disabled={enrollLoading === course._id}
                           >
+                            <HiPlusCircle style={{ marginRight: '0.4rem', marginBottom: '-2px' }}/> 
                             {enrollLoading === course._id ? 'Requesting...' : 'Request Enrollment'}
                           </button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </motion.div>
@@ -540,32 +631,71 @@ function StudentDashboard() {
           {activeTab === 'Rankings' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
               <div className="workspace-panel-header">
-                <h3>{t.leaderboard?.title || "Class Rankings"}</h3>
+                <h3>{t.leaderboard?.title || "Rankings"}</h3>
               </div>
-              <div className="ranking-list">
-                {[
-                  { rank: 1, name: "Alice Johnson", score: 2850, avatar: "AJ" },
-                  { rank: 2, name: "Bob Smith", score: 2720, avatar: "BS" },
-                  { rank: 3, name: user?.name || "Student", score: 2650, avatar: "ME", isCurrentUser: true },
-                  { rank: 4, name: "David Wilson", score: 2580, avatar: "DW" },
-                  { rank: 5, name: "Eva Brown", score: 2450, avatar: "EB" },
-                ].map((student) => (
-                  <div
-                    key={student.rank}
-                    className={`ranking-item ${student.isCurrentUser ? 'current-user' : ''} ${student.rank <= 3 ? 'top-3' : ''}`}
+              
+              <div className="leaderboard-controls" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                <select 
+                  className="language-selector" 
+                  value={leaderboardType}
+                  onChange={(e) => setLeaderboardType(e.target.value)}
+                  style={{ width: 'auto', padding: '0.5rem 1rem' }}
+                >
+                  <option value="global">Global Ranking</option>
+                  <option value="weekly">Weekly Top</option>
+                  <option value="class">Class Ranking</option>
+                  <option value="peers">My Peers</option>
+                </select>
+
+                {leaderboardType === 'class' && (
+                  <select 
+                    className="language-selector"
+                    value={selectedCourseForRanking}
+                    onChange={(e) => setSelectedCourseForRanking(e.target.value)}
+                    style={{ width: 'auto', padding: '0.5rem 1rem' }}
                   >
-                    <div className="rank-badge">{student.rank}</div>
-                    <div className="rank-avatar">{student.avatar}</div>
-                    <div className="rank-info">
-                      <span className="rank-name">
-                        {student.isCurrentUser ? `${student.name} (${t.leaderboard?.yourRank || "You"})` : student.name}
-                      </span>
-                    </div>
-                    <div className="rank-score">
-                      {student.score} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{t.leaderboard?.points || "pts"}</span>
-                    </div>
-                  </div>
-                ))}
+                    <option value="">-- Select a Class --</option>
+                    {enrolledCourses.filter(e => e.status === 'ACTIVE' || e.status === 'APPROVED').map(enc => (
+                      <option key={enc.course_id._id} value={enc.course_id._id}>
+                        {enc.course_id.course_name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="ranking-list">
+                {loadingLeaderboard ? (
+                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading rankings...</p>
+                ) : leaderboardType === 'class' && !selectedCourseForRanking ? (
+                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Select a class to view its ranking.</p>
+                ) : leaderboardData.length === 0 ? (
+                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No data available for this ranking.</p>
+                ) : (
+                  leaderboardData.map((student, index) => {
+                    const isCurrentUser = student._id === user?._id || student.isCurrentUser;
+                    // If it's a peer leaderboard, the exact rank number might be tricky without full data, 
+                    // so we just show listing rank, OR pass the absolute rank from backend.
+                    const displayRank = index + 1;
+                    return (
+                      <div
+                        key={student._id || index}
+                        className={`ranking-item ${isCurrentUser ? 'current-user' : ''} ${displayRank <= 3 && leaderboardType !== 'peers' ? 'top-3' : ''}`}
+                      >
+                        <div className="rank-badge">{displayRank}</div>
+                        <div className="rank-avatar">{(student.name || 'S').charAt(0).toUpperCase()}</div>
+                        <div className="rank-info">
+                          <span className="rank-name">
+                            {isCurrentUser ? `${student.name} (${t.leaderboard?.yourRank || "You"})` : student.name}
+                          </span>
+                        </div>
+                        <div className="rank-score">
+                          {student.points || 0} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{t.leaderboard?.points || "pts"}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </motion.div>
           )}
@@ -582,13 +712,33 @@ function StudentDashboard() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="neumorphic-modal-header">
-              <div>
-                <h2>{selectedCourse.course_name}</h2>
-                <p className="course-code-subtitle">
-                  {selectedCourse.course_code} | <span>{selectedCourse.points || 0} Course Points</span>
-                </p>
+              <div className="course-modal-intro">
+                <div>
+                  <h2>{selectedCourse.course_name}</h2>
+                  <p className="course-code-subtitle">
+                    {selectedCourse.course_code} | <span>{selectedCourse.points || 0} Course Points</span>
+                  </p>
+                </div>
+                <div className="course-modal-summary">
+                  {selectedCourse.subject && (
+                    <span className="course-modal-chip">{selectedCourse.subject}</span>
+                  )}
+                  <span className="course-modal-chip">{courseModules.length} Modules</span>
+                  {selectedCourse.handout_path && (
+                    <button
+                      type="button"
+                      className="course-modal-chip course-modal-chip-action"
+                      onClick={() => handleHandoutDownload(selectedCourse.handout_path, selectedCourse.handout_filename)}
+                    >
+                      <HiArrowDownTray /> Handout
+                    </button>
+                  )}
+                </div>
+                {selectedCourse.description && (
+                  <p className="course-modal-description">{selectedCourse.description}</p>
+                )}
               </div>
-              <button className="btn-neumorphic-close" onClick={() => setSelectedCourse(null)}>Close</button>
+              <button type="button" className="btn-neumorphic-close" onClick={() => setSelectedCourse(null)}>Close</button>
             </div>
 
             <div className="neumorphic-modal-body">
@@ -604,12 +754,15 @@ function StudentDashboard() {
                         className="neumorphic-module-header"
                         onClick={() => toggleModule(module._id)}
                       >
-                        <div>
+                        <div className="neumorphic-module-copy">
                           <h4>{module.module_order}. {module.module_name}</h4>
                           <p>{module.description}</p>
                         </div>
-                        <div className="module-points-badge">
-                          {module.points || 0} pts
+                        <div className="neumorphic-module-meta">
+                          <span className="module-order-chip">Module {module.module_order}</span>
+                          <div className="module-points-badge">
+                            {module.points || 0} pts
+                          </div>
                         </div>
                       </div>
 
@@ -629,10 +782,20 @@ function StudentDashboard() {
                                     <span className="task-name">{task.task_name}</span>
                                     <span className="task-meta">
                                       <span className={`diff-${task.difficulty.toLowerCase()}`}>{task.difficulty}</span> | {task.language} | <HiClock/> {task.time_limit}m
+                                      {task.allow_collaboration && <span style={{ marginLeft: '10px', color: 'var(--accent-blue)', fontWeight: 600 }}>• Teamwork Allowed</span>}
                                     </span>
                                   </div>
-                                  <div className="task-points">
-                                    <HiStar /> {task.points} pts
+                                  <div className="task-actions">
+                                    <div className="task-points">
+                                      <HiStar /> {task.points} pts
+                                    </div>
+                                    <button 
+                                      type="button"
+                                      className="btn btn-primary task-complete-btn"
+                                      onClick={() => setCompletingTask(task)}
+                                    >
+                                      <HiCheckCircle /> Complete
+                                    </button>
                                   </div>
                                 </div>
                               ))}
@@ -647,6 +810,15 @@ function StudentDashboard() {
             </div>
           </motion.div>
         </div>
+      )}
+
+      {completingTask && selectedCourse && (
+        <CompleteTaskModal
+          task={completingTask}
+          courseId={selectedCourse._id}
+          onClose={() => setCompletingTask(null)}
+          onComplete={handleTaskCompleteSuccess}
+        />
       )}
     </div>
   )
