@@ -254,7 +254,7 @@ function ManageRewardsModal({ course, onClose }) {
                                             </p>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-                                            <span style={{ color: '#fbbf24', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                                            <span style={{ color: 'var(--points-highlight)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                                                 <HiStar /> {reward.cost}
                                             </span>
                                             <button 

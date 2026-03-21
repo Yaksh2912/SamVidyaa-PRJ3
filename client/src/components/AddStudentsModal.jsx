@@ -66,15 +66,15 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
 
                 {result && (
                     <div style={{
-                        background: 'rgba(16, 185, 129, 0.1)',
-                        border: '1px solid rgba(16, 185, 129, 0.25)',
+                        background: 'var(--status-success-bg)',
+                        border: '1px solid var(--status-success-border)',
                         borderRadius: 'var(--border-radius-sm)',
                         padding: '1rem',
                         marginBottom: '1rem',
                         color: 'var(--text-primary)',
                         fontSize: '0.95rem'
                     }}>
-                        <strong style={{ color: '#10b981' }}>✓ {result.message}</strong>
+                        <strong style={{ color: 'var(--status-success-text)' }}>✓ {result.message}</strong>
                         <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1.5rem' }}>
                             <span><strong>{result.enrolled}</strong> enrolled</span>
                             <span><strong>{result.skipped}</strong> skipped</span>

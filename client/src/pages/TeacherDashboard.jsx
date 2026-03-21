@@ -14,6 +14,22 @@ import AddStudentsModal from '../components/AddStudentsModal'
 import ManageRewardsModal from '../components/ManageRewardsModal'
 import './Dashboard.css'
 
+const COURSE_GRADIENTS = [
+  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  'linear-gradient(135deg, #6B73FF 0%, #000DFF 100%)',
+  'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+  'linear-gradient(135deg, #FF8008 0%, #FFA080 100%)',
+  'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)',
+  'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)'
+]
+
+const getCourseGradient = (id) => {
+  if (!id) return COURSE_GRADIENTS[0]
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash)
+  return COURSE_GRADIENTS[Math.abs(hash) % COURSE_GRADIENTS.length]
+}
+
 function TeacherDashboard() {
   const { theme } = useTheme()
   const { translations, language, changeLanguage } = useI18n()
@@ -454,6 +470,13 @@ function TeacherDashboard() {
   }
 
   const t = translations.dashboard.teacher
+  const selectedCourseTaskCount = modules.reduce((sum, module) => sum + (module.tasks_per_module || 0), 0)
+  const selectedCourseFileCount = modules.reduce((sum, module) => sum + ((module.files && module.files.length) || 0), 0)
+  const selectedModuleTotalPoints = tasks.reduce((sum, task) => sum + (task.points || 0), 0)
+  const selectedModuleAverageTime = tasks.length > 0
+    ? Math.round(tasks.reduce((sum, task) => sum + (task.time_limit || 0), 0) / tasks.length)
+    : 0
+  const selectedModuleLanguageCount = new Set(tasks.map(task => task.language).filter(Boolean)).size
 
   return (
     <div className="dashboard-layout" data-theme={theme}>
@@ -583,25 +606,60 @@ function TeacherDashboard() {
                       <HiFolderPlus /> Create Course
                     </button>
                   </div>
-                  <div className="courses-grid">
+                  <div className="gc-course-grid teacher-course-grid">
                     {courses.length === 0 ? <p className="no-data">No courses created yet.</p> : courses.map(course => (
                       <motion.div
                         key={course._id}
-                        className="course-card"
+                        className="gc-course-card teacher-course-card"
                         whileHover={{ y: -5 }}
                         onClick={() => handleCourseSelect(course)}
                       >
-                        <div className="course-header">
-                          <span className="course-code">{course.course_code}</span>
-                          <button className="btn-icon delete-btn" onClick={(e) => handleDeleteCourse(e, course._id)} title="Delete Course">
-                            <HiTrash />
-                          </button>
+                        <div className="gc-card-header" style={{ background: getCourseGradient(course._id) }}>
+                          <h3 title={course.course_name}>{course.course_name}</h3>
+                          <p className="gc-course-teacher">Instructor Workspace • {course.course_code}</p>
                         </div>
-                        <h4>{course.course_name}</h4>
-                        <p>{course.description}</p>
-                        <div className="course-meta">
-                          <span>{course.subject}</span>
-                          <span>Q: {course.course_test_questions} | {course.points || 0} pts</span>
+
+                        <div className="gc-card-avatar teacher-course-avatar">
+                          {(course.course_name || 'C').charAt(0).toUpperCase()}
+                        </div>
+
+                        <div className="gc-card-body teacher-course-body">
+                          <p className="gc-course-desc">{course.description || 'No description provided.'}</p>
+                          <div className="teacher-course-meta">
+                            <span className="teacher-course-chip">{course.subject || 'General'}</span>
+                            <span className="teacher-course-chip">Q: {course.course_test_questions || 0}</span>
+                            <span className="teacher-course-chip">{course.points || 0} pts</span>
+                          </div>
+                        </div>
+
+                        <div className="gc-card-footer teacher-course-footer">
+                          <button
+                            className="btn-icon"
+                            title="Export Course"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleCourseExport(course._id, course.course_code)
+                            }}
+                          >
+                            <HiArrowDownTray size={20} />
+                          </button>
+                          <button
+                            className="btn-icon"
+                            title="Delete Course"
+                            onClick={(e) => handleDeleteCourse(e, course._id)}
+                          >
+                            <HiTrash size={20} />
+                          </button>
+                          <button
+                            className="btn-icon"
+                            title="Open Course"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleCourseSelect(course)
+                            }}
+                          >
+                            <HiBookOpen size={22} />
+                          </button>
                         </div>
                       </motion.div>
                     ))}
@@ -609,17 +667,22 @@ function TeacherDashboard() {
                 </div>
               ) : !selectedModule ? (
                 /* MODULE LIST VIEW */
-                <div className="modules-view">
-                  <div className="view-header">
+                <div className="teacher-course-shell">
+                  <div className="view-header teacher-course-workspace-header">
                     <button className="btn btn-secondary" onClick={handleBack}>
                       ← Back to Courses
                     </button>
-                    <div className="view-title-row">
-                      <div className="view-title-info">
+                    <div className="teacher-course-hero">
+                      <div className="view-title-info teacher-course-title-block">
                         <h2>{selectedCourse.course_name} <span className="course-code-large">({selectedCourse.course_code})</span></h2>
                         <p className="view-description">{selectedCourse.description}</p>
+                        <div className="teacher-course-inline-meta">
+                          <span className="teacher-workspace-chip">{selectedCourse.subject || 'General'}</span>
+                          <span className="teacher-workspace-chip">{modules.length} Modules</span>
+                          <span className="teacher-workspace-chip">{selectedCourseTaskCount} Tasks</span>
+                        </div>
                       </div>
-                      <div className="course-actions">
+                      <div className="course-actions teacher-course-action-bar">
                         <button className="btn btn-outline" onClick={() => handleCourseExport(selectedCourse._id, selectedCourse.course_code)} title="Export Course">
                           <HiArrowDownTray /> Export Course
                         </button>
@@ -642,6 +705,29 @@ function TeacherDashboard() {
                         ref={handoutInputRef}
                         onChange={handleHandoutUpload}
                       />
+                    </div>
+
+                    <div className="teacher-course-summary-grid">
+                      <div className="teacher-summary-card">
+                        <span className="teacher-summary-label">Modules</span>
+                        <strong>{modules.length}</strong>
+                        <p>Structured learning blocks in this course</p>
+                      </div>
+                      <div className="teacher-summary-card">
+                        <span className="teacher-summary-label">Tasks</span>
+                        <strong>{selectedCourseTaskCount}</strong>
+                        <p>Total assignments published across modules</p>
+                      </div>
+                      <div className="teacher-summary-card">
+                        <span className="teacher-summary-label">Resources</span>
+                        <strong>{selectedCourseFileCount}</strong>
+                        <p>Files attached across your teaching flow</p>
+                      </div>
+                      <div className="teacher-summary-card">
+                        <span className="teacher-summary-label">Course Points</span>
+                        <strong>{selectedCourse.points || 0}</strong>
+                        <p>Reward value configured for the course journey</p>
+                      </div>
                     </div>
                   </div>
 
@@ -691,34 +777,50 @@ function TeacherDashboard() {
                   </div>
 
                   <div className="modules-section">
-                    <h3>Modules</h3>
+                    <div className="teacher-section-heading">
+                      <div>
+                        <h3>Modules</h3>
+                        <p>Organize the course into clear learning blocks with tasks and resources.</p>
+                      </div>
+                    </div>
                     {loadingModules ? <p>Loading modules...</p> : (
-                      <div className="modules-grid">
+                      <div className="teacher-module-grid">
                         {modules.length === 0 ? <p className="no-modules">No modules in this course.</p> : modules.map(module => (
-                          <div key={module._id} className="module-card">
-                            <div className="module-info">
-                              <h4>{module.module_name} <span className="module-order">#{module.module_order}</span></h4>
-                              <p>{module.description}</p>
-                              <div className="module-meta">
-                                <span className="file-count">{module.files.length} Files</span>
-                                <span>{module.tasks_per_module} Tasks</span>
-                                <span>{module.points || 0} pts</span>
+                          <div key={module._id} className="teacher-module-card">
+                            <div className="teacher-module-top">
+                              <div className="teacher-module-heading">
+                                <span className="teacher-module-order">Module {module.module_order}</span>
+                                <h4>{module.module_name}</h4>
                               </div>
+                              <span className="teacher-module-points">{module.points || 0} pts</span>
                             </div>
-                            <div className="module-actions">
-                              <button className="btn btn-outline" onClick={() => handleModuleExport(module._id, module.module_name)} title="Export Module">
-                                <HiArrowDownTray /> Export
-                              </button>
-                              <button className="btn btn-outline" onClick={() => handleModuleSelect(module)} title="View Tasks">
-                                <HiListBullet /> Tasks
-                              </button>
-                              <button className="btn btn-outline" onClick={() => openTaskForm(module._id)} title="Add Task">
-                                <HiPlus /> Add
-                              </button>
 
-                              <button className="btn btn-danger" onClick={() => handleDeleteModule(module._id)} title="Delete Module">
-                                <HiTrash />
-                              </button>
+                            <p className="teacher-module-description">{module.description || 'No module description added yet.'}</p>
+
+                            <div className="teacher-module-meta">
+                              <span className="teacher-workspace-chip">{module.files.length} Files</span>
+                              <span className="teacher-workspace-chip">{module.tasks_per_module || 0} Tasks</span>
+                              <span className="teacher-workspace-chip">Order #{module.module_order}</span>
+                            </div>
+
+                            <div className="teacher-module-actions">
+                              <div className="teacher-module-primary-actions">
+                                <button className="btn btn-outline" onClick={() => handleModuleSelect(module)} title="View Tasks">
+                                  <HiListBullet /> View Tasks
+                                </button>
+                                <button className="btn btn-outline" onClick={() => openTaskForm(module._id)} title="Add Task">
+                                  <HiPlus /> Add Task
+                                </button>
+                              </div>
+
+                              <div className="teacher-module-secondary-actions">
+                                <button className="btn btn-outline" onClick={() => handleModuleExport(module._id, module.module_name)} title="Export Module">
+                                  <HiArrowDownTray /> Export
+                                </button>
+                                <button className="btn btn-danger" onClick={() => handleDeleteModule(module._id)} title="Delete Module">
+                                  <HiTrash /> Delete
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -728,62 +830,99 @@ function TeacherDashboard() {
                 </div>
               ) : (
                 /* TASK LIST VIEW */
-                <div className="tasks-view">
-                  <div className="view-header">
+                <div className="teacher-course-shell">
+                  <div className="view-header teacher-course-workspace-header">
                     <button className="btn btn-secondary" onClick={handleBack}>
                       ← Back to Modules
                     </button>
-                    <div className="view-title-row">
-                      <div className="view-title-info">
+                    <div className="teacher-course-hero">
+                      <div className="view-title-info teacher-course-title-block">
                         <h2>{selectedModule.module_name} <span className="module-order">Module #{selectedModule.module_order}</span></h2>
                         <p className="view-description">{selectedModule.description}</p>
+                        <div className="teacher-course-inline-meta">
+                          <span className="teacher-workspace-chip">{tasks.length} Tasks</span>
+                          <span className="teacher-workspace-chip">{selectedModuleTotalPoints} Total Points</span>
+                          <span className="teacher-workspace-chip">{selectedModuleAverageTime} min avg time</span>
+                        </div>
                       </div>
                       <button className="btn btn-primary" onClick={() => openTaskForm(selectedModule._id, null)}>
                         <HiPlus /> Create Task
                       </button>
                     </div>
+
+                    <div className="teacher-course-summary-grid">
+                      <div className="teacher-summary-card">
+                        <span className="teacher-summary-label">Tasks</span>
+                        <strong>{tasks.length}</strong>
+                        <p>Published coding tasks inside this module</p>
+                      </div>
+                      <div className="teacher-summary-card">
+                        <span className="teacher-summary-label">Points</span>
+                        <strong>{selectedModuleTotalPoints}</strong>
+                        <p>Total points available across all tasks</p>
+                      </div>
+                      <div className="teacher-summary-card">
+                        <span className="teacher-summary-label">Languages</span>
+                        <strong>{selectedModuleLanguageCount}</strong>
+                        <p>Distinct programming languages currently used</p>
+                      </div>
+                      <div className="teacher-summary-card">
+                        <span className="teacher-summary-label">Time Profile</span>
+                        <strong>{selectedModuleAverageTime}m</strong>
+                        <p>Average suggested time limit for completion</p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="modules-section">
-                    <h3>Tasks</h3>
+                    <div className="teacher-section-heading">
+                      <div>
+                        <h3>Tasks</h3>
+                        <p>Review, edit, and maintain the coding challenges for this module.</p>
+                      </div>
+                    </div>
                     {loadingTasks ? <p>Loading tasks...</p> : (
-                      <div className="modules-grid">
+                      <div className="teacher-task-grid">
                         {tasks.length === 0 ? <p className="no-modules">No tasks in this module.</p> : tasks.map(task => (
-                          <div key={task._id} className="module-card">
-                            <div className="module-info">
-                              <h4>
-                                {task.task_name}
-                                <span className="task-summary-pill">
-                                  {task.difficulty} | {task.points}pts
-                                </span>
-                              </h4>
-                              <p>{task.problem_statement}</p>
-                              <div className="module-meta">
-                                <span>Lang: {task.language}</span>
-                                <span>Time: {task.time_limit}m</span>
-                                <span>Tests: {task.test_cases_count}</span>
+                          <div key={task._id} className="teacher-task-card">
+                            <div className="teacher-task-top">
+                              <div>
+                                <h4>{task.task_name}</h4>
+                                <p className="teacher-task-problem">{task.problem_statement}</p>
                               </div>
-                              {task.constraints && (
-                                <p className="task-constraints">
-                                  <strong>Constraints:</strong> {task.constraints}
-                                </p>
-                              )}
+                              <span className={`teacher-task-difficulty ${task.difficulty?.toLowerCase()}`}>
+                                {task.difficulty}
+                              </span>
                             </div>
-                            <div className="module-actions">
+
+                            <div className="teacher-task-meta">
+                              <span className="teacher-workspace-chip">Lang: {task.language}</span>
+                              <span className="teacher-workspace-chip">Time: {task.time_limit}m</span>
+                              <span className="teacher-workspace-chip">Tests: {task.test_cases_count}</span>
+                              <span className="teacher-workspace-chip">{task.points || 0} pts</span>
+                            </div>
+
+                            {task.constraints && (
+                              <p className="teacher-task-constraints">
+                                <strong>Constraints:</strong> {task.constraints}
+                              </p>
+                            )}
+
+                            <div className="teacher-task-actions">
                               <button
                                 className="btn btn-outline"
                                 onClick={() => openTaskForm(task.module_id, task)}
                                 title="Edit Task"
                                 style={{ borderColor: 'var(--accent-blue)', color: 'var(--accent-blue)' }}
                               >
-                                Edit
+                                Edit Task
                               </button>
                               <button
                                 className="btn btn-danger"
                                 onClick={() => handleDeleteTask(task._id, task.module_id)}
                                 title="Delete Task"
                               >
-                                <HiTrash />
+                                <HiTrash /> Delete
                               </button>
                             </div>
                           </div>

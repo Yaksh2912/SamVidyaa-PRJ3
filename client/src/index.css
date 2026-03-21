@@ -20,6 +20,7 @@ body {
   --bg-primary: #f5f7fa;
   --bg-secondary: #ffffff;
   --bg-tertiary: #edf1f7;
+  --bg-primary-rgb: 245, 247, 250;
 
   /* Text */
   --text-primary: #1b2a3d;
@@ -38,6 +39,8 @@ body {
   --accent-green: #10b981;
   --accent-orange: #f59e0b;
   --accent-red: #ef4444;
+  --accent-error: #ef4444;
+  --points-highlight: #b45309;
 
   /* Gradients */
   --accent-gradient: linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #06b6d4 100%);
@@ -54,7 +57,19 @@ body {
   /* Borders */
   --border-color: rgba(13, 148, 136, 0.16);
   --border-light: rgba(13, 148, 136, 0.1);
+  --border-light-rgb: 13, 148, 136;
   --border-focus: #0d9488;
+
+  /* Status */
+  --status-success-text: #059669;
+  --status-success-bg: rgba(16, 185, 129, 0.12);
+  --status-success-border: rgba(16, 185, 129, 0.25);
+  --status-warning-text: #b45309;
+  --status-warning-bg: rgba(245, 158, 11, 0.12);
+  --status-warning-border: rgba(245, 158, 11, 0.25);
+  --status-danger-text: #dc2626;
+  --status-danger-bg: rgba(239, 68, 68, 0.12);
+  --status-danger-border: rgba(239, 68, 68, 0.25);
 
   /* Glass Effect */
   --glass-bg: rgba(255, 255, 255, 0.72);
@@ -88,6 +103,7 @@ body {
   --bg-primary: #0c1222;
   --bg-secondary: #151e30;
   --bg-tertiary: #1e2a40;
+  --bg-primary-rgb: 12, 18, 34;
 
   --text-primary: #e8ecf4;
   --text-secondary: #94a3b8;
@@ -97,6 +113,12 @@ body {
   --accent-primary: #2dd4bf;
   --accent-secondary: #5eead4;
   --accent-tertiary: #fbbf24;
+  --accent-blue: #60a5fa;
+  --accent-green: #34d399;
+  --accent-orange: #fbbf24;
+  --accent-red: #f87171;
+  --accent-error: #f87171;
+  --points-highlight: #fbbf24;
 
   --accent-gradient: linear-gradient(135deg, #2dd4bf 0%, #5eead4 50%, #22d3ee 100%);
   --accent-gradient-subtle: linear-gradient(135deg, rgba(45, 212, 191, 0.1) 0%, rgba(94, 234, 212, 0.08) 50%, rgba(34, 211, 238, 0.05) 100%);
@@ -106,7 +128,18 @@ body {
 
   --border-color: rgba(45, 212, 191, 0.18);
   --border-light: rgba(45, 212, 191, 0.12);
+  --border-light-rgb: 45, 212, 191;
   --border-focus: #2dd4bf;
+
+  --status-success-text: #34d399;
+  --status-success-bg: rgba(52, 211, 153, 0.14);
+  --status-success-border: rgba(52, 211, 153, 0.28);
+  --status-warning-text: #fbbf24;
+  --status-warning-bg: rgba(251, 191, 36, 0.14);
+  --status-warning-border: rgba(251, 191, 36, 0.28);
+  --status-danger-text: #f87171;
+  --status-danger-bg: rgba(248, 113, 113, 0.14);
+  --status-danger-border: rgba(248, 113, 113, 0.28);
 
   --glass-bg: rgba(21, 30, 48, 0.82);
   --glass-border: rgba(45, 212, 191, 0.12);
