@@ -8,6 +8,7 @@ import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
 import CompleteTaskModal from '../components/CompleteTaskModal'
 import AskCollaborationModal from '../components/AskCollaborationModal'
+import ChatBot from '../components/ChatBot'
 import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification, HiUserGroup, HiCheck, HiXMark } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import './Dashboard.css'
@@ -938,6 +939,9 @@ function StudentDashboard() {
           onClose={() => setCollabModalTask(null)}
         />
       )}
+
+      {/* RAG Chatbot Widget */}
+      <ChatBot />
     </div>
   )
 }
