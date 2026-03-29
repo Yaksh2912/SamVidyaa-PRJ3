@@ -485,6 +485,12 @@ function StudentDashboard() {
                 <span className="premium-points-label">{t.topbar.totalPoints}</span>
               </div>
             </div>
+            <button className="theme-toggle topbar-action-mobile" onClick={toggleTheme} aria-label={common.toggleTheme}>
+              {isDark ? <FiSun size={18} /> : <FiMoon size={18} />}
+            </button>
+            <button onClick={handleLogout} className="btn-logout topbar-action-mobile" title={t.logout}>
+              <HiArrowDownTray style={{ transform: 'rotate(-90deg)', fontSize: '1.4rem' }} />
+            </button>
           </div>
         </header>
 

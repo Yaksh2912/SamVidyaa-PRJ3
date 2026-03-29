@@ -503,20 +503,22 @@
 }
 
 /* ─── Responsive Adjustments ─── */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
     .chatbot-panel {
-        width: calc(100vw - 2rem);
-        right: 1rem;
-        bottom: 6rem;
-        max-height: 75vh;
-        border-radius: 24px;
+        width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        right: 0;
+        bottom: 0;
+        border-radius: 0;
+        border: none;
     }
 
     .chatbot-fab {
-        bottom: 1.5rem;
-        right: 1.5rem;
-        width: 56px;
-        height: 56px;
-        font-size: 1.6rem;
+        bottom: 85px; /* Clear the bottom navigation bar */
+        right: 1rem;
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
     }
 }

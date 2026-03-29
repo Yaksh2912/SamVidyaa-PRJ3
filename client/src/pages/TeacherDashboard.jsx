@@ -545,6 +545,12 @@ function TeacherDashboard() {
               <option value="en">{common.languageNames.en}</option>
               <option value="hi">{common.languageNames.hi}</option>
             </select>
+            <button className="theme-toggle topbar-action-mobile" onClick={toggleTheme} aria-label={common.toggleTheme}>
+              {isDark ? <FiSun size={18} /> : <FiMoon size={18} />}
+            </button>
+            <button onClick={handleLogout} className="btn-logout topbar-action-mobile" title={t.logout}>
+              <HiArrowDownTray style={{ transform: 'rotate(-90deg)', fontSize: '1.4rem' }} />
+            </button>
           </div>
         </header>
 
