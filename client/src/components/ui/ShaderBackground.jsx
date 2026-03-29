@@ -40,7 +40,6 @@ export default function ShaderBackground({
                     style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
                     colors={colors}
                     speed={speed}
-                    backgroundColor={bg}
                 />
             )}
 
@@ -72,7 +71,6 @@ export default function ShaderBackground({
                         style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
                         colors={colors}
                         speed={speed * 0.5}
-                        backgroundColor={bg}
                     />
                     <div
                         style={{
