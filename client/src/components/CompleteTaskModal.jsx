@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import API_BASE_URL from '../config';
 import { HiCheckCircle, HiUsers } from 'react-icons/hi2';
+import { useI18n } from '../context/I18nContext';
 import './ModalForm.css';
 
 function CompleteTaskModal({ task, courseId, onClose, onComplete }) {
+    const { translations, t: translate } = useI18n();
+    const t = translations.forms.completeTask;
     const [classmates, setClassmates] = useState([]);
     const [selectedPeers, setSelectedPeers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -63,15 +66,15 @@ function CompleteTaskModal({ task, courseId, onClose, onComplete }) {
             });
             const data = await res.json();
             if (res.ok) {
-                alert(data.message);
+                alert(t.completeSuccess);
                 onComplete(task._id, data.points); // Pass new total points back
                 onClose();
             } else {
-                alert(data.message || 'Failed to complete task');
+                alert(data.message || t.completeFailed);
             }
         } catch (error) {
             console.error('Complete task error:', error);
-            alert('Something went wrong');
+            alert(translations.common.errors.somethingWentWrong);
         } finally {
             setSubmitting(false);
         }
@@ -94,22 +97,26 @@ function CompleteTaskModal({ task, courseId, onClose, onComplete }) {
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <h2>Submit Task: {task.task_name}</h2>
+                <h2>{translate('forms.completeTask.title', { task: task.task_name })}</h2>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                    This task is worth a total of <strong>{task.points} points</strong>.
+                    {translate('forms.completeTask.totalPoints', { points: task.points })}
                 </p>
 
                 {task.allow_collaboration && (
                     <div style={{ background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-blue)' }}>
                         <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-blue)', marginBottom: '0.5rem' }}>
-                            <HiUsers /> Collaboration Mode
+                            <HiUsers /> {t.collaborationMode}
                         </h4>
                         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                            Your teacher has enabled collaboration for this task with a <strong>{task.collab_percentage}% sharing split</strong>. 
+                            {translate('forms.completeTask.collaborationInfo', { percentage: task.collab_percentage })}
                         </p>
                         {selectedPeers.length > 0 && (
                             <p style={{ fontSize: '0.9rem', color: 'var(--accent-blue)', marginTop: '0.5rem', fontWeight: 600 }}>
-                                Because you selected {selectedPeers.length} peer(s), you will earn {studentShare} points, and each peer will receive {peerShareEach} points!
+                                {translate('forms.completeTask.collaborationSummary', {
+                                    count: selectedPeers.length,
+                                    studentShare,
+                                    peerShare: peerShareEach
+                                })}
                             </p>
                         )}
                     </div>
@@ -118,11 +125,11 @@ function CompleteTaskModal({ task, courseId, onClose, onComplete }) {
                 <form onSubmit={handleSubmit}>
                     {task.allow_collaboration && (
                         <div className="form-group">
-                            <label>Select Collaborators (Optional)</label>
+                            <label>{t.selectCollaborators}</label>
                             {loading ? (
-                                <p style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>Loading classmates...</p>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>{t.loadingClassmates}</p>
                             ) : classmates.length === 0 ? (
-                                <p style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>No other students found in this class.</p>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>{t.noClassmates}</p>
                             ) : (
                                 <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '0.5rem' }}>
                                     {classmates.map(peer => (
@@ -141,10 +148,10 @@ function CompleteTaskModal({ task, courseId, onClose, onComplete }) {
                     )}
 
                     <div className="modal-actions" style={{ marginTop: '2rem' }}>
-                        <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                        <button type="button" className="btn btn-secondary" onClick={onClose}>{t.cancel}</button>
                         <button type="submit" className="btn btn-primary" disabled={submitting}>
                             <HiCheckCircle style={{ marginRight: '0.5rem' }}/> 
-                            {submitting ? 'Submitting...' : 'Mark as Complete'}
+                            {submitting ? t.submitting : t.markComplete}
                         </button>
                     </div>
                 </form>

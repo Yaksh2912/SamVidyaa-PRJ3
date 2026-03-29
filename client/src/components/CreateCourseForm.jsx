@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import API_BASE_URL from '../config';
+import { useI18n } from '../context/I18nContext';
 
 function CreateCourseForm({ onClose, onCourseCreated }) {
+    const { translations } = useI18n();
+    const t = translations.forms.course;
     const [formData, setFormData] = useState({
         course_name: '',
         course_code: '',
@@ -39,7 +42,7 @@ function CreateCourseForm({ onClose, onCourseCreated }) {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.message || 'Failed to create course');
+                throw new Error(data.message || t.createFailed);
             }
 
             const newCourse = await response.json();
@@ -47,7 +50,7 @@ function CreateCourseForm({ onClose, onCourseCreated }) {
             onClose();
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Something went wrong');
+            setError(err.message || translations.common.errors.somethingWentWrong);
         } finally {
             setIsSubmitting(false);
         }
@@ -60,45 +63,45 @@ function CreateCourseForm({ onClose, onCourseCreated }) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
             >
-                <h2>Create New Course</h2>
+                <h2>{t.title}</h2>
                 {error && <div className="error-message">{error}</div>}
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label>Course Name</label>
+                        <label>{t.courseName}</label>
                         <input
                             type="text"
                             name="course_name"
                             value={formData.course_name}
                             onChange={handleChange}
                             required
-                            placeholder="e.g., Intro to Python"
+                            placeholder={t.courseNamePlaceholder}
                         />
                     </div>
                     <div className="form-group-row">
                         <div className="form-group">
-                            <label>Course Code</label>
+                            <label>{t.courseCode}</label>
                             <input
                                 type="text"
                                 name="course_code"
                                 value={formData.course_code}
                                 onChange={handleChange}
                                 required
-                                placeholder="e.g., CS101"
+                                placeholder={t.courseCodePlaceholder}
                             />
                         </div>
                         <div className="form-group">
-                            <label>Subject</label>
+                            <label>{t.subject}</label>
                             <input
                                 type="text"
                                 name="subject"
                                 value={formData.subject}
                                 onChange={handleChange}
                                 required
-                                placeholder="e.g., Computer Science"
+                                placeholder={t.subjectPlaceholder}
                             />
                         </div>
                         <div className="form-group">
-                            <label>Course Points</label>
+                            <label>{t.coursePoints}</label>
                             <input
                                 type="number"
                                 name="points"
@@ -110,19 +113,19 @@ function CreateCourseForm({ onClose, onCourseCreated }) {
                         </div>
                     </div>
                     <div className="form-group">
-                        <label>Description</label>
+                        <label>{t.description}</label>
                         <textarea
                             name="description"
                             value={formData.description}
                             onChange={handleChange}
                             rows="3"
-                            placeholder="Course details..."
+                            placeholder={t.descriptionPlaceholder}
                         />
                     </div>
                     <div className="modal-actions">
-                        <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                        <button type="button" className="btn btn-secondary" onClick={onClose}>{t.cancel}</button>
                         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                            {isSubmitting ? 'Creating...' : 'Create Course'}
+                            {isSubmitting ? t.creating : t.create}
                         </button>
                     </div>
                 </form>

@@ -13,9 +13,7 @@ import './LandingPage.css'
 function LandingPage() {
   const [activeIndex, setActiveIndex] = useState(null);
   const { theme, toggleTheme, isDark } = useTheme();
-  const { language, changeLanguage } = useI18n();
-
-  const { translations } = useI18n();
+  const { translations, language, changeLanguage, t: translate } = useI18n();
 
   const toggleFAQ = (index) => {
     setActiveIndex(activeIndex === index ? null : index);
@@ -59,13 +57,13 @@ function LandingPage() {
                 value={language}
                 onChange={(e) => changeLanguage(e.target.value)}
               >
-                <option value="en">EN</option>
-                <option value="hi">हिं</option>
+                <option value="en">{t.common.languageNames.en}</option>
+                <option value="hi">{t.common.languageNames.hi}</option>
               </select>
               <button
                 className="theme-toggle"
                 onClick={toggleTheme}
-                aria-label="Toggle theme"
+                aria-label={t.common.toggleTheme}
               >
                 {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
               </button>
@@ -112,16 +110,16 @@ function LandingPage() {
                 <div className="feature-card__icon-wrap feature-card__icon-wrap--student">
                   <FaUserGraduate />
                 </div>
-                <div className="feature-card__tag">For Students</div>
+                <div className="feature-card__tag">{t.features.cardTags.students}</div>
                 <h3 className="feature-card__title">{t.features?.students}</h3>
                 <p className="feature-card__desc">{t.features?.studentsDesc}</p>
                 <ul className="feature-card__list">
-                  <li><FiCheckCircle /> Access assignments &amp; lab tasks</li>
-                  <li><FiCheckCircle /> Track grades &amp; progress</li>
-                  <li><FiCheckCircle /> Download course handouts</li>
+                  {t.features.listItems.students.map((item) => (
+                    <li key={item}><FiCheckCircle /> {item}</li>
+                  ))}
                 </ul>
                 <Link to="/signup" className="feature-card__cta">
-                  Get Started <FiArrowRight />
+                  {t.features.ctas.students} <FiArrowRight />
                 </Link>
               </div>
             </motion.div>
@@ -133,16 +131,16 @@ function LandingPage() {
                 <div className="feature-card__icon-wrap feature-card__icon-wrap--teacher">
                   <FaChalkboardTeacher />
                 </div>
-                <div className="feature-card__tag">For Teachers</div>
+                <div className="feature-card__tag">{t.features.cardTags.teachers}</div>
                 <h3 className="feature-card__title">{t.features?.teachers}</h3>
                 <p className="feature-card__desc">{t.features?.teachersDesc}</p>
                 <ul className="feature-card__list">
-                  <li><FiCheckCircle /> Create modules &amp; tasks</li>
-                  <li><FiCheckCircle /> Grade student submissions</li>
-                  <li><FiCheckCircle /> Upload handouts &amp; resources</li>
+                  {t.features.listItems.teachers.map((item) => (
+                    <li key={item}><FiCheckCircle /> {item}</li>
+                  ))}
                 </ul>
                 <Link to="/signup" className="feature-card__cta feature-card__cta--teacher">
-                  Start Teaching <FiArrowRight />
+                  {t.features.ctas.teachers} <FiArrowRight />
                 </Link>
               </div>
             </motion.div>
@@ -154,16 +152,16 @@ function LandingPage() {
                 <div className="feature-card__icon-wrap feature-card__icon-wrap--admin">
                   <FaUserTie />
                 </div>
-                <div className="feature-card__tag">For Admins</div>
+                <div className="feature-card__tag">{t.features.cardTags.admins}</div>
                 <h3 className="feature-card__title">{t.features?.admins}</h3>
                 <p className="feature-card__desc">{t.features?.adminsDesc}</p>
                 <ul className="feature-card__list">
-                  <li><FiCheckCircle /> Manage users &amp; roles</li>
-                  <li><FiCheckCircle /> Monitor system activity</li>
-                  <li><FiCheckCircle /> Generate reports</li>
+                  {t.features.listItems.admins.map((item) => (
+                    <li key={item}><FiCheckCircle /> {item}</li>
+                  ))}
                 </ul>
                 <Link to="/signup" className="feature-card__cta feature-card__cta--admin">
-                  Manage System <FiArrowRight />
+                  {t.features.ctas.admins} <FiArrowRight />
                 </Link>
               </div>
             </motion.div>
@@ -267,7 +265,7 @@ function LandingPage() {
                 <input type="email" placeholder={t.contact?.emailPlaceholder} required />
               </div>
               <div className="form-group">
-                <input type="text" placeholder="Subject" required />
+                <input type="text" placeholder={t.contact?.subjectPlaceholder} required />
               </div>
               <div className="form-group">
                 <textarea placeholder={t.contact?.messagePlaceholder} required></textarea>

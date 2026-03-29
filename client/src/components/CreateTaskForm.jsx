@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import API_BASE_URL from '../config';
+import { useI18n } from '../context/I18nContext';
 import './ModalForm.css';
 
 function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
+    const { translations } = useI18n();
+    const t = translations.forms.task;
     const [formData, setFormData] = useState({
         task_name: '',
         problem_statement: '',
@@ -57,7 +60,7 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
 
     const handleAddTestCase = () => {
         if (!newTestCase.input || !newTestCase.expected_output) {
-            alert("Input and Expected Output are required for a test case.");
+            alert(t.testCaseRequired);
             return;
         }
         setTestCases([...testCases, { ...newTestCase, order_index: testCases.length + 1 }]);
@@ -74,7 +77,7 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
         setError('');
 
         if (!formData.task_name || !formData.problem_statement) {
-            setError('Task name and problem statement are required.');
+            setError(t.required);
             setIsSubmitting(false);
             return;
         }
@@ -106,16 +109,16 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.message || `Failed to ${isEditing ? 'update' : 'create'} task`);
+                throw new Error(data.message || (isEditing ? t.updateFailed : t.createFailed));
             }
 
             const savedTask = await response.json();
             onTaskCreated(savedTask, isEditing);
-            alert(`Task ${isEditing ? 'updated' : 'created'} successfully!`);
+            alert(isEditing ? t.updatedSuccess : t.createdSuccess);
             onClose();
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Something went wrong');
+            setError(err.message || translations.common.errors.somethingWentWrong);
         } finally {
             setIsSubmitting(false);
         }
@@ -128,40 +131,40 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
             >
-                <h2>{initialData ? 'Edit Task' : 'Create New Task'}</h2>
+                <h2>{initialData ? t.editTitle : t.createTitle}</h2>
                 {error && <div className="error-message">{error}</div>}
                 <form onSubmit={handleSubmit} className="task-form">
                     <div className="form-group">
-                        <label>Task Name</label>
+                        <label>{t.taskName}</label>
                         <input
                             type="text"
                             name="task_name"
                             value={formData.task_name}
                             onChange={handleChange}
                             required
-                            placeholder="e.g., Calculate Sum"
+                            placeholder={t.taskNamePlaceholder}
                         />
                     </div>
 
                     <div className="form-row">
                         <div className="form-group">
-                            <label>Difficulty</label>
+                            <label>{t.difficulty}</label>
                             <select name="difficulty" value={formData.difficulty} onChange={handleChange}>
-                                <option value="EASY">Easy</option>
-                                <option value="MEDIUM">Medium</option>
-                                <option value="HARD">Hard</option>
+                                <option value="EASY">{t.difficulties.EASY}</option>
+                                <option value="MEDIUM">{t.difficulties.MEDIUM}</option>
+                                <option value="HARD">{t.difficulties.HARD}</option>
                             </select>
                         </div>
                         <div className="form-group">
-                            <label>Base Points</label>
+                            <label>{t.basePoints}</label>
                             <input type="number" name="points" value={formData.points} onChange={handleChange} min="1" />
                         </div>
                         <div className="form-group">
-                            <label>Time Limit (mins)</label>
+                            <label>{t.timeLimit}</label>
                             <input type="number" name="time_limit" value={formData.time_limit} onChange={handleChange} min="1" />
                         </div>
                         <div className="form-group">
-                            <label>Language</label>
+                            <label>{t.language}</label>
                             <select name="language" value={formData.language} onChange={handleChange}>
                                 <option value="Python">Python</option>
                                 <option value="JavaScript">JavaScript</option>
@@ -181,14 +184,14 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                                     onChange={handleChange}
                                     style={{ transform: 'scale(1.2)' }}
                                 />
-                                Allow Collaboration
+                                {t.allowCollaboration}
                             </label>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem', marginLeft: '1.75rem' }}>If enabled, students can choose to share their reward points with peers who helped them.</p>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem', marginLeft: '1.75rem' }}>{t.collaborationHelp}</p>
                         </div>
                         
                         {formData.allow_collaboration && (
                             <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
-                                <label style={{ color: 'var(--accent-blue)' }}>Peer Share Percentage (%)</label>
+                                <label style={{ color: 'var(--accent-blue)' }}>{t.peerShare}</label>
                                 <input 
                                     type="number" 
                                     name="collab_percentage" 
@@ -203,62 +206,62 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                     </div>
 
                     <div className="form-group">
-                        <label>Problem Statement</label>
+                        <label>{t.problemStatement}</label>
                         <textarea
                             name="problem_statement"
                             value={formData.problem_statement}
                             onChange={handleChange}
                             rows="4"
                             required
-                            placeholder="Describe the task..."
+                            placeholder={t.problemStatementPlaceholder}
                         />
                     </div>
 
                     <div className="form-group">
-                        <label>Expected Output Description (Optional)</label>
+                        <label>{t.expectedOutput}</label>
                         <textarea
                             name="expected_output"
                             value={formData.expected_output}
                             onChange={handleChange}
                             rows="2"
-                            placeholder="Description of expected output..."
+                            placeholder={t.expectedOutputPlaceholder}
                         />
                     </div>
 
                     <div className="form-row">
                         <div className="form-group">
-                            <label>Sample Input (Text)</label>
-                            <textarea name="sample_input" value={formData.sample_input} onChange={handleChange} rows="3" placeholder="Input example..." />
+                            <label>{t.sampleInput}</label>
+                            <textarea name="sample_input" value={formData.sample_input} onChange={handleChange} rows="3" placeholder={t.sampleInputPlaceholder} />
                         </div>
                         <div className="form-group">
-                            <label>Sample Output (Text)</label>
-                            <textarea name="sample_output" value={formData.sample_output} onChange={handleChange} rows="3" placeholder="Output example..." />
+                            <label>{t.sampleOutput}</label>
+                            <textarea name="sample_output" value={formData.sample_output} onChange={handleChange} rows="3" placeholder={t.sampleOutputPlaceholder} />
                         </div>
                     </div>
 
                     <div className="form-group">
-                        <label>Constraints</label>
+                        <label>{t.constraints}</label>
                         <textarea
                             name="constraints"
                             value={formData.constraints}
                             onChange={handleChange}
                             rows="2"
-                            placeholder="e.g., Use O(n) time complexity"
+                            placeholder={t.constraintsPlaceholder}
                         />
                     </div>
 
                     <div className="test-cases-section">
-                        <h3>Test Cases</h3>
+                        <h3>{t.testCases}</h3>
                         <div className="test-case-inputs">
                             <input
                                 type="text"
-                                placeholder="Input"
+                                placeholder={t.testCaseInput}
                                 value={newTestCase.input}
                                 onChange={(e) => setNewTestCase({ ...newTestCase, input: e.target.value })}
                             />
                             <input
                                 type="text"
-                                placeholder="Expected Output"
+                                placeholder={t.testCaseExpectedOutput}
                                 value={newTestCase.expected_output}
                                 onChange={(e) => setNewTestCase({ ...newTestCase, expected_output: e.target.value })}
                             />
@@ -268,24 +271,24 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                                     className="checkbox-input"
                                     checked={newTestCase.is_sample}
                                     onChange={(e) => setNewTestCase({ ...newTestCase, is_sample: e.target.checked })}
-                                /> Sample
+                                /> {t.sample}
                             </label>
-                            <button type="button" onClick={handleAddTestCase} className="btn-small">Add</button>
+                            <button type="button" onClick={handleAddTestCase} className="btn-small">{t.add}</button>
                         </div>
                         <ul className="test-cases-list">
                             {testCases.map((tc, index) => (
                                 <li key={index}>
-                                    <span>In: {tc.input} | Out: {tc.expected_output} ({tc.is_sample ? 'Sample' : 'Hidden'})</span>
-                                    <button type="button" onClick={() => removeTestCase(index)} className="btn-text-danger">Remove</button>
+                                    <span>{t.testCaseInput}: {tc.input} | {t.testCaseExpectedOutput}: {tc.expected_output} ({tc.is_sample ? t.sample : t.hidden})</span>
+                                    <button type="button" onClick={() => removeTestCase(index)} className="btn-text-danger">{t.remove}</button>
                                 </li>
                             ))}
                         </ul>
                     </div>
 
                     <div className="modal-actions">
-                        <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                        <button type="button" className="btn btn-secondary" onClick={onClose}>{t.cancel}</button>
                         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                            {isSubmitting ? 'Saving...' : (initialData ? 'Update Task' : 'Create Task')}
+                            {isSubmitting ? t.saving : (initialData ? t.update : t.create)}
                         </button>
                     </div>
                 </form>

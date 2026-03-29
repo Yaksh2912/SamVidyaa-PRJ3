@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import API_BASE_URL from '../config';
 import { HiUserGroup, HiOutlinePaperAirplane } from 'react-icons/hi2';
 import { motion } from 'framer-motion';
+import { useI18n } from '../context/I18nContext';
 
 function AskCollaborationModal({ onClose, task, courseId }) {
+    const { translations, t: translate } = useI18n();
+    const t = translations.forms.collaboration;
     const [peers, setPeers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [inviting, setInviting] = useState(null);
@@ -28,7 +31,7 @@ function AskCollaborationModal({ onClose, task, courseId }) {
                 }
             } catch (err) {
                 console.error("Failed to fetch peers", err);
-                setError("Failed to load peers.");
+                setError(t.loadFailed);
             } finally {
                 setLoading(false);
             }
@@ -62,13 +65,13 @@ function AskCollaborationModal({ onClose, task, courseId }) {
             const data = await response.json();
             
             if (response.ok) {
-                setSuccessMsg('Invitation sent successfully!');
+                setSuccessMsg(t.inviteSuccess);
             } else {
-                setError(data.message || 'Failed to send invitation.');
+                setError(data.message || t.inviteFailed);
             }
         } catch (err) {
             console.error("Invite error", err);
-            setError('Something went wrong.');
+            setError(translations.common.errors.somethingWentWrong);
         } finally {
             setInviting(null);
         }
@@ -97,8 +100,8 @@ function AskCollaborationModal({ onClose, task, courseId }) {
             >
                 <div className="neumorphic-modal-header" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1rem' }}>
                     <div className="course-modal-intro">
-                        <h2><HiUserGroup /> Find a Partner</h2>
-                        <p className="course-code-subtitle">Task: {task.task_name}</p>
+                        <h2><HiUserGroup /> {t.title}</h2>
+                        <p className="course-code-subtitle">{translate('forms.collaboration.task', { task: task.task_name })}</p>
                     </div>
                 </div>
 
@@ -107,9 +110,9 @@ function AskCollaborationModal({ onClose, task, courseId }) {
                     {successMsg && <div className="success-message" style={{ marginBottom: '1rem', color: 'var(--status-success-text)', background: 'var(--status-success-bg)', padding: '0.75rem', borderRadius: '8px' }}>{successMsg}</div>}
 
                     {loading ? (
-                        <p className="loading-text">Finding classmates...</p>
+                        <p className="loading-text">{t.loading}</p>
                     ) : peers.length === 0 ? (
-                        <p className="empty-state">No other active students found in this course.</p>
+                        <p className="empty-state">{t.empty}</p>
                     ) : (
                         <div className="peers-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.5rem' }}>
                             {peers.map(peer => (
@@ -119,8 +122,8 @@ function AskCollaborationModal({ onClose, task, courseId }) {
                                             {(peer.student_id?.name || 'S').charAt(0).toUpperCase()}
                                         </div>
                                         <div>
-                                            <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{peer.student_id?.name || 'Unknown Student'}</div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{peer.student_id?.enrollment_number || peer.student_id?.email || 'N/A'}</div>
+                                            <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{peer.student_id?.name || translations.common.unknownStudent}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{peer.student_id?.enrollment_number || peer.student_id?.email || translations.common.notAvailable}</div>
                                         </div>
                                     </div>
                                     <button 
@@ -129,7 +132,7 @@ function AskCollaborationModal({ onClose, task, courseId }) {
                                         onClick={() => handleInvite(peer.student_id?._id)}
                                         disabled={inviting === peer.student_id?._id}
                                     >
-                                        {inviting === peer.student_id?._id ? 'Sending...' : <><HiOutlinePaperAirplane style={{ marginRight:'4px' }}/> Invite</>}
+                                        {inviting === peer.student_id?._id ? t.inviting : <><HiOutlinePaperAirplane style={{ marginRight:'4px' }}/> {t.invite}</>}
                                     </button>
                                 </div>
                             ))}
@@ -138,7 +141,7 @@ function AskCollaborationModal({ onClose, task, courseId }) {
                 </div>
 
                 <div className="modal-actions" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button type="button" className="btn btn-secondary" onClick={onClose}>Close</button>
+                    <button type="button" className="btn btn-secondary" onClick={onClose}>{t.close}</button>
                 </div>
             </motion.div>
         </div>

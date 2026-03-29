@@ -30,7 +30,7 @@ const getCourseGradient = (id) => {
 
 function StudentDashboard() {
   const { theme } = useTheme()
-  const { translations, language, changeLanguage } = useI18n()
+  const { translations, language, changeLanguage, t: translate } = useI18n()
   const { toggleTheme, isDark } = useTheme()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -42,7 +42,7 @@ function StudentDashboard() {
   const [userPoints, setUserPoints] = useState(0);
   const [claimingReward, setClaimingReward] = useState(null);
   const [showPointShop, setShowPointShop] = useState(false);
-  const [activeTab, setActiveTab] = useState('Dashboard');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
@@ -187,13 +187,13 @@ function StudentDashboard() {
       if (res.ok) {
         setUserPoints(data.points);
         await fetchRewards(); // Update locked/unlocked states
-        alert(data.message);
+        alert(t.pointShop.claimSuccess);
       } else {
-        alert(data.message || 'Failed to claim reward');
+        alert(data.message || translations.dashboard.student.pointShop.claimFailed);
       }
     } catch (error) {
       console.error('Claim reward error:', error);
-      alert('Error claiming reward');
+      alert(translations.dashboard.student.pointShop.claimError);
     } finally {
       setClaimingReward(null);
     }
@@ -240,7 +240,7 @@ function StudentDashboard() {
   };
 
   useEffect(() => {
-    if (activeTab === 'Rankings') {
+    if (activeTab === 'rankings') {
       fetchLeaderboard();
     }
   }, [activeTab, leaderboardType, selectedCourseForRanking]);
@@ -276,7 +276,7 @@ function StudentDashboard() {
         fetchCollaborations(); // Refresh list
       } else {
         const data = await res.json();
-        alert(data.message || 'Failed to update request');
+        alert(data.message || translations.dashboard.student.collaboration.updateFailed);
       }
     } catch (error) {
       console.error('Respond collab error:', error);
@@ -339,7 +339,7 @@ function StudentDashboard() {
     try {
       const url = `${API_BASE_URL}/${handoutPath.replace(/\\/g, '/')}`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Download failed');
+      if (!response.ok) throw new Error(translations.dashboard.student.courseModal.downloadFailed);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -351,7 +351,7 @@ function StudentDashboard() {
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Download error', error);
-      alert('Download failed');
+      alert(translations.dashboard.student.courseModal.downloadFailed);
     }
   };
 
@@ -376,20 +376,34 @@ function StudentDashboard() {
 
       if (response.ok) {
         await fetchData(); // Refresh lists
-        alert("Enrolled successfully!");
+        alert(translations.dashboard.student.availableCourses.enrollSuccess);
       } else {
         const data = await response.json();
-        alert(data.message || "Enrollment failed");
+        alert(data.message || translations.dashboard.student.availableCourses.enrollFailed);
       }
     } catch (error) {
       console.error("Enrollment error:", error);
-      alert("Something went wrong");
+      alert(translations.common.errors.somethingWentWrong);
     } finally {
       setEnrollLoading(null);
     }
   };
 
   const t = translations.dashboard.student
+  const common = translations.common
+  const tabTitles = {
+    dashboard: t.tabs.dashboard,
+    myCourses: t.tabs.myCourses,
+    availableCourses: t.tabs.availableCourses,
+    pointShop: t.tabs.pointShop,
+    rankings: t.tabs.rankings
+  }
+  const getEnrollmentStatusLabel = (status) => {
+    if (status === 'PENDING') return t.courses.requestPending
+    if (status === 'REJECTED') return t.courses.notEnrolled
+    return t.courses.active
+  }
+  const getDifficultyLabel = (difficulty) => translations.forms.task.difficulties[difficulty] || difficulty
 
   return (
     <div className="dashboard-layout" data-theme={theme}>
@@ -400,27 +414,27 @@ function StudentDashboard() {
         </div>
         
         <nav className="sidebar-nav">
-          <button className={`sidebar-link ${activeTab === 'Dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('Dashboard')}>
-            <HiStar className="sidebar-icon" /> Dashboard
+          <button className={`sidebar-link ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+            <HiStar className="sidebar-icon" /> {t.tabs.dashboard}
           </button>
-          <button className={`sidebar-link ${activeTab === 'My Courses' ? 'active' : ''}`} onClick={() => setActiveTab('My Courses')}>
-            <HiBookOpen className="sidebar-icon" /> My Courses
+          <button className={`sidebar-link ${activeTab === 'myCourses' ? 'active' : ''}`} onClick={() => setActiveTab('myCourses')}>
+            <HiBookOpen className="sidebar-icon" /> {t.tabs.myCourses}
           </button>
-          <button className={`sidebar-link ${activeTab === 'Available Courses' ? 'active' : ''}`} onClick={() => setActiveTab('Available Courses')}>
-            <HiPlusCircle className="sidebar-icon" /> Available Courses
+          <button className={`sidebar-link ${activeTab === 'availableCourses' ? 'active' : ''}`} onClick={() => setActiveTab('availableCourses')}>
+            <HiPlusCircle className="sidebar-icon" /> {t.tabs.availableCourses}
           </button>
-          <button className={`sidebar-link ${activeTab === 'Point Shop' ? 'active' : ''}`} onClick={() => setActiveTab('Point Shop')}>
-            <HiShoppingCart className="sidebar-icon" /> Point Shop
+          <button className={`sidebar-link ${activeTab === 'pointShop' ? 'active' : ''}`} onClick={() => setActiveTab('pointShop')}>
+            <HiShoppingCart className="sidebar-icon" /> {t.tabs.pointShop}
           </button>
-          <button className={`sidebar-link ${activeTab === 'Rankings' ? 'active' : ''}`} onClick={() => setActiveTab('Rankings')}>
-            <HiTrophy className="sidebar-icon" /> Rankings
+          <button className={`sidebar-link ${activeTab === 'rankings' ? 'active' : ''}`} onClick={() => setActiveTab('rankings')}>
+            <HiTrophy className="sidebar-icon" /> {t.tabs.rankings}
           </button>
         </nav>
 
         <div className="sidebar-bottom">
           <div className="theme-toggle-row">
-            <span className="text-secondary" style={{ fontSize: '0.85rem', fontWeight: 500 }}>Theme</span>
-            <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+            <span className="text-secondary" style={{ fontSize: '0.85rem', fontWeight: 500 }}>{common.theme}</span>
+            <button className="theme-toggle" onClick={toggleTheme} aria-label={common.toggleTheme}>
               {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
             </button>
           </div>
@@ -428,11 +442,11 @@ function StudentDashboard() {
             <div className="profile-info">
               <div className="profile-avatar">{user?.name ? user.name.charAt(0).toUpperCase() : 'S'}</div>
               <div className="profile-text">
-                <span className="profile-name">{user?.name || 'Student'}</span>
-                <span className="profile-role">Student</span>
+                <span className="profile-name">{user?.name || translations.auth.roles.student}</span>
+                <span className="profile-role">{t.roleLabel}</span>
               </div>
             </div>
-            <button onClick={handleLogout} className="btn-logout" title="Logout">
+            <button onClick={handleLogout} className="btn-logout" title={t.logout}>
               <HiArrowDownTray style={{ transform: 'rotate(-90deg)', fontSize: '1.2rem' }} />
             </button>
           </div>
@@ -445,7 +459,9 @@ function StudentDashboard() {
         <header className="dashboard-topbar">
           <div className="topbar-left">
             <h2 className="topbar-title">
-              {activeTab === 'Dashboard' ? `Welcome Back, ${user?.name || 'Student'}` : activeTab}
+              {activeTab === 'dashboard'
+                ? translate('dashboard.student.topbar.welcomeBack', { name: user?.name || translations.auth.roles.student })
+                : tabTitles[activeTab]}
             </h2>
           </div>
           <div className="topbar-right">
@@ -454,18 +470,18 @@ function StudentDashboard() {
               value={language}
               onChange={(e) => changeLanguage(e.target.value)}
             >
-              <option value="en">EN</option>
-              <option value="hi">हिं</option>
+              <option value="en">{common.languageNames.en}</option>
+              <option value="hi">{common.languageNames.hi}</option>
             </select>
             <div 
               className="points-badge-premium" 
-              onClick={() => setActiveTab('Point Shop')} 
-              title="Open Point Shop"
+              onClick={() => setActiveTab('pointShop')} 
+              title={t.topbar.openPointShop}
             >
               <HiStar className="premium-star" />
               <div className="premium-points-info">
                 <span className="premium-points-value">{userPoints}</span>
-                <span className="premium-points-label">Total Points</span>
+                <span className="premium-points-label">{t.topbar.totalPoints}</span>
               </div>
             </div>
           </div>
@@ -473,37 +489,37 @@ function StudentDashboard() {
 
         {/* WORKSPACE */}
         <div className="dashboard-workspace">
-          {activeTab === 'Dashboard' && (
+          {activeTab === 'dashboard' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
               <div className="workspace-panel-header">
-                <h3>Quick Stats</h3>
+                <h3>{t.stats.quickStats}</h3>
               </div>
               <div className="stats-grid">
                 <div className="stat-card">
                   <div className="stat-icon"><HiBookOpen /></div>
                   <div className="stat-info">
-                    <h3>Enrolled Courses</h3>
+                    <h3>{t.stats.enrolledCourses}</h3>
                     <p className="stat-number">{enrolledCourses.filter(e => e.status === 'ACTIVE' || e.status === 'APPROVED').length}</p>
                   </div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-icon"><HiClock /></div>
                   <div className="stat-info">
-                    <h3>Pending Requests</h3>
+                    <h3>{t.stats.pendingRequests}</h3>
                     <p className="stat-number">{enrolledCourses.filter(e => e.status === 'PENDING').length}</p>
                   </div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-icon"><HiPlusCircle /></div>
                   <div className="stat-info">
-                    <h3>Available</h3>
+                    <h3>{t.stats.available}</h3>
                     <p className="stat-number">{availableCourses.length}</p>
                   </div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-icon"><HiStar /></div>
                   <div className="stat-info">
-                    <h3>Points Earned</h3>
+                    <h3>{t.stats.pointsEarned}</h3>
                     <p className="stat-number">{userPoints}</p>
                   </div>
                 </div>
@@ -511,12 +527,16 @@ function StudentDashboard() {
 
               {collaborations.incoming.length > 0 && (
                 <div className="collabs-section" style={{ marginTop: '2rem' }}>
-                  <h3 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Pending Collaboration Requests</h3>
+                  <h3 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>{t.collaboration.pendingRequests}</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {collaborations.incoming.map(req => (
                       <div key={req._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--accent-primary)' }}>
                         <div>
-                          <strong style={{ color: 'var(--text-primary)' }}>{req.requester.name}</strong> wants to team up for <strong style={{ color: 'var(--accent-primary)' }}>{req.task_id.task_name}</strong> in {req.course_id.course_name}.
+                          {translate('dashboard.student.collaboration.requestMessage', {
+                            name: req.requester.name,
+                            task: req.task_id.task_name,
+                            course: req.course_id.course_name
+                          })}
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button 
@@ -524,14 +544,14 @@ function StudentDashboard() {
                             style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                             onClick={() => handleRespondCollab(req._id, 'ACCEPTED')}
                           >
-                            <HiCheck style={{ marginRight: '4px' }}/> Accept
+                            <HiCheck style={{ marginRight: '4px' }}/> {t.collaboration.accept}
                           </button>
                           <button 
                             className="btn btn-secondary" 
                             style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                             onClick={() => handleRespondCollab(req._id, 'REJECTED')}
                           >
-                            <HiXMark style={{ marginRight: '4px' }}/> Decline
+                            <HiXMark style={{ marginRight: '4px' }}/> {t.collaboration.decline}
                           </button>
                         </div>
                       </div>
@@ -542,18 +562,18 @@ function StudentDashboard() {
             </motion.div>
           )}
 
-          {activeTab === 'My Courses' && (
+          {activeTab === 'myCourses' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
               <div className="workspace-panel-header">
-                <h3>My Backpack</h3>
+                <h3>{t.courses.title}</h3>
               </div>
-              {loading ? <p>Loading...</p> : enrolledCourses.length === 0 ? (
-                <p className="empty-state">You are not enrolled in any courses yet.</p>
+              {loading ? <p>{t.courses.loading}</p> : enrolledCourses.length === 0 ? (
+                <p className="empty-state">{t.courses.empty}</p>
               ) : (
                 <div className="gc-course-grid">
                   {enrolledCourses.map((enrollment) => {
                     const course = enrollment.course_id;
-                    const instructorName = course.instructor ? course.instructor.name : 'Unknown';
+                    const instructorName = course.instructor ? course.instructor.name : common.unknownInstructor;
                     const initial = instructorName.charAt(0).toUpperCase();
 
                     return (
@@ -573,9 +593,9 @@ function StudentDashboard() {
                         <div className="gc-card-avatar">{initial}</div>
                         
                         <div className="gc-card-body">
-                           <p className="gc-course-desc">{course.description || "No description provided."}</p>
+                           <p className="gc-course-desc">{course.description || common.noDescription}</p>
                            <span className={`status-badge ${enrollment.status.toLowerCase()}`} style={{ marginTop: '0.5rem', display: 'inline-block' }}>
-                             {enrollment.status === 'PENDING' ? 'Request Pending' : enrollment.status === 'REJECTED' ? 'Not Enrolled' : 'Active'}
+                             {getEnrollmentStatusLabel(enrollment.status)}
                            </span>
                         </div>
 
@@ -583,7 +603,7 @@ function StudentDashboard() {
                           {(enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') && course.handout_path && (
                             <button
                               className="btn-icon"
-                              title="Download Handout"
+                              title={t.courses.downloadHandout}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleHandoutDownload(course.handout_path, course.handout_filename);
@@ -594,7 +614,7 @@ function StudentDashboard() {
                           )}
                           <button
                             className="btn-icon"
-                            title="Open Course"
+                            title={t.courses.openCourse}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') handleViewCourse(course);
@@ -611,17 +631,17 @@ function StudentDashboard() {
             </motion.div>
           )}
 
-          {activeTab === 'Available Courses' && (
+          {activeTab === 'availableCourses' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
               <div className="workspace-panel-header">
-                <h3>Course Catalog</h3>
+                <h3>{t.availableCourses.title}</h3>
               </div>
-              {loading ? <p>Loading...</p> : availableCourses.length === 0 ? (
-                <p className="empty-state">No new courses available at the moment.</p>
+              {loading ? <p>{t.availableCourses.loading}</p> : availableCourses.length === 0 ? (
+                <p className="empty-state">{t.availableCourses.empty}</p>
               ) : (
                 <div className="gc-course-grid">
                   {availableCourses.map((course) => {
-                    const instructorName = course.instructor ? course.instructor.name : 'Unknown';
+                    const instructorName = course.instructor ? course.instructor.name : common.unknownInstructor;
                     const initial = instructorName.charAt(0).toUpperCase();
 
                     return (
@@ -633,8 +653,10 @@ function StudentDashboard() {
                         <div className="gc-card-avatar">{initial}</div>
                         
                         <div className="gc-card-body">
-                           <p className="gc-course-desc">{course.description || "No description provided."}</p>
-                           <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>Subject: {course.subject}</span>
+                           <p className="gc-course-desc">{course.description || common.noDescription}</p>
+                           <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                             {translate('dashboard.student.availableCourses.subject', { subject: course.subject })}
+                           </span>
                         </div>
 
                         <div className="gc-card-footer" style={{ borderTop: 'none', paddingBottom: '1.25rem' }}>
@@ -645,7 +667,7 @@ function StudentDashboard() {
                             disabled={enrollLoading === course._id}
                           >
                             <HiPlusCircle style={{ marginRight: '0.4rem', marginBottom: '-2px' }}/> 
-                            {enrollLoading === course._id ? 'Requesting...' : 'Request Enrollment'}
+                            {enrollLoading === course._id ? t.availableCourses.requesting : t.availableCourses.requestEnrollment}
                           </button>
                         </div>
                       </div>
@@ -656,19 +678,19 @@ function StudentDashboard() {
             </motion.div>
           )}
 
-          {activeTab === 'Point Shop' && (
+          {activeTab === 'pointShop' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel point-shop-panel">
               <div className="workspace-panel-header">
-                <h3>Fun Zone Rewards</h3>
+                <h3>{t.pointShop.title}</h3>
                 <button className="btn btn-earn-points" onClick={() => handleAddPoints(50)}>
-                  <HiBolt /> Earn 50 Points (Test)
+                  <HiBolt /> {t.pointShop.earnTestPoints}
                 </button>
               </div>
               <div className="rewards-grid">
                 {loadingRewards ? (
-                  <p style={{ color: 'var(--text-secondary)' }}>Loading fresh rewards...</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>{t.pointShop.loading}</p>
                 ) : rewards.length === 0 ? (
-                  <p className="empty-state">No custom rewards available. Keep an eye out for updates from your teachers!</p>
+                  <p className="empty-state">{t.pointShop.empty}</p>
                 ) : rewards.map((reward) => (
                   <motion.div
                     key={reward._id}
@@ -681,19 +703,19 @@ function StudentDashboard() {
                       <h4 className="reward-card-name" style={{ marginBottom: '0.15rem' }}>{reward.name}</h4>
                       {reward.course_id && (
                         <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
-                          Course: {reward.course_id.course_name}
+                          {translate('dashboard.student.pointShop.course', { course: reward.course_id.course_name })}
                         </span>
                       )}
                       <p className="reward-card-desc">{reward.description}</p>
                     </div>
                     <div className="reward-card-footer">
-                      <span className="reward-cost"><HiStar /> {reward.cost} pts</span>
+                      <span className="reward-cost"><HiStar /> {translate('dashboard.student.pointShop.cost', { points: reward.cost })}</span>
                       <button
                         className="btn btn-claim"
                         disabled={userPoints < reward.cost || claimingReward === reward._id}
                         onClick={() => handleClaimReward(reward)}
                       >
-                        {claimingReward === reward._id ? 'Claiming...' : userPoints < reward.cost ? 'Locked' : 'Claim'}
+                        {claimingReward === reward._id ? t.pointShop.claiming : userPoints < reward.cost ? t.pointShop.locked : t.pointShop.claim}
                       </button>
                     </div>
                   </motion.div>
@@ -702,10 +724,10 @@ function StudentDashboard() {
             </motion.div>
           )}
 
-          {activeTab === 'Rankings' && (
+          {activeTab === 'rankings' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
               <div className="workspace-panel-header">
-                <h3>{t.leaderboard?.title || "Rankings"}</h3>
+                <h3>{t.leaderboard.title}</h3>
               </div>
               
               <div className="leaderboard-controls" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
@@ -715,10 +737,10 @@ function StudentDashboard() {
                   onChange={(e) => setLeaderboardType(e.target.value)}
                   style={{ width: 'auto', padding: '0.5rem 1rem' }}
                 >
-                  <option value="global">Global Ranking</option>
-                  <option value="weekly">Weekly Top</option>
-                  <option value="class">Class Ranking</option>
-                  <option value="peers">My Peers</option>
+                  <option value="global">{t.leaderboard.options.global}</option>
+                  <option value="weekly">{t.leaderboard.options.weekly}</option>
+                  <option value="class">{t.leaderboard.options.class}</option>
+                  <option value="peers">{t.leaderboard.options.peers}</option>
                 </select>
 
                 {leaderboardType === 'class' && (
@@ -728,7 +750,7 @@ function StudentDashboard() {
                     onChange={(e) => setSelectedCourseForRanking(e.target.value)}
                     style={{ width: 'auto', padding: '0.5rem 1rem' }}
                   >
-                    <option value="">-- Select a Class --</option>
+                    <option value="">{t.leaderboard.selectClass}</option>
                     {enrolledCourses.filter(e => e.status === 'ACTIVE' || e.status === 'APPROVED').map(enc => (
                       <option key={enc.course_id._id} value={enc.course_id._id}>
                         {enc.course_id.course_name}
@@ -740,11 +762,11 @@ function StudentDashboard() {
 
               <div className="ranking-list">
                 {loadingLeaderboard ? (
-                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading rankings...</p>
+                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{t.leaderboard.loading}</p>
                 ) : leaderboardType === 'class' && !selectedCourseForRanking ? (
-                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Select a class to view its ranking.</p>
+                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{t.leaderboard.selectClassPrompt}</p>
                 ) : leaderboardData.length === 0 ? (
-                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No data available for this ranking.</p>
+                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{t.leaderboard.empty}</p>
                 ) : (
                   leaderboardData.map((student, index) => {
                     const isCurrentUser = student._id === user?._id || student.isCurrentUser;
@@ -760,11 +782,11 @@ function StudentDashboard() {
                         <div className="rank-avatar">{(student.name || 'S').charAt(0).toUpperCase()}</div>
                         <div className="rank-info">
                           <span className="rank-name">
-                            {isCurrentUser ? `${student.name} (${t.leaderboard?.yourRank || "You"})` : student.name}
+                            {isCurrentUser ? `${student.name} (${t.leaderboard.yourRank})` : student.name}
                           </span>
                         </div>
                         <div className="rank-score">
-                          {student.points || 0} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{t.leaderboard?.points || "pts"}</span>
+                          {student.points || 0} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{t.leaderboard.points}</span>
                         </div>
                       </div>
                     );
@@ -790,21 +812,21 @@ function StudentDashboard() {
                 <div>
                   <h2>{selectedCourse.course_name}</h2>
                   <p className="course-code-subtitle">
-                    {selectedCourse.course_code} | <span>{selectedCourse.points || 0} Course Points</span>
+                    {selectedCourse.course_code} | <span>{translate('dashboard.student.courseModal.coursePoints', { points: selectedCourse.points || 0 })}</span>
                   </p>
                 </div>
                 <div className="course-modal-summary">
                   {selectedCourse.subject && (
                     <span className="course-modal-chip">{selectedCourse.subject}</span>
                   )}
-                  <span className="course-modal-chip">{courseModules.length} Modules</span>
+                  <span className="course-modal-chip">{translate('dashboard.student.courseModal.moduleCount', { count: courseModules.length })}</span>
                   {selectedCourse.handout_path && (
                     <button
                       type="button"
                       className="course-modal-chip course-modal-chip-action"
                       onClick={() => handleHandoutDownload(selectedCourse.handout_path, selectedCourse.handout_filename)}
                     >
-                      <HiArrowDownTray /> Handout
+                      <HiArrowDownTray /> {t.courseModal.handout}
                     </button>
                   )}
                 </div>
@@ -812,14 +834,14 @@ function StudentDashboard() {
                   <p className="course-modal-description">{selectedCourse.description}</p>
                 )}
               </div>
-              <button type="button" className="btn-neumorphic-close" onClick={() => setSelectedCourse(null)}>Close</button>
+              <button type="button" className="btn-neumorphic-close" onClick={() => setSelectedCourse(null)}>{t.courseModal.close}</button>
             </div>
 
             <div className="neumorphic-modal-body">
               {modalLoading ? (
-                <p className="loading-text">Loading syllabus...</p>
+                <p className="loading-text">{t.courseModal.syllabusLoading}</p>
               ) : courseModules.length === 0 ? (
-                <p className="empty-state">No modules available for this course yet.</p>
+                <p className="empty-state">{t.courseModal.empty}</p>
               ) : (
                 <div className="neumorphic-modules">
                   {courseModules.map((module) => (
@@ -833,21 +855,21 @@ function StudentDashboard() {
                           <p>{module.description}</p>
                         </div>
                         <div className="neumorphic-module-meta">
-                          <span className="module-order-chip">Module {module.module_order}</span>
+                          <span className="module-order-chip">{translate('dashboard.student.courseModal.moduleLabel', { order: module.module_order })}</span>
                           <div className="module-points-badge">
-                            {module.points || 0} pts
+                            {translate('dashboard.student.pointShop.cost', { points: module.points || 0 })}
                           </div>
                         </div>
                       </div>
 
                       {expandedModule === module._id && (
                         <div className="neumorphic-module-tasks">
-                          <h5>Tasks ({courseTasks[module._id]?.length || 0})</h5>
+                          <h5>{translate('dashboard.student.courseModal.taskCount', { count: courseTasks[module._id]?.length || 0 })}</h5>
                           
                           {!courseTasks[module._id] ? (
-                            <p className="loading-tasks">Loading tasks...</p>
+                            <p className="loading-tasks">{t.courseModal.loadingTasks}</p>
                           ) : courseTasks[module._id].length === 0 ? (
-                            <p className="loading-tasks">No tasks assigned yet.</p>
+                            <p className="loading-tasks">{t.courseModal.noTasks}</p>
                           ) : (
                             <div className="neumorphic-task-list">
                               {courseTasks[module._id].map(task => (
@@ -855,13 +877,13 @@ function StudentDashboard() {
                                   <div className="task-info">
                                     <span className="task-name">{task.task_name}</span>
                                     <span className="task-meta">
-                                      <span className={`diff-${task.difficulty.toLowerCase()}`}>{task.difficulty}</span> | {task.language} | <HiClock/> {task.time_limit}m
-                                      {task.allow_collaboration && <span style={{ marginLeft: '10px', color: '#3b82f6', fontWeight: 600 }}>• Teamwork Allowed</span>}
+                                      <span className={`diff-${task.difficulty.toLowerCase()}`}>{getDifficultyLabel(task.difficulty)}</span> | {task.language} | <HiClock/> {task.time_limit}m
+                                      {task.allow_collaboration && <span style={{ marginLeft: '10px', color: '#3b82f6', fontWeight: 600 }}>• {t.courseModal.teamworkAllowed}</span>}
                                     </span>
                                   </div>
                                   <div className="task-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                     <div className="task-points">
-                                      <HiStar /> {task.points} pts
+                                      <HiStar /> {translate('dashboard.student.pointShop.cost', { points: task.points })}
                                     </div>
                                     {task.allow_collaboration && (
                                       <button 
@@ -874,7 +896,7 @@ function StudentDashboard() {
                                           setCollabModalTask(task);
                                         }}
                                       >
-                                        <HiUserGroup /> Ask for Collaboration
+                                        <HiUserGroup /> {t.courseModal.askForCollaboration}
                                       </button>
                                     )}
                                     <button 
@@ -882,7 +904,7 @@ function StudentDashboard() {
                                       className="btn btn-primary task-complete-btn"
                                       onClick={() => setCompletingTask(task)}
                                     >
-                                      <HiCheckCircle /> Complete
+                                      <HiCheckCircle /> {t.courseModal.complete}
                                     </button>
                                   </div>
                                 </div>

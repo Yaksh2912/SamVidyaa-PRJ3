@@ -1,8 +1,11 @@
 import React, { useState } from 'react'
 import API_BASE_URL from '../config'
+import { useI18n } from '../context/I18nContext'
 import '../components/ModalForm.css'
 
 function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
+    const { translations, t: translate } = useI18n()
+    const t = translations.forms.addStudents
     const [activeTab, setActiveTab] = useState('range') // 'range' | 'excel'
     const [startEnrollment, setStartEnrollment] = useState('')
     const [endEnrollment, setEndEnrollment] = useState('')
@@ -17,7 +20,7 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
         setResult(null)
 
         if (!startEnrollment || !endEnrollment) {
-            setError('Both enrollment numbers are required')
+            setError(t.rangeRequired)
             return
         }
 
@@ -46,11 +49,11 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
                 setResult(data)
                 if (onStudentsAdded) onStudentsAdded()
             } else {
-                setError(data.message || 'Bulk enrollment failed')
+                setError(data.message || t.bulkFailed)
             }
         } catch (err) {
             console.error('Bulk enroll error:', err)
-            setError('Something went wrong')
+            setError(translations.common.errors.somethingWentWrong)
         } finally {
             setLoading(false)
         }
@@ -62,7 +65,7 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
         setResult(null)
 
         if (!excelFile) {
-            setError('Please select an Excel file')
+            setError(t.excelRequired)
             return
         }
 
@@ -90,11 +93,11 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
                 setResult(data)
                 if (onStudentsAdded) onStudentsAdded()
             } else {
-                setError(data.message || 'Excel upload failed')
+                setError(data.message || t.excelFailed)
             }
         } catch (err) {
             console.error('Excel upload error:', err)
-            setError('Something went wrong')
+            setError(translations.common.errors.somethingWentWrong)
         } finally {
             setLoading(false)
         }
@@ -103,11 +106,11 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <h2>Add Students</h2>
+                <h2>{t.title}</h2>
 
                 <div className="modal-tabs" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                    <button type="button" onClick={() => { setActiveTab('range'); setError(''); setResult(null); }} style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', borderBottom: activeTab === 'range' ? '2px solid var(--primary-color)' : 'none', color: activeTab === 'range' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: activeTab === 'range' ? '600' : 'normal' }}>By Enrollment Range</button>
-                    <button type="button" onClick={() => { setActiveTab('excel'); setError(''); setResult(null); }} style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', borderBottom: activeTab === 'excel' ? '2px solid var(--primary-color)' : 'none', color: activeTab === 'excel' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: activeTab === 'excel' ? '600' : 'normal' }}>Upload Excel</button>
+                    <button type="button" onClick={() => { setActiveTab('range'); setError(''); setResult(null); }} style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', borderBottom: activeTab === 'range' ? '2px solid var(--primary-color)' : 'none', color: activeTab === 'range' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: activeTab === 'range' ? '600' : 'normal' }}>{t.byRange}</button>
+                    <button type="button" onClick={() => { setActiveTab('excel'); setError(''); setResult(null); }} style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', borderBottom: activeTab === 'excel' ? '2px solid var(--primary-color)' : 'none', color: activeTab === 'excel' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: activeTab === 'excel' ? '600' : 'normal' }}>{t.uploadExcel}</button>
                 </div>
 
                 {error && <div className="error-message">{error}</div>}
@@ -124,10 +127,10 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
                     }}>
                         <strong style={{ color: 'var(--status-success-text)' }}>✓ {result.message}</strong>
                         <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                            <span><strong>{result.enrolled}</strong> enrolled</span>
-                            <span><strong>{result.skipped}</strong> skipped</span>
-                            {result.not_found !== undefined && <span><strong>{result.not_found}</strong> not found</span>}
-                            {result.total_in_range !== undefined && <span><strong>{result.total_in_range}</strong> found in range</span>}
+                            <span>{translate('forms.addStudents.enrolled', { count: result.enrolled })}</span>
+                            <span>{translate('forms.addStudents.skipped', { count: result.skipped })}</span>
+                            {result.not_found !== undefined && <span>{translate('forms.addStudents.notFound', { count: result.not_found })}</span>}
+                            {result.total_in_range !== undefined && <span>{translate('forms.addStudents.foundInRange', { count: result.total_in_range })}</span>}
                         </div>
                     </div>
                 )}
@@ -135,26 +138,26 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
                 {activeTab === 'range' ? (
                     <form onSubmit={handleRangeSubmit}>
                         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                            Enter a range of enrollment numbers to enroll all matching students into this course.
+                            {t.rangeHelp}
                         </p>
                         <div className="form-group-row" style={{ display: 'flex', gap: '1rem' }}>
                             <div className="form-group" style={{ flex: 1 }}>
-                                <label>From Enrollment Number</label>
+                                <label>{t.fromEnrollment}</label>
                                 <input
                                     type="text"
                                     value={startEnrollment}
                                     onChange={(e) => setStartEnrollment(e.target.value)}
-                                    placeholder="e.g. 220101"
+                                    placeholder={t.enrollmentPlaceholderStart}
                                     required
                                 />
                             </div>
                             <div className="form-group" style={{ flex: 1 }}>
-                                <label>To Enrollment Number</label>
+                                <label>{t.toEnrollment}</label>
                                 <input
                                     type="text"
                                     value={endEnrollment}
                                     onChange={(e) => setEndEnrollment(e.target.value)}
-                                    placeholder="e.g. 220150"
+                                    placeholder={t.enrollmentPlaceholderEnd}
                                     required
                                 />
                             </div>
@@ -162,20 +165,20 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
 
                         <div className="modal-actions">
                             <button type="button" className="btn btn-secondary" onClick={onClose}>
-                                Cancel
+                                {t.cancel}
                             </button>
                             <button type="submit" className="btn btn-primary" disabled={loading}>
-                                {loading ? 'Enrolling...' : 'Enroll Students'}
+                                {loading ? t.enrolling : t.enrollStudents}
                             </button>
                         </div>
                     </form>
                 ) : (
                     <form onSubmit={handleExcelSubmit}>
                         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                            Upload an Excel file containing list of students. File must include <strong>email</strong> and <strong>enrollment number</strong> columns.
+                            {t.excelHelp}
                         </p>
                         <div className="form-group">
-                            <label>Select Excel File (.xlsx, .xls, .csv)</label>
+                            <label>{t.selectExcel}</label>
                             <input
                                 type="file"
                                 accept=".xlsx, .xls, .csv"
@@ -186,10 +189,10 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
 
                         <div className="modal-actions">
                             <button type="button" className="btn btn-secondary" onClick={onClose}>
-                                Cancel
+                                {t.cancel}
                             </button>
                             <button type="submit" className="btn btn-primary" disabled={loading || !excelFile}>
-                                {loading ? 'Uploading...' : 'Upload & Enroll'}
+                                {loading ? t.uploading : t.uploadAndEnroll}
                             </button>
                         </div>
                     </form>
@@ -200,4 +203,3 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
 }
 
 export default AddStudentsModal
-

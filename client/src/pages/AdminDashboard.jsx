@@ -9,7 +9,7 @@ import './Dashboard.css'
 
 function AdminDashboard() {
   const { theme } = useTheme()
-  const { translations, language, changeLanguage } = useI18n()
+  const { translations, language, changeLanguage, t: translate } = useI18n()
   const { toggleTheme, isDark } = useTheme()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -33,18 +33,18 @@ function AdminDashboard() {
                 value={language}
                 onChange={(e) => changeLanguage(e.target.value)}
               >
-                <option value="en">EN</option>
-                <option value="hi">हिं</option>
+                <option value="en">{translations.common.languageNames.en}</option>
+                <option value="hi">{translations.common.languageNames.hi}</option>
               </select>
               <button 
                 className="theme-toggle"
                 onClick={toggleTheme}
-                aria-label="Toggle theme"
+                aria-label={translations.common.toggleTheme}
               >
                 {isDark ? '☀️' : '🌙'}
               </button>
             </div>
-            <span className="user-info">{t.welcome}, {user?.name || 'Admin'}</span>
+            <span className="user-info">{t.welcome}, {user?.name || translations.auth.roles.admin}</span>
             <button onClick={handleLogout} className="btn btn-secondary">
               {t.logout}
             </button>
@@ -176,15 +176,15 @@ function AdminDashboard() {
           <h3>{t.activity.title}</h3>
           <div className="activity-list">
             <div className="activity-item">
-              <span className="activity-time">2 hours ago</span>
+              <span className="activity-time">{translate('dashboard.admin.activity.hoursAgo', { hours: 2 })}</span>
               <span className="activity-text">{t.activity.newStudent}</span>
             </div>
             <div className="activity-item">
-              <span className="activity-time">5 hours ago</span>
+              <span className="activity-time">{translate('dashboard.admin.activity.hoursAgo', { hours: 5 })}</span>
               <span className="activity-text">{t.activity.assignmentSubmitted}</span>
             </div>
             <div className="activity-item">
-              <span className="activity-time">1 day ago</span>
+              <span className="activity-time">{t.activity.dayAgo}</span>
               <span className="activity-text">{t.activity.newTeacher}</span>
             </div>
           </div>

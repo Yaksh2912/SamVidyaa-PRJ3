@@ -8,13 +8,14 @@ import StudentDashboard from './pages/StudentDashboard'
 import TeacherDashboard from './pages/TeacherDashboard'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
-import { I18nProvider } from './context/I18nContext'
+import { I18nProvider, useI18n } from './context/I18nContext'
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user, isAuthenticated, loading } = useAuth()
+  const { t } = useI18n()
 
   if (loading) {
-    return <div className="loading-screen">Loading...</div>
+    return <div className="loading-screen">{t('app.loading')}</div>
   }
 
   if (!isAuthenticated) {

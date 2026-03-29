@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import API_BASE_URL from '../config';
+import { useI18n } from '../context/I18nContext';
 import './ModalForm.css';
 
 function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
+    const { translations } = useI18n();
+    const t = translations.forms.module;
     const [formData, setFormData] = useState({
         module_name: '',
         description: '',
@@ -32,7 +35,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
         setError('');
 
         if (!formData.module_name || !formData.module_order) {
-            setError('Module name and order are required.');
+            setError(t.required);
             setIsSubmitting(false);
             return;
         }
@@ -66,7 +69,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.message || 'Failed to create module');
+                throw new Error(data.message || t.createFailed);
             }
 
             const newModule = await response.json();
@@ -74,7 +77,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
             onClose();
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Something went wrong');
+            setError(err.message || translations.common.errors.somethingWentWrong);
         } finally {
             setIsSubmitting(false);
         }
@@ -87,12 +90,12 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
             >
-                <h2>Create New Module</h2>
+                <h2>{t.title}</h2>
                 {error && <div className="error-message">{error}</div>}
                 <form onSubmit={handleSubmit}>
                     <div className="form-row">
                         <div className="form-group" style={{ flex: 1 }}>
-                            <label>Module Order</label>
+                            <label>{t.moduleOrder}</label>
                             <input
                                 type="number"
                                 name="module_order"
@@ -103,32 +106,32 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                             />
                         </div>
                         <div className="form-group" style={{ flex: 3 }}>
-                            <label>Module Name</label>
+                            <label>{t.moduleName}</label>
                             <input
                                 type="text"
                                 name="module_name"
                                 value={formData.module_name}
                                 onChange={handleChange}
                                 required
-                                placeholder="e.g., Variables"
+                                placeholder={t.moduleNamePlaceholder}
                             />
                         </div>
                     </div>
 
                     <div className="form-group">
-                        <label>Description</label>
+                        <label>{t.description}</label>
                         <textarea
                             name="description"
                             value={formData.description}
                             onChange={handleChange}
                             rows="3"
-                            placeholder="Module details..."
+                            placeholder={t.descriptionPlaceholder}
                         />
                     </div>
 
                     <div className="form-row">
                         <div className="form-group" style={{ flex: 1 }}>
-                            <label>Tasks Count</label>
+                            <label>{t.tasksCount}</label>
                             <input
                                 type="number"
                                 name="tasks_per_module"
@@ -138,7 +141,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                             />
                         </div>
                         <div className="form-group" style={{ flex: 1 }}>
-                            <label>Test Questions</label>
+                            <label>{t.testQuestions}</label>
                             <input
                                 type="number"
                                 name="module_test_questions"
@@ -148,7 +151,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                             />
                         </div>
                         <div className="form-group" style={{ flex: 1 }}>
-                            <label>Module Points</label>
+                            <label>{t.modulePoints}</label>
                             <input
                                 type="number"
                                 name="points"
@@ -158,7 +161,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                             />
                         </div>
                         <div className="form-group" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                            <label style={{ marginBottom: '0.5rem', display: 'block' }}>Status</label>
+                            <label style={{ marginBottom: '0.5rem', display: 'block' }}>{t.status}</label>
                             <label className="checkbox-label">
                                 <input
                                     type="checkbox"
@@ -167,13 +170,13 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                                     checked={formData.is_active}
                                     onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
                                 />
-                                Active
+                                {t.active}
                             </label>
                         </div>
                     </div>
 
                     <div className="form-group">
-                        <label>Resources (Files)</label>
+                        <label>{t.resources}</label>
                         <input
                             type="file"
                             multiple
@@ -181,9 +184,9 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                         />
                     </div>
                     <div className="modal-actions">
-                        <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                        <button type="button" className="btn btn-secondary" onClick={onClose}>{t.cancel}</button>
                         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                            {isSubmitting ? 'Creating...' : 'Create Module'}
+                            {isSubmitting ? t.creating : t.create}
                         </button>
                     </div>
                 </form>

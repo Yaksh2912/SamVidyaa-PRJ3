@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import API_BASE_URL from '../config';
 import { HiStar, HiTrash, HiCheckBadge, HiClock, HiLightBulb, HiSwatch, HiBolt, HiIdentification, HiGift, HiPlus } from 'react-icons/hi2';
+import { useI18n } from '../context/I18nContext';
 import './ModalForm.css'; // Utilizing existing modal styles
 
 // Mapping of icon names to actual React Icons
@@ -16,6 +17,8 @@ const MAP_ICONS = {
 };
 
 function ManageRewardsModal({ course, onClose }) {
+    const { translations, t: translate } = useI18n();
+    const t = translations.forms.rewards;
     const [rewards, setRewards] = useState([]);
     const [loading, setLoading] = useState(true);
     
@@ -65,7 +68,7 @@ function ManageRewardsModal({ course, onClose }) {
         setError('');
 
         if (!formData.name || !formData.description || !formData.cost) {
-            setError('Please fill out all fields.');
+            setError(t.required);
             setIsSubmitting(false);
             return;
         }
@@ -90,7 +93,7 @@ function ManageRewardsModal({ course, onClose }) {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.message || 'Failed to create reward');
+                throw new Error(data.message || t.createFailed);
             }
 
             const newReward = await response.json();
@@ -105,14 +108,14 @@ function ManageRewardsModal({ course, onClose }) {
             });
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Something went wrong');
+            setError(err.message || translations.common.errors.somethingWentWrong);
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleDeleteReward = async (rewardId) => {
-        if (!window.confirm("Are you sure you want to delete this reward?")) return;
+        if (!window.confirm(t.confirmDelete)) return;
 
         try {
             const userStr = localStorage.getItem('user');
@@ -125,11 +128,11 @@ function ManageRewardsModal({ course, onClose }) {
             if (response.ok) {
                 setRewards(rewards.filter(r => r._id !== rewardId));
             } else {
-                alert("Failed to delete reward");
+                alert(t.deleteFailed);
             }
         } catch (error) {
             console.error("Delete error", error);
-            alert("Error deleting reward");
+            alert(t.deleteError);
         }
     };
 
@@ -142,47 +145,47 @@ function ManageRewardsModal({ course, onClose }) {
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '1rem' }}>
                     <div>
-                        <h2 style={{ marginBottom: '0.25rem' }}>Manage Course Rewards</h2>
+                        <h2 style={{ marginBottom: '0.25rem' }}>{t.manageTitle}</h2>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>{course.course_name}</p>
                     </div>
-                    <button className="btn btn-secondary" onClick={onClose}>Close</button>
+                    <button className="btn btn-secondary" onClick={onClose}>{t.close}</button>
                 </div>
 
                 <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
                     
                     {/* LEFT COLUMN: ADD REWARD FORM */}
                     <div style={{ flex: '1 1 300px', background: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: 'var(--border-radius-md)' }}>
-                        <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Add New Reward</h3>
+                        <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>{t.addNew}</h3>
                         {error && <div className="error-message">{error}</div>}
                         
                         <form onSubmit={handleAddReward} className="task-form">
                             <div className="form-group">
-                                <label>Reward Title</label>
+                                <label>{t.rewardTitle}</label>
                                 <input
                                     type="text"
                                     name="name"
                                     value={formData.name}
                                     onChange={handleChange}
-                                    placeholder="e.g. Pizza Party"
+                                    placeholder={t.rewardTitlePlaceholder}
                                     required
                                 />
                             </div>
                             
                             <div className="form-group">
-                                <label>Description</label>
+                                <label>{t.description}</label>
                                 <input
                                     type="text"
                                     name="description"
                                     value={formData.description}
                                     onChange={handleChange}
-                                    placeholder="Brief description of the reward"
+                                    placeholder={t.descriptionPlaceholder}
                                     required
                                 />
                             </div>
                             
                             <div className="form-row">
                                 <div className="form-group" style={{ flex: 1 }}>
-                                    <label>Cost (Points)</label>
+                                    <label>{t.cost}</label>
                                     <input
                                         type="number"
                                         name="cost"
@@ -193,32 +196,32 @@ function ManageRewardsModal({ course, onClose }) {
                                     />
                                 </div>
                                 <div className="form-group" style={{ flex: 1 }}>
-                                    <label>Icon</label>
+                                    <label>{t.icon}</label>
                                     <select name="icon_name" value={formData.icon_name} onChange={handleChange}>
-                                        <option value="HiGift">Gift Box</option>
-                                        <option value="HiCheckBadge">Badge</option>
-                                        <option value="HiClock">Clock</option>
-                                        <option value="HiLightBulb">Light Bulb</option>
-                                        <option value="HiSwatch">Paint Swatch</option>
-                                        <option value="HiBolt">Lightning Bolt</option>
-                                        <option value="HiIdentification">Certificate</option>
+                                        <option value="HiGift">{t.icons.HiGift}</option>
+                                        <option value="HiCheckBadge">{t.icons.HiCheckBadge}</option>
+                                        <option value="HiClock">{t.icons.HiClock}</option>
+                                        <option value="HiLightBulb">{t.icons.HiLightBulb}</option>
+                                        <option value="HiSwatch">{t.icons.HiSwatch}</option>
+                                        <option value="HiBolt">{t.icons.HiBolt}</option>
+                                        <option value="HiIdentification">{t.icons.HiIdentification}</option>
                                     </select>
                                 </div>
                             </div>
                             
                             <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }} disabled={isSubmitting}>
-                                <HiPlus /> {isSubmitting ? 'Adding...' : 'Add Reward'}
+                                <HiPlus /> {isSubmitting ? t.adding : t.addReward}
                             </button>
                         </form>
                     </div>
 
                     {/* RIGHT COLUMN: EXISTING REWARDS LIST */}
                     <div style={{ flex: '1 1 350px' }}>
-                        <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Available Rewards ({rewards.length})</h3>
+                        <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>{translate('forms.rewards.availableRewards', { count: rewards.length })}</h3>
                         {loading ? (
-                            <p style={{ color: 'var(--text-secondary)' }}>Loading rewards...</p>
+                            <p style={{ color: 'var(--text-secondary)' }}>{t.loading}</p>
                         ) : rewards.length === 0 ? (
-                            <p className="empty-state" style={{ padding: '2rem' }}>No rewards added to this course yet. Add one to give your students something to strive for!</p>
+                            <p className="empty-state" style={{ padding: '2rem' }}>{t.empty}</p>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                 {rewards.map(reward => (
@@ -261,7 +264,7 @@ function ManageRewardsModal({ course, onClose }) {
                                                 className="btn btn-danger" 
                                                 style={{ padding: '0.4rem' }}
                                                 onClick={() => handleDeleteReward(reward._id)}
-                                                title="Delete Reward"
+                                                title={t.deleteReward}
                                             >
                                                 <HiTrash />
                                             </button>

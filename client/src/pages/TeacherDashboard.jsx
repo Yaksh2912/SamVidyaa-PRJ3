@@ -32,10 +32,12 @@ const getCourseGradient = (id) => {
 
 function TeacherDashboard() {
   const { theme } = useTheme()
-  const { translations, language, changeLanguage } = useI18n()
+  const { translations, language, changeLanguage, t: translate } = useI18n()
   const { toggleTheme, isDark } = useTheme()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const t = translations.dashboard.teacher
+  const common = translations.common
 
   const [showModuleForm, setShowModuleForm] = React.useState(false)
   const [showCourseForm, setShowCourseForm] = React.useState(false)
@@ -63,7 +65,7 @@ function TeacherDashboard() {
   // Handout state
   const [handoutUploading, setHandoutUploading] = React.useState(false)
   const handoutInputRef = React.useRef(null)
-  const [activeTab, setActiveTab] = React.useState('Dashboard')
+  const [activeTab, setActiveTab] = React.useState('dashboard')
 
   const [stats, setStats] = React.useState({
     activeClasses: 0,
@@ -184,11 +186,11 @@ function TeacherDashboard() {
           s.enrollment_id === enrollmentId ? { ...s, status: newStatus } : s
         ));
       } else {
-        alert("Failed to update status");
+        alert(t.alerts.updateStatusFailed);
       }
     } catch (error) {
       console.error("Status update error", error);
-      alert("Error updating status");
+      alert(t.alerts.updateStatusError);
     }
   }
 
@@ -259,7 +261,7 @@ function TeacherDashboard() {
 
   const handleDeleteCourse = async (e, courseId) => {
     e.stopPropagation()
-    if (!window.confirm("Are you sure you want to delete this course?")) return;
+    if (!window.confirm(t.alerts.confirmDeleteCourse)) return;
 
     try {
       const userStr = localStorage.getItem('user')
@@ -272,16 +274,16 @@ function TeacherDashboard() {
       if (response.ok) {
         setCourses(courses.filter(c => c._id !== courseId))
       } else {
-        alert("Failed to delete course")
+        alert(t.alerts.deleteCourseFailed)
       }
     } catch (error) {
       console.error("Delete error", error)
-      alert("Error deleting course")
+      alert(t.alerts.deleteCourseError)
     }
   }
 
   const handleDeleteModule = async (moduleId) => {
-    if (!window.confirm("Are you sure you want to delete this module?")) return;
+    if (!window.confirm(t.alerts.confirmDeleteModule)) return;
 
     try {
       const userStr = localStorage.getItem('user')
@@ -298,16 +300,16 @@ function TeacherDashboard() {
           setSelectedModule(null);
         }
       } else {
-        alert("Failed to delete module")
+        alert(t.alerts.deleteModuleFailed)
       }
     } catch (error) {
       console.error("Delete error", error)
-      alert("Error deleting module")
+      alert(t.alerts.deleteModuleError)
     }
   }
 
   const handleDeleteTask = async (taskId, moduleId) => {
-    if (!window.confirm("Are you sure you want to delete this task?")) return;
+    if (!window.confirm(t.alerts.confirmDeleteTask)) return;
 
     try {
       const userStr = localStorage.getItem('user')
@@ -327,11 +329,11 @@ function TeacherDashboard() {
             : m
         ));
       } else {
-        alert("Failed to delete task")
+        alert(t.alerts.deleteTaskFailed)
       }
     } catch (error) {
       console.error("Delete error", error)
-      alert("Error deleting task")
+      alert(t.alerts.deleteTaskError)
     }
   }
 
@@ -356,11 +358,11 @@ function TeacherDashboard() {
         a.click()
         a.remove()
       } else {
-        alert('Course export failed')
+        alert(t.alerts.courseExportFailed)
       }
     } catch (error) {
       console.error('Export error', error)
-      alert('Course export failed')
+      alert(t.alerts.courseExportFailed)
     }
   }
 
@@ -385,11 +387,11 @@ function TeacherDashboard() {
         a.click()
         a.remove()
       } else {
-        alert('Module export failed')
+        alert(t.alerts.moduleExportFailed)
       }
     } catch (error) {
       console.error('Export error', error)
-      alert('Module export failed')
+      alert(t.alerts.moduleExportFailed)
     }
   }
 
@@ -425,11 +427,11 @@ function TeacherDashboard() {
         ));
       } else {
         const err = await response.json();
-        alert(err.message || 'Upload failed');
+        alert(err.message || t.handout.uploadFailed);
       }
     } catch (error) {
       console.error('Handout upload error', error);
-      alert('Upload failed');
+      alert(t.handout.uploadFailed);
     } finally {
       setHandoutUploading(false);
       // Reset file input so the same file can be re-selected after removal
@@ -438,7 +440,7 @@ function TeacherDashboard() {
   };
 
   const handleHandoutDelete = async () => {
-    if (!window.confirm('Remove the uploaded handout?')) return;
+    if (!window.confirm(t.handout.removeConfirm)) return;
 
     try {
       const userStr = localStorage.getItem('user');
@@ -456,11 +458,11 @@ function TeacherDashboard() {
           : c
         ));
       } else {
-        alert('Failed to remove handout');
+        alert(t.handout.removeFailed);
       }
     } catch (error) {
       console.error('Handout delete error', error);
-      alert('Error removing handout');
+      alert(t.handout.removeError);
     }
   };
 
@@ -469,7 +471,6 @@ function TeacherDashboard() {
     navigate('/')
   }
 
-  const t = translations.dashboard.teacher
   const selectedCourseTaskCount = modules.reduce((sum, module) => sum + (module.tasks_per_module || 0), 0)
   const selectedCourseFileCount = modules.reduce((sum, module) => sum + ((module.files && module.files.length) || 0), 0)
   const selectedModuleTotalPoints = tasks.reduce((sum, task) => sum + (task.points || 0), 0)
@@ -477,6 +478,12 @@ function TeacherDashboard() {
     ? Math.round(tasks.reduce((sum, task) => sum + (task.time_limit || 0), 0) / tasks.length)
     : 0
   const selectedModuleLanguageCount = new Set(tasks.map(task => task.language).filter(Boolean)).size
+  const tabTitles = {
+    dashboard: t.tabs.dashboard,
+    myCourses: t.tabs.myCourses
+  }
+  const getDifficultyLabel = (difficulty) => translations.forms.task.difficulties[difficulty] || difficulty
+  const getStatusLabel = (status) => common.statuses[status] || status
 
   return (
     <div className="dashboard-layout" data-theme={theme}>
@@ -487,18 +494,18 @@ function TeacherDashboard() {
         </div>
         
         <nav className="sidebar-nav">
-          <button className={`sidebar-link ${activeTab === 'Dashboard' ? 'active' : ''}`} onClick={() => { setActiveTab('Dashboard'); handleBack(); }}>
-            <HiChartBar className="sidebar-icon" /> Dashboard
+          <button className={`sidebar-link ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => { setActiveTab('dashboard'); handleBack(); }}>
+            <HiChartBar className="sidebar-icon" /> {t.tabs.dashboard}
           </button>
-          <button className={`sidebar-link ${activeTab === 'My Courses' ? 'active' : ''}`} onClick={() => setActiveTab('My Courses')}>
-            <HiBookOpen className="sidebar-icon" /> My Courses
+          <button className={`sidebar-link ${activeTab === 'myCourses' ? 'active' : ''}`} onClick={() => setActiveTab('myCourses')}>
+            <HiBookOpen className="sidebar-icon" /> {t.tabs.myCourses}
           </button>
         </nav>
 
         <div className="sidebar-bottom">
           <div className="theme-toggle-row">
-            <span className="text-secondary" style={{ fontSize: '0.85rem', fontWeight: 500 }}>Theme</span>
-            <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+            <span className="text-secondary" style={{ fontSize: '0.85rem', fontWeight: 500 }}>{common.theme}</span>
+            <button className="theme-toggle" onClick={toggleTheme} aria-label={common.toggleTheme}>
               {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
             </button>
           </div>
@@ -506,11 +513,11 @@ function TeacherDashboard() {
             <div className="profile-info">
               <div className="profile-avatar">{user?.name ? user.name.charAt(0).toUpperCase() : 'T'}</div>
               <div className="profile-text">
-                <span className="profile-name">{user?.name || 'Teacher'}</span>
-                <span className="profile-role">Teacher</span>
+                <span className="profile-name">{user?.name || translations.auth.roles.teacher}</span>
+                <span className="profile-role">{t.roleLabel}</span>
               </div>
             </div>
-            <button onClick={handleLogout} className="btn-logout" title="Logout">
+            <button onClick={handleLogout} className="btn-logout" title={t.logout}>
               <HiArrowDownTray style={{ transform: 'rotate(-90deg)', fontSize: '1.2rem' }} />
             </button>
           </div>
@@ -522,8 +529,11 @@ function TeacherDashboard() {
         <header className="dashboard-topbar">
           <div className="topbar-left">
             <h2 className="topbar-title">
-              {activeTab === 'Dashboard' ? `Welcome Back, ${user?.name || 'Teacher'}` :
-               activeTab === 'My Courses' ? (selectedCourse ? selectedCourse.course_name : 'My Courses') : activeTab}
+              {activeTab === 'dashboard'
+                ? translate('dashboard.teacher.topbar.welcomeBack', { name: user?.name || translations.auth.roles.teacher })
+                : activeTab === 'myCourses'
+                  ? (selectedCourse ? selectedCourse.course_name : t.tabs.myCourses)
+                  : tabTitles[activeTab]}
             </h2>
           </div>
           <div className="topbar-right">
@@ -532,17 +542,17 @@ function TeacherDashboard() {
               value={language}
               onChange={(e) => changeLanguage(e.target.value)}
             >
-              <option value="en">EN</option>
-              <option value="hi">हिं</option>
+              <option value="en">{common.languageNames.en}</option>
+              <option value="hi">{common.languageNames.hi}</option>
             </select>
           </div>
         </header>
 
         <div className="dashboard-workspace">
-          {activeTab === 'Dashboard' && (
+          {activeTab === 'dashboard' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
               <div className="workspace-panel-header">
-                <h3>Quick Stats</h3>
+                <h3>{t.stats.quickStats}</h3>
               </div>
               <div className="stats-grid">
                 <motion.div className="stat-card" whileHover={{ y: -4 }}>
@@ -578,36 +588,32 @@ function TeacherDashboard() {
               <div className="recent-activity mt-4">
                 <h3>{t.activity.title}</h3>
                 <div className="activity-list">
-                  <div className="activity-item">
-                    <span className="activity-time">2 hours ago</span>
-                    <span className="activity-text">John Doe {t.activity.submitted} Lab 5</span>
-                  </div>
-                  <div className="activity-item">
-                    <span className="activity-time">5 hours ago</span>
-                    <span className="activity-text">Jane Smith {t.activity.submitted} Lab 5</span>
-                  </div>
-                  <div className="activity-item">
-                    <span className="activity-time">{t.activity.dayAgo}</span>
-                    <span className="activity-text">Bob Johnson {t.activity.submitted} Lab 4</span>
-                  </div>
+                  {t.activity.quickLog.map((item, index) => (
+                    <div className="activity-item" key={`${item.name}-${index}`}>
+                      <span className="activity-time">
+                        {item.dayAgo ? t.activity.dayAgo : translate('dashboard.teacher.activity.hoursAgo', { hours: item.hours })}
+                      </span>
+                      <span className="activity-text">{item.name} {t.activity.submitted} {item.lab}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </motion.div>
           )}
 
-          {activeTab === 'My Courses' && (
+          {activeTab === 'myCourses' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
               {!selectedCourse ? (
                 /* COURSE LIST VIEW */
                 <div className="courses-section">
                   <div className="section-header">
-                    <h3>My Courses</h3>
+                    <h3>{t.courses.title}</h3>
                     <button className="btn btn-primary" onClick={() => setShowCourseForm(true)}>
-                      <HiFolderPlus /> Create Course
+                      <HiFolderPlus /> {t.courses.createCourse}
                     </button>
                   </div>
                   <div className="gc-course-grid teacher-course-grid">
-                    {courses.length === 0 ? <p className="no-data">No courses created yet.</p> : courses.map(course => (
+                    {courses.length === 0 ? <p className="no-data">{t.courses.empty}</p> : courses.map(course => (
                       <motion.div
                         key={course._id}
                         className="gc-course-card teacher-course-card"
@@ -616,7 +622,7 @@ function TeacherDashboard() {
                       >
                         <div className="gc-card-header" style={{ background: getCourseGradient(course._id) }}>
                           <h3 title={course.course_name}>{course.course_name}</h3>
-                          <p className="gc-course-teacher">Instructor Workspace • {course.course_code}</p>
+                          <p className="gc-course-teacher">{t.courses.instructorWorkspace} • {course.course_code}</p>
                         </div>
 
                         <div className="gc-card-avatar teacher-course-avatar">
@@ -624,18 +630,18 @@ function TeacherDashboard() {
                         </div>
 
                         <div className="gc-card-body teacher-course-body">
-                          <p className="gc-course-desc">{course.description || 'No description provided.'}</p>
+                          <p className="gc-course-desc">{course.description || common.noDescription}</p>
                           <div className="teacher-course-meta">
-                            <span className="teacher-course-chip">{course.subject || 'General'}</span>
-                            <span className="teacher-course-chip">Q: {course.course_test_questions || 0}</span>
-                            <span className="teacher-course-chip">{course.points || 0} pts</span>
+                            <span className="teacher-course-chip">{course.subject || common.general}</span>
+                            <span className="teacher-course-chip">{translate('dashboard.teacher.courses.questionCount', { count: course.course_test_questions || 0 })}</span>
+                            <span className="teacher-course-chip">{translate('dashboard.student.pointShop.cost', { points: course.points || 0 })}</span>
                           </div>
                         </div>
 
                         <div className="gc-card-footer teacher-course-footer">
                           <button
                             className="btn-icon"
-                            title="Export Course"
+                            title={t.courses.exportCourse}
                             onClick={(e) => {
                               e.stopPropagation()
                               handleCourseExport(course._id, course.course_code)
@@ -645,14 +651,14 @@ function TeacherDashboard() {
                           </button>
                           <button
                             className="btn-icon"
-                            title="Delete Course"
+                            title={t.courses.deleteCourse}
                             onClick={(e) => handleDeleteCourse(e, course._id)}
                           >
                             <HiTrash size={20} />
                           </button>
                           <button
                             className="btn-icon"
-                            title="Open Course"
+                            title={t.courses.openCourse}
                             onClick={(e) => {
                               e.stopPropagation()
                               handleCourseSelect(course)
@@ -670,30 +676,30 @@ function TeacherDashboard() {
                 <div className="teacher-course-shell">
                   <div className="view-header teacher-course-workspace-header">
                     <button className="btn btn-secondary" onClick={handleBack}>
-                      ← Back to Courses
+                      {t.courses.backToCourses}
                     </button>
                     <div className="teacher-course-hero">
                       <div className="view-title-info teacher-course-title-block">
                         <h2>{selectedCourse.course_name} <span className="course-code-large">({selectedCourse.course_code})</span></h2>
                         <p className="view-description">{selectedCourse.description}</p>
                         <div className="teacher-course-inline-meta">
-                          <span className="teacher-workspace-chip">{selectedCourse.subject || 'General'}</span>
-                          <span className="teacher-workspace-chip">{modules.length} Modules</span>
-                          <span className="teacher-workspace-chip">{selectedCourseTaskCount} Tasks</span>
+                          <span className="teacher-workspace-chip">{selectedCourse.subject || common.general}</span>
+                          <span className="teacher-workspace-chip">{translate('dashboard.teacher.courses.modulesCount', { count: modules.length })}</span>
+                          <span className="teacher-workspace-chip">{translate('dashboard.teacher.courses.tasksCount', { count: selectedCourseTaskCount })}</span>
                         </div>
                       </div>
                       <div className="course-actions teacher-course-action-bar">
-                        <button className="btn btn-outline" onClick={() => handleCourseExport(selectedCourse._id, selectedCourse.course_code)} title="Export Course">
-                          <HiArrowDownTray /> Export Course
+                        <button className="btn btn-outline" onClick={() => handleCourseExport(selectedCourse._id, selectedCourse.course_code)} title={t.courses.exportCourse}>
+                          <HiArrowDownTray /> {t.courses.exportCourse}
                         </button>
                         <button className="btn btn-secondary" onClick={handleViewStudents}>
-                          <HiUserGroup /> Students
+                          <HiUserGroup /> {t.courses.students}
                         </button>
                         <button className="btn btn-secondary" onClick={() => setShowRewardsModal(true)}>
-                          <HiGift /> Rewards
+                          <HiGift /> {t.courses.rewards}
                         </button>
                         <button className="btn btn-primary" onClick={() => setShowModuleForm(true)}>
-                          <HiFolderPlus /> Add Module
+                          <HiFolderPlus /> {t.courses.addModule}
                         </button>
                       </div>
 
@@ -709,24 +715,24 @@ function TeacherDashboard() {
 
                     <div className="teacher-course-summary-grid">
                       <div className="teacher-summary-card">
-                        <span className="teacher-summary-label">Modules</span>
+                        <span className="teacher-summary-label">{t.courses.summaries.modules}</span>
                         <strong>{modules.length}</strong>
-                        <p>Structured learning blocks in this course</p>
+                        <p>{t.courses.summaries.modulesDesc}</p>
                       </div>
                       <div className="teacher-summary-card">
-                        <span className="teacher-summary-label">Tasks</span>
+                        <span className="teacher-summary-label">{t.courses.summaries.tasks}</span>
                         <strong>{selectedCourseTaskCount}</strong>
-                        <p>Total assignments published across modules</p>
+                        <p>{t.courses.summaries.tasksDesc}</p>
                       </div>
                       <div className="teacher-summary-card">
-                        <span className="teacher-summary-label">Resources</span>
+                        <span className="teacher-summary-label">{t.courses.summaries.resources}</span>
                         <strong>{selectedCourseFileCount}</strong>
-                        <p>Files attached across your teaching flow</p>
+                        <p>{t.courses.summaries.resourcesDesc}</p>
                       </div>
                       <div className="teacher-summary-card">
-                        <span className="teacher-summary-label">Course Points</span>
+                        <span className="teacher-summary-label">{t.courses.summaries.coursePoints}</span>
                         <strong>{selectedCourse.points || 0}</strong>
-                        <p>Reward value configured for the course journey</p>
+                        <p>{t.courses.summaries.coursePointsDesc}</p>
                       </div>
                     </div>
                   </div>
@@ -752,25 +758,25 @@ function TeacherDashboard() {
                             onClick={() => handoutInputRef.current?.click()}
                             disabled={handoutUploading}
                           >
-                            {handoutUploading ? 'Uploading…' : '↑ Replace'}
+                            {handoutUploading ? common.uploading : `↑ ${t.handout.replace}`}
                           </button>
                           <button
                             className="btn btn-danger"
                             onClick={handleHandoutDelete}
                           >
-                            <HiTrash /> Remove
+                            <HiTrash /> {t.handout.remove}
                           </button>
                         </div>
                       </>
                     ) : (
                       <>
-                        <span className="course-handout-empty">No handout uploaded</span>
+                        <span className="course-handout-empty">{t.handout.none}</span>
                         <button
                           className="btn btn-outline"
                           onClick={() => handoutInputRef.current?.click()}
                           disabled={handoutUploading}
                         >
-                          <HiPaperClip /> {handoutUploading ? 'Uploading…' : 'Upload Handout (PDF)'}
+                          <HiPaperClip /> {handoutUploading ? common.uploading : t.handout.upload}
                         </button>
                       </>
                     )}
@@ -779,46 +785,46 @@ function TeacherDashboard() {
                   <div className="modules-section">
                     <div className="teacher-section-heading">
                       <div>
-                        <h3>Modules</h3>
-                        <p>Organize the course into clear learning blocks with tasks and resources.</p>
+                        <h3>{t.modules.title}</h3>
+                        <p>{t.modules.description}</p>
                       </div>
                     </div>
-                    {loadingModules ? <p>Loading modules...</p> : (
+                    {loadingModules ? <p>{t.modules.loading}</p> : (
                       <div className="teacher-module-grid">
-                        {modules.length === 0 ? <p className="no-modules">No modules in this course.</p> : modules.map(module => (
+                        {modules.length === 0 ? <p className="no-modules">{t.modules.empty}</p> : modules.map(module => (
                           <div key={module._id} className="teacher-module-card">
                             <div className="teacher-module-top">
                               <div className="teacher-module-heading">
-                                <span className="teacher-module-order">Module {module.module_order}</span>
+                                <span className="teacher-module-order">{translate('dashboard.teacher.modules.moduleLabel', { order: module.module_order })}</span>
                                 <h4>{module.module_name}</h4>
                               </div>
-                              <span className="teacher-module-points">{module.points || 0} pts</span>
+                              <span className="teacher-module-points">{translate('dashboard.student.pointShop.cost', { points: module.points || 0 })}</span>
                             </div>
 
-                            <p className="teacher-module-description">{module.description || 'No module description added yet.'}</p>
+                            <p className="teacher-module-description">{module.description || t.modules.noDescription}</p>
 
                             <div className="teacher-module-meta">
-                              <span className="teacher-workspace-chip">{module.files.length} Files</span>
-                              <span className="teacher-workspace-chip">{module.tasks_per_module || 0} Tasks</span>
-                              <span className="teacher-workspace-chip">Order #{module.module_order}</span>
+                              <span className="teacher-workspace-chip">{translate('dashboard.teacher.modules.filesCount', { count: module.files.length })}</span>
+                              <span className="teacher-workspace-chip">{translate('dashboard.teacher.modules.tasksCount', { count: module.tasks_per_module || 0 })}</span>
+                              <span className="teacher-workspace-chip">{translate('dashboard.teacher.modules.order', { order: module.module_order })}</span>
                             </div>
 
                             <div className="teacher-module-actions">
                               <div className="teacher-module-primary-actions">
-                                <button className="btn btn-outline" onClick={() => handleModuleSelect(module)} title="View Tasks">
-                                  <HiListBullet /> View Tasks
+                                <button className="btn btn-outline" onClick={() => handleModuleSelect(module)} title={t.modules.viewTasks}>
+                                  <HiListBullet /> {t.modules.viewTasks}
                                 </button>
-                                <button className="btn btn-outline" onClick={() => openTaskForm(module._id)} title="Add Task">
-                                  <HiPlus /> Add Task
+                                <button className="btn btn-outline" onClick={() => openTaskForm(module._id)} title={t.modules.addTask}>
+                                  <HiPlus /> {t.modules.addTask}
                                 </button>
                               </div>
 
                               <div className="teacher-module-secondary-actions">
-                                <button className="btn btn-outline" onClick={() => handleModuleExport(module._id, module.module_name)} title="Export Module">
-                                  <HiArrowDownTray /> Export
+                                <button className="btn btn-outline" onClick={() => handleModuleExport(module._id, module.module_name)} title={t.modules.exportModule}>
+                                  <HiArrowDownTray /> {t.modules.export}
                                 </button>
-                                <button className="btn btn-danger" onClick={() => handleDeleteModule(module._id)} title="Delete Module">
-                                  <HiTrash /> Delete
+                                <button className="btn btn-danger" onClick={() => handleDeleteModule(module._id)} title={t.modules.deleteModule}>
+                                  <HiTrash /> {t.modules.delete}
                                 </button>
                               </div>
                             </div>
@@ -833,43 +839,43 @@ function TeacherDashboard() {
                 <div className="teacher-course-shell">
                   <div className="view-header teacher-course-workspace-header">
                     <button className="btn btn-secondary" onClick={handleBack}>
-                      ← Back to Modules
+                      {t.taskView.backToModules}
                     </button>
                     <div className="teacher-course-hero">
                       <div className="view-title-info teacher-course-title-block">
-                        <h2>{selectedModule.module_name} <span className="module-order">Module #{selectedModule.module_order}</span></h2>
+                        <h2>{selectedModule.module_name} <span className="module-order">{translate('dashboard.teacher.taskView.moduleLabel', { order: selectedModule.module_order })}</span></h2>
                         <p className="view-description">{selectedModule.description}</p>
                         <div className="teacher-course-inline-meta">
-                          <span className="teacher-workspace-chip">{tasks.length} Tasks</span>
-                          <span className="teacher-workspace-chip">{selectedModuleTotalPoints} Total Points</span>
-                          <span className="teacher-workspace-chip">{selectedModuleAverageTime} min avg time</span>
+                          <span className="teacher-workspace-chip">{translate('dashboard.teacher.courses.tasksCount', { count: tasks.length })}</span>
+                          <span className="teacher-workspace-chip">{translate('dashboard.teacher.taskView.totalPoints', { count: selectedModuleTotalPoints })}</span>
+                          <span className="teacher-workspace-chip">{translate('dashboard.teacher.taskView.avgTime', { count: selectedModuleAverageTime })}</span>
                         </div>
                       </div>
                       <button className="btn btn-primary" onClick={() => openTaskForm(selectedModule._id, null)}>
-                        <HiPlus /> Create Task
+                        <HiPlus /> {t.taskView.createTask}
                       </button>
                     </div>
 
                     <div className="teacher-course-summary-grid">
                       <div className="teacher-summary-card">
-                        <span className="teacher-summary-label">Tasks</span>
+                        <span className="teacher-summary-label">{t.taskView.summaries.tasks}</span>
                         <strong>{tasks.length}</strong>
-                        <p>Published coding tasks inside this module</p>
+                        <p>{t.taskView.summaries.tasksDesc}</p>
                       </div>
                       <div className="teacher-summary-card">
-                        <span className="teacher-summary-label">Points</span>
+                        <span className="teacher-summary-label">{t.taskView.summaries.points}</span>
                         <strong>{selectedModuleTotalPoints}</strong>
-                        <p>Total points available across all tasks</p>
+                        <p>{t.taskView.summaries.pointsDesc}</p>
                       </div>
                       <div className="teacher-summary-card">
-                        <span className="teacher-summary-label">Languages</span>
+                        <span className="teacher-summary-label">{t.taskView.summaries.languages}</span>
                         <strong>{selectedModuleLanguageCount}</strong>
-                        <p>Distinct programming languages currently used</p>
+                        <p>{t.taskView.summaries.languagesDesc}</p>
                       </div>
                       <div className="teacher-summary-card">
-                        <span className="teacher-summary-label">Time Profile</span>
+                        <span className="teacher-summary-label">{t.taskView.summaries.timeProfile}</span>
                         <strong>{selectedModuleAverageTime}m</strong>
-                        <p>Average suggested time limit for completion</p>
+                        <p>{t.taskView.summaries.timeProfileDesc}</p>
                       </div>
                     </div>
                   </div>
@@ -877,13 +883,13 @@ function TeacherDashboard() {
                   <div className="modules-section">
                     <div className="teacher-section-heading">
                       <div>
-                        <h3>Tasks</h3>
-                        <p>Review, edit, and maintain the coding challenges for this module.</p>
+                        <h3>{t.taskView.title}</h3>
+                        <p>{t.taskView.description}</p>
                       </div>
                     </div>
-                    {loadingTasks ? <p>Loading tasks...</p> : (
+                    {loadingTasks ? <p>{t.taskView.loading}</p> : (
                       <div className="teacher-task-grid">
-                        {tasks.length === 0 ? <p className="no-modules">No tasks in this module.</p> : tasks.map(task => (
+                        {tasks.length === 0 ? <p className="no-modules">{t.taskView.empty}</p> : tasks.map(task => (
                           <div key={task._id} className="teacher-task-card">
                             <div className="teacher-task-top">
                               <div>
@@ -891,20 +897,20 @@ function TeacherDashboard() {
                                 <p className="teacher-task-problem">{task.problem_statement}</p>
                               </div>
                               <span className={`teacher-task-difficulty ${task.difficulty?.toLowerCase()}`}>
-                                {task.difficulty}
+                                {getDifficultyLabel(task.difficulty)}
                               </span>
                             </div>
 
                             <div className="teacher-task-meta">
-                              <span className="teacher-workspace-chip">Lang: {task.language}</span>
-                              <span className="teacher-workspace-chip">Time: {task.time_limit}m</span>
-                              <span className="teacher-workspace-chip">Tests: {task.test_cases_count}</span>
-                              <span className="teacher-workspace-chip">{task.points || 0} pts</span>
+                              <span className="teacher-workspace-chip">{translate('dashboard.teacher.taskView.language', { language: task.language })}</span>
+                              <span className="teacher-workspace-chip">{translate('dashboard.teacher.taskView.time', { time: task.time_limit })}</span>
+                              <span className="teacher-workspace-chip">{translate('dashboard.teacher.taskView.tests', { count: task.test_cases_count })}</span>
+                              <span className="teacher-workspace-chip">{translate('dashboard.student.pointShop.cost', { points: task.points || 0 })}</span>
                             </div>
 
                             {task.constraints && (
                               <p className="teacher-task-constraints">
-                                <strong>Constraints:</strong> {task.constraints}
+                                <strong>{t.taskView.constraints}</strong> {task.constraints}
                               </p>
                             )}
 
@@ -912,17 +918,17 @@ function TeacherDashboard() {
                               <button
                                 className="btn btn-outline"
                                 onClick={() => openTaskForm(task.module_id, task)}
-                                title="Edit Task"
+                                title={t.taskView.editTask}
                                 style={{ borderColor: 'var(--accent-blue)', color: 'var(--accent-blue)' }}
                               >
-                                Edit Task
+                                {t.taskView.editTask}
                               </button>
                               <button
                                 className="btn btn-danger"
                                 onClick={() => handleDeleteTask(task._id, task.module_id)}
-                                title="Delete Task"
+                                title={t.taskView.deleteTask}
                               >
-                                <HiTrash /> Delete
+                                <HiTrash /> {t.taskView.deleteTask}
                               </button>
                             </div>
                           </div>
@@ -976,22 +982,22 @@ function TeacherDashboard() {
             <div className="students-modal-header">
               <div className="students-modal-title">
                 <h2>{selectedCourse.course_name}</h2>
-                <p>Enrolled Students ({students.length})</p>
+                <p>{translate('dashboard.teacher.studentsModal.enrolledStudents', { count: students.length })}</p>
               </div>
               <div className="students-modal-actions">
                 <button className="btn btn-primary" onClick={() => setShowAddStudentsModal(true)}>
-                  <HiPlus /> Add Students
+                  <HiPlus /> {t.studentsModal.addStudents}
                 </button>
                 <button className="btn btn-secondary" onClick={() => { setViewingStudents(false); setStudents([]); }}>
-                  Close
+                  {t.studentsModal.close}
                 </button>
               </div>
             </div>
 
             <div className="students-modal-body">
-              {loadingStudents ? <p className="students-modal-loading">Loading students...</p> : (
+              {loadingStudents ? <p className="students-modal-loading">{t.studentsModal.loading}</p> : (
                 students.length === 0 ? (
-                  <p className="no-modules">No students enrolled yet.</p>
+                  <p className="no-modules">{t.studentsModal.empty}</p>
                 ) : (
                   <div className="students-list">
                     {students.map(student => (
@@ -999,11 +1005,11 @@ function TeacherDashboard() {
                         <div className="student-main">
                           <span className="student-name">{student.name}</span>
                           <span className="student-email">{student.email}</span>
-                          <span className="student-enrollment">{student.enrollment_number || 'N/A'}</span>
+                          <span className="student-enrollment">{student.enrollment_number || common.notAvailable}</span>
                         </div>
                         <div className="student-actions">
                           <span className={`student-status-chip ${student.status?.toLowerCase()}`}>
-                            {student.status}
+                            {getStatusLabel(student.status)}
                           </span>
                           {student.status === 'PENDING' && (
                             <>
@@ -1011,13 +1017,13 @@ function TeacherDashboard() {
                                 className="btn btn-primary"
                                 onClick={() => handleEnrollmentStatus(student.enrollment_id, 'ACTIVE')}
                               >
-                                Approve
+                                {t.studentsModal.approve}
                               </button>
                               <button
                                 className="btn btn-danger"
                                 onClick={() => handleEnrollmentStatus(student.enrollment_id, 'REJECTED')}
                               >
-                                Reject
+                                {t.studentsModal.reject}
                               </button>
                             </>
                           )}
