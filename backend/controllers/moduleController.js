@@ -1,7 +1,38 @@
 const Module = require('../models/Module');
+const Task = require('../models/Task');
+const CodingQuestion = require('../models/CodingQuestion');
 const archive = require('archiver');
 const fs = require('fs');
 const path = require('path');
+
+const attachTaskCounts = async (modules) => {
+    if (!modules.length) return modules;
+
+    const moduleIds = modules.map((module) => module._id);
+    const taskCounts = await Task.aggregate([
+        {
+            $match: {
+                module_id: { $in: moduleIds }
+            }
+        },
+        {
+            $group: {
+                _id: '$module_id',
+                count: { $sum: 1 }
+            }
+        }
+    ]);
+
+    const taskCountMap = new Map(
+        taskCounts.map((entry) => [entry._id.toString(), entry.count])
+    );
+
+    return modules.map((module) => {
+        const moduleObject = typeof module.toObject === 'function' ? module.toObject() : module;
+        moduleObject.task_count = taskCountMap.get(module._id.toString()) || 0;
+        return moduleObject;
+    });
+};
 
 // @desc    Create a new module
 // @route   POST /api/modules
@@ -119,7 +150,7 @@ const getTeacherModules = async (req, res) => {
             .sort({ module_order: 1, createdAt: -1 })
             .populate('course_id', 'course_name course_code');
 
-        res.json(modules);
+        res.json(await attachTaskCounts(modules));
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }
@@ -132,7 +163,7 @@ const getCourseModules = async (req, res) => {
     try {
         const modules = await Module.find({ course_id: req.params.courseId })
             .sort({ module_order: 1 });
-        res.json(modules);
+        res.json(await attachTaskCounts(modules));
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }
@@ -213,10 +244,6 @@ const deleteModule = async (req, res) => {
         res.status(500).json({ message: 'Failed to delete module' });
     }
 };
-
-const Task = require('../models/Task');
-const CodingQuestion = require('../models/CodingQuestion');
-
 // @desc    Export module as JSON
 // @route   GET /api/modules/:id/export
 // @access  Private (Teacher/Admin)

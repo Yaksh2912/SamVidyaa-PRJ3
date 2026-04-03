@@ -29,6 +29,16 @@ const getCourseGradient = (id) => {
   return COURSE_GRADIENTS[Math.abs(hash) % COURSE_GRADIENTS.length];
 };
 
+const sortModulesByOrder = (moduleList = []) => [...moduleList].sort((left, right) => {
+  const orderDelta = (Number(left?.module_order) || 0) - (Number(right?.module_order) || 0);
+  if (orderDelta !== 0) return orderDelta;
+
+  const createdAtDelta = new Date(left?.createdAt || 0).getTime() - new Date(right?.createdAt || 0).getTime();
+  if (createdAtDelta !== 0) return createdAtDelta;
+
+  return (left?.module_name || '').localeCompare(right?.module_name || '');
+});
+
 const formatFileSize = (size) => {
   if (!size || Number(size) <= 0) return ''
 
@@ -301,6 +311,7 @@ function StudentDashboard() {
     setSelectedCourse(course);
     setModalLoading(true);
     setCourseModules([]);
+    setCourseTasks({});
     setExpandedModule(null);
     try {
       const userStr = localStorage.getItem('user');
@@ -310,7 +321,7 @@ function StudentDashboard() {
       });
       if (res.ok) {
         const data = await res.json();
-        setCourseModules(data);
+        setCourseModules(sortModulesByOrder(data));
       }
     } catch (err) {
       console.error('Error fetching modules:', err);
@@ -858,18 +869,18 @@ function StudentDashboard() {
                 <p className="empty-state">{t.courseModal.empty}</p>
               ) : (
                 <div className="neumorphic-modules">
-                  {courseModules.map((module) => (
+                  {courseModules.map((module, index) => (
                     <div key={module._id} className={`neumorphic-module-card ${expandedModule === module._id ? 'expanded' : ''}`}>
                       <div
                         className="neumorphic-module-header"
                         onClick={() => toggleModule(module._id)}
                       >
                         <div className="neumorphic-module-copy">
-                          <h4>{module.module_order}. {module.module_name}</h4>
+                          <h4>{index + 1}. {module.module_name}</h4>
                           <p>{module.description}</p>
                         </div>
                         <div className="neumorphic-module-meta">
-                          <span className="module-order-chip">{translate('dashboard.student.courseModal.moduleLabel', { order: module.module_order })}</span>
+                          <span className="module-order-chip">{translate('dashboard.student.courseModal.moduleLabel', { order: index + 1 })}</span>
                           <div className="module-points-badge">
                             {translate('dashboard.student.pointShop.cost', { points: module.points || 0 })}
                           </div>

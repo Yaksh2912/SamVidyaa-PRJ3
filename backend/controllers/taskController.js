@@ -11,6 +11,8 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 
 const execFileAsync = promisify(execFile);
+const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
+
 const normalizeImportedText = (text) => text
     .replace(/\r/g, '')
     .replace(/\u0000/g, '')
@@ -287,11 +289,26 @@ const verifyModuleAccess = async (moduleId, user) => {
     }
 
     const instructorId = module.course_id?.instructor?.toString();
-    if (instructorId !== user._id.toString() && user.role !== 'ADMIN') {
+    if (instructorId !== user._id.toString() && !isAdminRole(user.role)) {
         return { error: { status: 401, message: 'Not authorized' } };
     }
 
     return { module };
+};
+
+const verifyTaskAccess = async (taskId, user) => {
+    const task = await Task.findById(taskId);
+
+    if (!task) {
+        return { error: { status: 404, message: 'Task not found' } };
+    }
+
+    const access = await verifyModuleAccess(task.module_id, user);
+    if (access.error) {
+        return { error: access.error };
+    }
+
+    return { task, module: access.module };
 };
 
 // @desc    Create a new task
@@ -303,6 +320,11 @@ const createTask = async (req, res) => {
 
         if (!module_id || !task_name || !problem_statement) {
             return res.status(400).json({ message: 'Missing required fields' });
+        }
+
+        const access = await verifyModuleAccess(module_id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
 
         const task = await Task.create({
@@ -422,14 +444,11 @@ const getTasks = async (req, res) => {
 // @access  Private
 const deleteTask = async (req, res) => {
     try {
-        const task = await Task.findById(req.params.id);
-
-        if (!task) {
-            return res.status(404).json({ message: 'Task not found' });
+        const access = await verifyTaskAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
-
-        // Ideally check ownership via module -> course -> instructor
-        // For now, assuming authenticated teacher is enough or we rely on frontend scope
+        const { task } = access;
 
         await task.deleteOne();
 
@@ -449,11 +468,12 @@ const deleteTask = async (req, res) => {
 const updateTask = async (req, res) => {
     try {
         const { test_cases, ...updateData } = req.body;
-        
-        const task = await Task.findById(req.params.id);
-        if (!task) {
-            return res.status(404).json({ message: 'Task not found' });
+
+        const access = await verifyTaskAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
+        const { task } = access;
 
         // Apply updates
         Object.assign(task, updateData);

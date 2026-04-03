@@ -5,6 +5,32 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
+const isInstructorRole = (role) => role === 'INSTRUCTOR' || role === 'instructor' || role === 'TEACHER' || role === 'teacher';
+
+const verifyCourseAccess = async (courseId, user, options = {}) => {
+    const { allowStudentReadActive = false } = options;
+    const course = await Course.findById(courseId).populate('instructor', 'name email');
+
+    if (!course) {
+        return { error: { status: 404, message: 'Course not found' } };
+    }
+
+    if (isAdminRole(user.role)) {
+        return { course };
+    }
+
+    if (course.instructor?._id?.toString() === user._id.toString()) {
+        return { course };
+    }
+
+    if (allowStudentReadActive && user.role === 'STUDENT' && course.is_active) {
+        return { course };
+    }
+
+    return { error: { status: 401, message: 'Not authorized' } };
+};
+
 // ---- Multer setup for handout PDFs ----
 const handoutStorage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -34,6 +60,10 @@ const handoutUploadMiddleware = handoutUpload.single('handout');
 // @access  Private (Instructor/Admin)
 const createCourse = async (req, res) => {
     try {
+        if (!isInstructorRole(req.user.role) && !isAdminRole(req.user.role)) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
         const { course_code, course_name, description, subject, course_test_questions, points } = req.body;
 
         const courseExists = await Course.findOne({ course_code });
@@ -65,15 +95,11 @@ const createCourse = async (req, res) => {
 // @access  Private (Instructor/Admin)
 const updateCourse = async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id);
-
-        if (!course) {
-            return res.status(404).json({ message: 'Course not found' });
+        const access = await verifyCourseAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
-
-        if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
-            return res.status(401).json({ message: 'Not authorized' });
-        }
+        const course = access.course;
 
         const {
             course_code,
@@ -202,13 +228,12 @@ const getCourses = async (req, res) => {
 // @access  Private
 const getCourseById = async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id).populate('instructor', 'name email');
-
-        if (course) {
-            res.json(course);
-        } else {
-            res.status(404).json({ message: 'Course not found' });
+        const access = await verifyCourseAccess(req.params.id, req.user, { allowStudentReadActive: true });
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
+
+        res.json(access.course);
     } catch (error) {
         console.error(error);
         res.status(400).json({ message: 'Failed to fetch course' });
@@ -220,16 +245,11 @@ const getCourseById = async (req, res) => {
 // @access  Private (Instructor/Admin)
 const deleteCourse = async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id);
-
-        if (!course) {
-            return res.status(404).json({ message: 'Course not found' });
+        const access = await verifyCourseAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
-
-        // Check ownership
-        if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
-            return res.status(401).json({ message: 'Not authorized' });
-        }
+        const course = access.course;
 
         await course.deleteOne();
         res.json({ message: 'Course removed' });
@@ -438,15 +458,11 @@ const getTeacherStats = async (req, res) => {
 // @access  Private (Instructor/Admin)
 const getCourseAnalytics = async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id).populate('instructor', 'name');
-
-        if (!course) {
-            return res.status(404).json({ message: 'Course not found' });
+        const access = await verifyCourseAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
-
-        if (course.instructor && course.instructor._id.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
-            return res.status(401).json({ message: 'Not authorized' });
-        }
+        const course = access.course;
 
         const [modules, enrollments, progressRecords] = await Promise.all([
             Module.find({ course_id: course._id })
@@ -653,16 +669,11 @@ const CodingQuestion = require('../models/CodingQuestion');
 // @access  Private (Instructor/Admin)
 const exportCourse = async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id).populate('instructor', 'name');
-
-        if (!course) {
-            return res.status(404).json({ message: 'Course not found' });
+        const access = await verifyCourseAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
-
-        // Check ownership
-        if (course.instructor._id.toString() !== req.user._id.toString() && req.user.role !== 'admin' && req.user.role !== 'ADMIN') {
-            return res.status(401).json({ message: 'Not authorized' });
-        }
+        const course = access.course;
 
         console.log(`Exporting course JSON: ${course.course_name}`);
 
@@ -805,12 +816,11 @@ Modules Count: ${modulesData.length}
 // @access  Private (Instructor)
 const uploadHandout = async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id);
-        if (!course) return res.status(404).json({ message: 'Course not found' });
-
-        if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
-            return res.status(401).json({ message: 'Not authorized' });
+        const access = await verifyCourseAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
+        const course = access.course;
 
         if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
@@ -843,12 +853,11 @@ const uploadHandout = async (req, res) => {
 // @access  Private (Instructor)
 const deleteHandout = async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id);
-        if (!course) return res.status(404).json({ message: 'Course not found' });
-
-        if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
-            return res.status(401).json({ message: 'Not authorized' });
+        const access = await verifyCourseAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
+        const course = access.course;
 
         if (course.handout_path) {
             const filePath = path.join(__dirname, '..', course.handout_path);

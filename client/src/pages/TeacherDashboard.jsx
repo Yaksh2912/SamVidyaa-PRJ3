@@ -80,6 +80,12 @@ const formatFileSize = (size) => {
 }
 
 const getUploadFileUrl = (filePath = '') => `${API_BASE_URL.replace('/api', '')}/${filePath.replace(/\\/g, '/')}`
+const getModuleTaskCount = (module = {}) => Number(
+  module.task_count
+    ?? module.total_tasks
+    ?? module.tasks_per_module
+    ?? 0
+) || 0
 
 const sortModulesByOrder = (moduleList = []) => [...moduleList].sort((left, right) => {
   const orderDelta = (Number(left?.module_order) || 0) - (Number(right?.module_order) || 0)
@@ -183,7 +189,10 @@ function TeacherDashboard() {
       })
       if (response.ok) {
         const data = await response.json()
-        setModules(sortModulesByOrder(data))
+        const sortedModules = sortModulesByOrder(data)
+        setModules(sortedModules)
+        setSelectedCourse((prev) => prev && prev._id === courseId ? { ...prev, modules_count: sortedModules.length } : prev)
+        setCourses((prev) => prev.map((course) => course._id === courseId ? { ...course, modules_count: sortedModules.length } : course))
       }
     } catch (error) {
       console.error('Failed to fetch modules', error)
@@ -357,8 +366,13 @@ function TeacherDashboard() {
       }
 
       const updatedModule = await response.json()
-      setSelectedModule(updatedModule)
-      setModules((prev) => sortModulesByOrder(prev.map((module) => module._id === updatedModule._id ? updatedModule : module)))
+      const mergedModule = {
+        ...selectedModule,
+        ...updatedModule,
+        task_count: updatedModule.task_count ?? selectedModule?.task_count ?? 0
+      }
+      setSelectedModule(mergedModule)
+      setModules((prev) => sortModulesByOrder(prev.map((module) => module._id === mergedModule._id ? { ...module, ...mergedModule } : module)))
     } catch (error) {
       console.error('Delete module file error', error)
       alert(t.modules.resources.removeFailed)
@@ -377,13 +391,24 @@ function TeacherDashboard() {
 
   const handleModuleSaved = (moduleData, isEditing = false) => {
     if (isEditing) {
-      setModules((prev) => sortModulesByOrder(prev.map((module) => module._id === moduleData._id ? moduleData : module)))
-      setSelectedModule((prev) => prev && prev._id === moduleData._id ? { ...prev, ...moduleData } : prev)
+      setModules((prev) => sortModulesByOrder(prev.map((module) => (
+        module._id === moduleData._id
+          ? { ...module, ...moduleData, task_count: moduleData.task_count ?? module.task_count ?? 0 }
+          : module
+      ))))
+      setSelectedModule((prev) => prev && prev._id === moduleData._id ? { ...prev, ...moduleData, task_count: moduleData.task_count ?? prev.task_count ?? 0 } : prev)
       setEditingModule(null)
       return
     }
 
-    setModules((prev) => sortModulesByOrder([...prev, moduleData]))
+    const newModule = { ...moduleData, task_count: moduleData.task_count ?? 0 }
+    setModules((prev) => sortModulesByOrder([...prev, newModule]))
+    setSelectedCourse((prev) => prev ? { ...prev, modules_count: (prev.modules_count || 0) + 1 } : prev)
+    setCourses((prev) => prev.map((course) => (
+      course._id === selectedCourse?._id
+        ? { ...course, modules_count: (course.modules_count || 0) + 1 }
+        : course
+    )))
   }
 
   const handleTaskCreated = (taskData, isEditing = false) => {
@@ -397,7 +422,11 @@ function TeacherDashboard() {
 
       setModules((prev) => prev.map((module) =>
         module._id === taskData.module_id
-          ? { ...module, tasks_per_module: (module.tasks_per_module || 0) + 1 }
+          ? {
+              ...module,
+              task_count: getModuleTaskCount(module) + 1,
+              total_tasks: (module.total_tasks || getModuleTaskCount(module)) + 1
+            }
           : module
       ));
     }
@@ -445,6 +474,12 @@ function TeacherDashboard() {
 
       if (response.ok) {
         setModules(modules.filter(m => m._id !== moduleId))
+        setSelectedCourse((prev) => prev ? { ...prev, modules_count: Math.max(0, (prev.modules_count || 0) - 1) } : prev)
+        setCourses((prev) => prev.map((course) => (
+          course._id === selectedCourse?._id
+            ? { ...course, modules_count: Math.max(0, (course.modules_count || 0) - 1) }
+            : course
+        )))
         // If deleting the currently viewed module, go back
         if (selectedModule && selectedModule._id === moduleId) {
           setSelectedModule(null);
@@ -475,7 +510,11 @@ function TeacherDashboard() {
         // Update module task count locally
         setModules(modules.map(m =>
           m._id === moduleId
-            ? { ...m, tasks_per_module: Math.max(0, (m.tasks_per_module || 0) - 1) }
+            ? {
+                ...m,
+                task_count: Math.max(0, getModuleTaskCount(m) - 1),
+                total_tasks: Math.max(0, (m.total_tasks || getModuleTaskCount(m)) - 1)
+              }
             : m
         ));
       } else {
@@ -621,7 +660,7 @@ function TeacherDashboard() {
     navigate('/')
   }
 
-  const selectedCourseTaskCount = modules.reduce((sum, module) => sum + (module.tasks_per_module || 0), 0)
+  const selectedCourseTaskCount = modules.reduce((sum, module) => sum + getModuleTaskCount(module), 0)
   const selectedCourseFileCount = modules.reduce((sum, module) => sum + ((module.files && module.files.length) || 0), 0)
   const orderedModules = React.useMemo(() => sortModulesByOrder(modules), [modules])
   const selectedModuleDisplayOrder = React.useMemo(() => {
@@ -1247,7 +1286,7 @@ function TeacherDashboard() {
                                     <HiListBullet />
                                   </span>
                                   <div className="teacher-module-stat-copy">
-                                    <strong>{module.tasks_per_module || 0}</strong>
+                                    <strong>{getModuleTaskCount(module)}</strong>
                                     <span>{t.modules.stats.tasks}</span>
                                   </div>
                                 </div>
