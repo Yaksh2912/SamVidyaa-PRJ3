@@ -1,5 +1,6 @@
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
+const StudentProgress = require('../models/StudentProgress');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -154,6 +155,223 @@ const getTeacherStats = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Failed to fetch stats' });
+    }
+};
+
+const clampPercent = (value) => {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.min(100, Math.round(value)));
+};
+
+const average = (values) => {
+    if (!values.length) return 0;
+    return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+};
+
+// @desc    Get detailed analytics for a single course
+// @route   GET /api/courses/:id/analytics
+// @access  Private (Instructor/Admin)
+const getCourseAnalytics = async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id).populate('instructor', 'name');
+
+        if (!course) {
+            return res.status(404).json({ message: 'Course not found' });
+        }
+
+        if (course.instructor && course.instructor._id.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const [modules, enrollments, progressRecords] = await Promise.all([
+            Module.find({ course_id: course._id })
+                .select('module_name module_order')
+                .sort({ module_order: 1 }),
+            Enrollment.find({ course_id: course._id })
+                .populate('student_id', 'name email enrollment_number points last_login createdAt'),
+            StudentProgress.find({ course_id: course._id }).lean(),
+        ]);
+
+        const moduleIds = modules.map(module => module._id);
+        const tasks = moduleIds.length
+            ? await Task.find({ module_id: { $in: moduleIds } }).select('module_id').lean()
+            : [];
+
+        const tasksPerModule = tasks.reduce((acc, task) => {
+            const moduleId = task.module_id.toString();
+            acc[moduleId] = (acc[moduleId] || 0) + 1;
+            return acc;
+        }, {});
+
+        const enrollmentStatusBreakdown = enrollments.reduce((acc, enrollment) => {
+            acc[enrollment.status] = (acc[enrollment.status] || 0) + 1;
+            return acc;
+        }, {});
+
+        const activeEnrollments = enrollments.filter((enrollment) => ['ACTIVE', 'COMPLETED'].includes(enrollment.status) && enrollment.student_id);
+        const activeStudents = activeEnrollments
+            .map((enrollment) => ({
+                enrollment,
+                student: enrollment.student_id,
+            }))
+            .filter(({ student }) => student);
+
+        const progressByStudent = new Map();
+        const progressByModule = new Map();
+
+        for (const record of progressRecords) {
+            const studentId = record.student_id?.toString();
+            const moduleId = record.module_id?.toString();
+
+            if (studentId) {
+                if (!progressByStudent.has(studentId)) progressByStudent.set(studentId, []);
+                progressByStudent.get(studentId).push(record);
+            }
+
+            if (moduleId) {
+                if (!progressByModule.has(moduleId)) progressByModule.set(moduleId, []);
+                progressByModule.get(moduleId).push(record);
+            }
+        }
+
+        const totalTasks = tasks.length;
+        const totalModules = modules.length;
+
+        const studentAnalytics = activeStudents.map(({ enrollment, student }) => {
+            const studentId = student._id.toString();
+            const records = progressByStudent.get(studentId) || [];
+            const completedTasks = records.reduce((sum, record) => sum + (record.completed_tasks || 0), 0);
+            const moduleCompletionCount = records.filter((record) => record.module_status === 'MODULE_COMPLETED' || record.module_test_completed).length;
+            const averageScore = average(records.map((record) => record.total_score || 0));
+            const completionRate = totalTasks ? clampPercent((completedTasks / totalTasks) * 100) : 0;
+            const moduleCompletionRate = totalModules ? clampPercent((moduleCompletionCount / totalModules) * 100) : 0;
+            const engagementScore = clampPercent((completionRate * 0.55) + (moduleCompletionRate * 0.25) + (Math.min(averageScore, 100) * 0.2));
+
+            let progressBand = 'not_started';
+            if (enrollment.status === 'COMPLETED' || moduleCompletionRate >= 100) {
+                progressBand = 'completed';
+            } else if (records.length === 0) {
+                progressBand = 'not_started';
+            } else if (completionRate >= 70 || moduleCompletionRate >= 60) {
+                progressBand = 'on_track';
+            } else if (completionRate >= 30 || moduleCompletionRate >= 25) {
+                progressBand = 'steady';
+            } else {
+                progressBand = 'needs_support';
+            }
+
+            const latestProgressUpdate = records
+                .map((record) => new Date(record.updatedAt).getTime())
+                .filter(Boolean)
+                .sort((a, b) => b - a)[0];
+
+            return {
+                studentId,
+                name: student.name,
+                email: student.email,
+                enrollmentNumber: student.enrollment_number,
+                globalPoints: student.points || 0,
+                enrollmentStatus: enrollment.status,
+                completedTasks,
+                completionRate,
+                moduleCompletionCount,
+                moduleCompletionRate,
+                averageScore,
+                engagementScore,
+                progressBand,
+                lastActivityAt: latestProgressUpdate ? new Date(latestProgressUpdate).toISOString() : enrollment.updatedAt?.toISOString?.() || enrollment.createdAt?.toISOString?.() || null,
+                lastLoginAt: student.last_login || null,
+            };
+        }).sort((a, b) => {
+            if (b.engagementScore !== a.engagementScore) return b.engagementScore - a.engagementScore;
+            if (b.averageScore !== a.averageScore) return b.averageScore - a.averageScore;
+            if (b.completedTasks !== a.completedTasks) return b.completedTasks - a.completedTasks;
+            return b.globalPoints - a.globalPoints;
+        });
+
+        const moduleAnalytics = modules.map((module) => {
+            const moduleId = module._id.toString();
+            const records = progressByModule.get(moduleId) || [];
+            const taskCount = tasksPerModule[moduleId] || 0;
+
+            const studentsStarted = records.filter((record) =>
+                (record.completed_tasks || 0) > 0 ||
+                record.module_status !== 'NOT_STARTED' ||
+                record.module_test_completed
+            ).length;
+
+            const studentsCompleted = records.filter((record) =>
+                record.module_status === 'MODULE_COMPLETED' ||
+                record.module_test_completed
+            ).length;
+
+            const avgTaskCompletion = taskCount
+                ? average(records.map((record) => clampPercent(((record.completed_tasks || 0) / taskCount) * 100)))
+                : 0;
+
+            return {
+                moduleId,
+                moduleName: module.module_name,
+                moduleOrder: module.module_order,
+                taskCount,
+                studentsStarted,
+                studentsCompleted,
+                startedRate: activeStudents.length ? clampPercent((studentsStarted / activeStudents.length) * 100) : 0,
+                completedRate: activeStudents.length ? clampPercent((studentsCompleted / activeStudents.length) * 100) : 0,
+                averageScore: average(records.map((record) => record.total_score || 0)),
+                averageTaskCompletion: avgTaskCompletion,
+            };
+        });
+
+        const progressBandBreakdown = studentAnalytics.reduce((acc, student) => {
+            acc[student.progressBand] = (acc[student.progressBand] || 0) + 1;
+            return acc;
+        }, { completed: 0, on_track: 0, steady: 0, needs_support: 0, not_started: 0 });
+
+        const attentionNeeded = [...studentAnalytics]
+            .filter((student) => ['needs_support', 'not_started'].includes(student.progressBand))
+            .sort((a, b) => a.engagementScore - b.engagementScore)
+            .slice(0, 5);
+
+        const topPerformers = studentAnalytics.slice(0, 5);
+        const bottleneckModule = [...moduleAnalytics]
+            .filter((module) => module.taskCount > 0)
+            .sort((a, b) => a.completedRate - b.completedRate)[0] || null;
+
+        res.json({
+            course: {
+                _id: course._id,
+                course_name: course.course_name,
+                course_code: course.course_code,
+                subject: course.subject,
+            },
+            overview: {
+                totalStudents: enrollments.length,
+                activeStudents: activeStudents.length,
+                pendingStudents: enrollmentStatusBreakdown.PENDING || 0,
+                rejectedStudents: enrollmentStatusBreakdown.REJECTED || 0,
+                completedEnrollments: enrollmentStatusBreakdown.COMPLETED || 0,
+                totalModules,
+                totalTasks,
+                avgCompletionRate: average(studentAnalytics.map((student) => student.completionRate)),
+                avgScore: average(studentAnalytics.map((student) => student.averageScore)),
+                studentsNeedingSupport: (progressBandBreakdown.needs_support || 0) + (progressBandBreakdown.not_started || 0),
+                topPerformer: topPerformers[0] || null,
+                bottleneckModule,
+                dataMode: progressRecords.length ? 'progress' : 'enrollment_only',
+            },
+            distributions: {
+                enrollmentStatus: enrollmentStatusBreakdown,
+                progressBand: progressBandBreakdown,
+            },
+            topPerformers,
+            attentionNeeded,
+            moduleAnalytics,
+            studentAnalytics,
+        });
+    } catch (error) {
+        console.error('Course analytics error:', error);
+        res.status(500).json({ message: 'Failed to fetch course analytics' });
     }
 };
 
@@ -383,4 +601,4 @@ const deleteHandout = async (req, res) => {
     }
 };
 
-module.exports = { createCourse, getCourses, getCourseById, deleteCourse, getTeacherStats, exportCourse, uploadHandout, deleteHandout, handoutUploadMiddleware };
+module.exports = { createCourse, getCourses, getCourseById, deleteCourse, getTeacherStats, getCourseAnalytics, exportCourse, uploadHandout, deleteHandout, handoutUploadMiddleware };

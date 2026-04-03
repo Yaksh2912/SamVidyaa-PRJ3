@@ -433,12 +433,6 @@ function StudentDashboard() {
         </nav>
 
         <div className="sidebar-bottom">
-          <div className="theme-toggle-row">
-            <span className="text-secondary" style={{ fontSize: '0.85rem', fontWeight: 500 }}>{common.theme}</span>
-            <button className="theme-toggle" onClick={toggleTheme} aria-label={common.toggleTheme}>
-              {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
-            </button>
-          </div>
           <div className="sidebar-profile">
             <div className="profile-info">
               <div className="profile-avatar">{user?.name ? user.name.charAt(0).toUpperCase() : 'S'}</div>
@@ -474,6 +468,9 @@ function StudentDashboard() {
               <option value="en">{common.languageNames.en}</option>
               <option value="hi">{common.languageNames.hi}</option>
             </select>
+            <button className="theme-toggle topbar-theme-toggle" onClick={toggleTheme} aria-label={common.toggleTheme}>
+              {isDark ? <FiSun size={18} /> : <FiMoon size={18} />}
+            </button>
             <div 
               className="points-badge-premium" 
               onClick={() => setActiveTab('pointShop')} 
@@ -485,9 +482,6 @@ function StudentDashboard() {
                 <span className="premium-points-label">{t.topbar.totalPoints}</span>
               </div>
             </div>
-            <button className="theme-toggle topbar-action-mobile" onClick={toggleTheme} aria-label={common.toggleTheme}>
-              {isDark ? <FiSun size={18} /> : <FiMoon size={18} />}
-            </button>
             <button onClick={handleLogout} className="btn-logout topbar-action-mobile" title={t.logout}>
               <HiArrowDownTray style={{ transform: 'rotate(-90deg)', fontSize: '1.4rem' }} />
             </button>

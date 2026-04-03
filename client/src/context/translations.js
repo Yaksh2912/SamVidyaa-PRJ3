@@ -339,7 +339,7 @@ export const translations = {
         }
       },
       teacher: {
-        title: 'Teacher Dashboard',
+        title: 'INSTRUCTOR',
         welcome: 'Welcome',
         header: 'Class Management',
         subtitle: 'Manage classes, grade assignments, and monitor student progress',
@@ -350,7 +350,7 @@ export const translations = {
           myCourses: 'My Courses'
         },
         topbar: {
-          welcomeBack: 'Welcome Back, {name}'
+          welcomeBack: 'Welcome, {name}'
         },
         stats: {
           totalStudents: 'Total Students',
@@ -387,6 +387,7 @@ export const translations = {
         courses: {
           title: 'My Courses',
           createCourse: 'Create Course',
+          analytics: 'Analytics',
           empty: 'No courses created yet.',
           instructorWorkspace: 'Instructor Workspace',
           questionCount: 'Q: {count}',
@@ -409,6 +410,49 @@ export const translations = {
             coursePoints: 'Course Points',
             coursePointsDesc: 'Reward value configured for the course journey'
           }
+        },
+        analyticsModal: {
+          title: 'Course Analytics',
+          subtitle: 'cohort performance and learning signals',
+          close: 'Close',
+          loading: 'Loading course analytics...',
+          unavailable: 'Analytics are unavailable for this course right now.',
+          limitedData: 'Detailed progress records are limited right now. These insights are based on enrollments plus any saved progress snapshots.',
+          overview: {
+            activeLearners: 'Active Learners',
+            avgCompletion: 'Avg Completion',
+            avgScore: 'Avg Score',
+            supportNeeded: 'Needs Support'
+          },
+          highlights: {
+            topPerformer: 'Top Performer',
+            bottleneck: 'Bottleneck Module'
+          },
+          charts: {
+            topPerformers: 'Top Performers',
+            moduleProgress: 'Module Progress',
+            attentionNeeded: 'Learners Needing Attention',
+            studentSnapshot: 'Student Snapshot'
+          },
+          fields: {
+            completion: 'Completion',
+            score: 'Score',
+            engagement: 'Engagement',
+            started: 'Started',
+            completed: 'Completed',
+            lastActivity: 'Last activity'
+          },
+          progressBands: {
+            completed: 'Completed',
+            on_track: 'On Track',
+            steady: 'Steady',
+            needs_support: 'Needs Support',
+            not_started: 'Not Started'
+          },
+          emptyStudents: 'No learner analytics available yet.',
+          emptyModules: 'No module analytics available yet.',
+          emptyAttention: 'No learners are currently flagged for support.',
+          noRecentActivity: 'No recent update'
         },
         handout: {
           none: 'No handout uploaded',
@@ -479,6 +523,7 @@ export const translations = {
           confirmDeleteCourse: 'Are you sure you want to delete this course?',
           deleteCourseFailed: 'Failed to delete course',
           deleteCourseError: 'Error deleting course',
+          courseAnalyticsFailed: 'Failed to load course analytics',
           confirmDeleteModule: 'Are you sure you want to delete this module?',
           deleteModuleFailed: 'Failed to delete module',
           deleteModuleError: 'Error deleting module',
@@ -897,7 +942,7 @@ export const translations = {
           rankings: 'रैंकिंग'
         },
         topbar: {
-          welcomeBack: 'फिर से स्वागत है, {name}',
+          welcomeBack: 'स्वागत है, {name}',
           openPointShop: 'पॉइंट शॉप खोलें',
           totalPoints: 'कुल अंक'
         },
@@ -1007,7 +1052,7 @@ export const translations = {
           myCourses: 'मेरे कोर्स'
         },
         topbar: {
-          welcomeBack: 'फिर से स्वागत है, {name}'
+          welcomeBack: 'स्वागत है, {name}'
         },
         stats: {
           totalStudents: 'कुल छात्र',
@@ -1044,6 +1089,7 @@ export const translations = {
         courses: {
           title: 'मेरे कोर्स',
           createCourse: 'कोर्स बनाएं',
+          analytics: 'एनालिटिक्स',
           empty: 'अभी तक कोई कोर्स नहीं बनाया गया है।',
           instructorWorkspace: 'इंस्ट्रक्टर वर्कस्पेस',
           questionCount: 'प्रश्न: {count}',
@@ -1066,6 +1112,49 @@ export const translations = {
             coursePoints: 'कोर्स अंक',
             coursePointsDesc: 'कोर्स यात्रा के लिए निर्धारित रिवॉर्ड मूल्य'
           }
+        },
+        analyticsModal: {
+          title: 'कोर्स एनालिटिक्स',
+          subtitle: 'बैच प्रदर्शन और सीखने के संकेत',
+          close: 'बंद करें',
+          loading: 'कोर्स एनालिटिक्स लोड हो रहा है...',
+          unavailable: 'इस कोर्स के लिए एनालिटिक्स अभी उपलब्ध नहीं है।',
+          limitedData: 'विस्तृत प्रगति रिकॉर्ड अभी सीमित हैं। ये आँकड़े नामांकन और उपलब्ध प्रगति स्नैपशॉट्स पर आधारित हैं।',
+          overview: {
+            activeLearners: 'सक्रिय शिक्षार्थी',
+            avgCompletion: 'औसत पूर्णता',
+            avgScore: 'औसत स्कोर',
+            supportNeeded: 'सहायता आवश्यक'
+          },
+          highlights: {
+            topPerformer: 'शीर्ष प्रदर्शनकर्ता',
+            bottleneck: 'रुकावट वाला मॉड्यूल'
+          },
+          charts: {
+            topPerformers: 'शीर्ष प्रदर्शनकर्ता',
+            moduleProgress: 'मॉड्यूल प्रगति',
+            attentionNeeded: 'ध्यान चाहने वाले छात्र',
+            studentSnapshot: 'छात्र स्नैपशॉट'
+          },
+          fields: {
+            completion: 'पूर्णता',
+            score: 'स्कोर',
+            engagement: 'सक्रियता',
+            started: 'शुरू',
+            completed: 'पूर्ण',
+            lastActivity: 'अंतिम गतिविधि'
+          },
+          progressBands: {
+            completed: 'पूर्ण',
+            on_track: 'सही प्रगति',
+            steady: 'स्थिर',
+            needs_support: 'सहायता आवश्यक',
+            not_started: 'शुरू नहीं किया'
+          },
+          emptyStudents: 'अभी कोई छात्र एनालिटिक्स उपलब्ध नहीं है।',
+          emptyModules: 'अभी कोई मॉड्यूल एनालिटिक्स उपलब्ध नहीं है।',
+          emptyAttention: 'अभी किसी छात्र को अतिरिक्त सहायता के लिए चिह्नित नहीं किया गया है।',
+          noRecentActivity: 'हाल की कोई अपडेट नहीं'
         },
         handout: {
           none: 'कोई हैंडआउट अपलोड नहीं किया गया',
@@ -1136,6 +1225,7 @@ export const translations = {
           confirmDeleteCourse: 'क्या आप वाकई इस कोर्स को हटाना चाहते हैं?',
           deleteCourseFailed: 'कोर्स हटाया नहीं जा सका',
           deleteCourseError: 'कोर्स हटाने में त्रुटि',
+          courseAnalyticsFailed: 'कोर्स एनालिटिक्स लोड नहीं हो सका',
           confirmDeleteModule: 'क्या आप वाकई इस मॉड्यूल को हटाना चाहते हैं?',
           deleteModuleFailed: 'मॉड्यूल हटाया नहीं जा सका',
           deleteModuleError: 'मॉड्यूल हटाने में त्रुटि',

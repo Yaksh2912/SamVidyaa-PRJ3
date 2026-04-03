@@ -12,6 +12,7 @@ import CreateCourseForm from '../components/CreateCourseForm'
 import CreateTaskForm from '../components/CreateTaskForm'
 import AddStudentsModal from '../components/AddStudentsModal'
 import ManageRewardsModal from '../components/ManageRewardsModal'
+import CourseAnalyticsModal from '../components/CourseAnalyticsModal'
 import './Dashboard.css'
 
 const COURSE_GRADIENTS = [
@@ -61,6 +62,9 @@ function TeacherDashboard() {
   const [selectedModuleForTask, setSelectedModuleForTask] = React.useState(null) // For modal context
   const [showAddStudentsModal, setShowAddStudentsModal] = React.useState(false)
   const [showRewardsModal, setShowRewardsModal] = React.useState(false)
+  const [analyticsCourse, setAnalyticsCourse] = React.useState(null)
+  const [courseAnalytics, setCourseAnalytics] = React.useState(null)
+  const [loadingCourseAnalytics, setLoadingCourseAnalytics] = React.useState(false)
 
   // Handout state
   const [handoutUploading, setHandoutUploading] = React.useState(false)
@@ -163,6 +167,38 @@ function TeacherDashboard() {
       console.error('Failed to fetch students', error)
     } finally {
       setLoadingStudents(false)
+    }
+  }
+
+  const closeCourseAnalytics = () => {
+    setAnalyticsCourse(null)
+    setCourseAnalytics(null)
+    setLoadingCourseAnalytics(false)
+  }
+
+  const openCourseAnalytics = async (course) => {
+    setAnalyticsCourse(course)
+    setCourseAnalytics(null)
+    setLoadingCourseAnalytics(true)
+
+    try {
+      const userStr = localStorage.getItem('user')
+      const token = userStr ? JSON.parse(userStr).token : null
+      const response = await fetch(`${API_BASE_URL}/api/courses/${course._id}/analytics`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (!response.ok) {
+        throw new Error('analytics_failed')
+      }
+
+      const data = await response.json()
+      setCourseAnalytics(data)
+    } catch (error) {
+      console.error('Failed to fetch course analytics', error)
+      alert(t.alerts.courseAnalyticsFailed)
+    } finally {
+      setLoadingCourseAnalytics(false)
     }
   }
 
@@ -484,6 +520,11 @@ function TeacherDashboard() {
   }
   const getDifficultyLabel = (difficulty) => translations.forms.task.difficulties[difficulty] || difficulty
   const getStatusLabel = (status) => common.statuses[status] || status
+  const topbarTitle = activeTab === 'dashboard'
+    ? translate('dashboard.teacher.topbar.welcomeBack', { name: user?.name || translations.auth.roles.teacher })
+    : activeTab === 'myCourses'
+      ? (selectedCourse ? selectedCourse.course_name : '')
+      : tabTitles[activeTab]
 
   return (
     <div className="dashboard-layout" data-theme={theme}>
@@ -503,12 +544,6 @@ function TeacherDashboard() {
         </nav>
 
         <div className="sidebar-bottom">
-          <div className="theme-toggle-row">
-            <span className="text-secondary" style={{ fontSize: '0.85rem', fontWeight: 500 }}>{common.theme}</span>
-            <button className="theme-toggle" onClick={toggleTheme} aria-label={common.toggleTheme}>
-              {isDark ? <FiSun size={16} /> : <FiMoon size={16} />}
-            </button>
-          </div>
           <div className="sidebar-profile">
             <div className="profile-info">
               <div className="profile-avatar">{user?.name ? user.name.charAt(0).toUpperCase() : 'T'}</div>
@@ -528,13 +563,15 @@ function TeacherDashboard() {
       <main className="dashboard-content">
         <header className="dashboard-topbar">
           <div className="topbar-left">
-            <h2 className="topbar-title">
-              {activeTab === 'dashboard'
-                ? translate('dashboard.teacher.topbar.welcomeBack', { name: user?.name || translations.auth.roles.teacher })
-                : activeTab === 'myCourses'
-                  ? (selectedCourse ? selectedCourse.course_name : t.tabs.myCourses)
-                  : tabTitles[activeTab]}
-            </h2>
+            {topbarTitle && <h2 className="topbar-title">{topbarTitle}</h2>}
+            {activeTab === 'myCourses' && !selectedCourse && (
+              <button className="btn btn-primary topbar-create-button" onClick={() => setShowCourseForm(true)}>
+                <span className="topbar-create-button__icon">
+                  <HiFolderPlus />
+                </span>
+                <span className="topbar-create-button__label">{t.courses.createCourse}</span>
+              </button>
+            )}
           </div>
           <div className="topbar-right">
             <select
@@ -545,7 +582,7 @@ function TeacherDashboard() {
               <option value="en">{common.languageNames.en}</option>
               <option value="hi">{common.languageNames.hi}</option>
             </select>
-            <button className="theme-toggle topbar-action-mobile" onClick={toggleTheme} aria-label={common.toggleTheme}>
+            <button className="theme-toggle topbar-theme-toggle" onClick={toggleTheme} aria-label={common.toggleTheme}>
               {isDark ? <FiSun size={18} /> : <FiMoon size={18} />}
             </button>
             <button onClick={handleLogout} className="btn-logout topbar-action-mobile" title={t.logout}>
@@ -591,19 +628,6 @@ function TeacherDashboard() {
                 </motion.div>
               </div>
 
-              <div className="recent-activity mt-4">
-                <h3>{t.activity.title}</h3>
-                <div className="activity-list">
-                  {t.activity.quickLog.map((item, index) => (
-                    <div className="activity-item" key={`${item.name}-${index}`}>
-                      <span className="activity-time">
-                        {item.dayAgo ? t.activity.dayAgo : translate('dashboard.teacher.activity.hoursAgo', { hours: item.hours })}
-                      </span>
-                      <span className="activity-text">{item.name} {t.activity.submitted} {item.lab}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </motion.div>
           )}
 
@@ -612,12 +636,6 @@ function TeacherDashboard() {
               {!selectedCourse ? (
                 /* COURSE LIST VIEW */
                 <div className="courses-section">
-                  <div className="section-header">
-                    <h3>{t.courses.title}</h3>
-                    <button className="btn btn-primary" onClick={() => setShowCourseForm(true)}>
-                      <HiFolderPlus /> {t.courses.createCourse}
-                    </button>
-                  </div>
                   <div className="gc-course-grid teacher-course-grid">
                     {courses.length === 0 ? <p className="no-data">{t.courses.empty}</p> : courses.map(course => (
                       <motion.div
@@ -645,6 +663,16 @@ function TeacherDashboard() {
                         </div>
 
                         <div className="gc-card-footer teacher-course-footer">
+                          <button
+                            className="btn-icon"
+                            title={t.courses.analytics}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openCourseAnalytics(course)
+                            }}
+                          >
+                            <HiChartBar size={20} />
+                          </button>
                           <button
                             className="btn-icon"
                             title={t.courses.exportCourse}
@@ -978,6 +1006,17 @@ function TeacherDashboard() {
         <ManageRewardsModal
           course={selectedCourse}
           onClose={() => setShowRewardsModal(false)}
+        />
+      )}
+
+      {analyticsCourse && (
+        <CourseAnalyticsModal
+          course={analyticsCourse}
+          analytics={courseAnalytics}
+          loading={loadingCourseAnalytics}
+          onClose={closeCourseAnalytics}
+          labels={t}
+          common={common}
         />
       )}
 

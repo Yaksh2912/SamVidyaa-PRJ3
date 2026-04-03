@@ -7,6 +7,7 @@ const {
     getCourseById,
     deleteCourse,
     getTeacherStats,
+    getCourseAnalytics,
     uploadHandout,
     deleteHandout,
     handoutUploadMiddleware,
@@ -17,6 +18,7 @@ router.route('/')
     .get(protect, getCourses);
 
 router.get('/stats', protect, getTeacherStats); // Stats route must be before :id
+router.get('/:id/analytics', protect, getCourseAnalytics);
 
 router.route('/:id')
     .get(protect, getCourseById)

@@ -1,0 +1,22 @@
+TODO List - Features to Implement:
+
+1. Code Execution & Automated Grading Engine
+   - Create a mechanism to actually evaluate code. 
+   - Update `completeTask` controller to utilize a sandbox or code execution API to compile, run, and verify student submissions against test cases instead of blindly awarding points.
+   - Create a Submission schema to store student code answers.
+
+2. Manual Grading & Performance Statistics
+   - Implement real grading logic for the teacher dashboard instead of mocking `pendingGrading` and `avgPerformance`.
+   - Add UI/API for teachers to manually grade submissions if automated grading is not sufficient or if tasks require manual review.
+
+3. Automated RAG Document Embeddings
+   - Add logic that triggers upon PDF handout upload to parse the PDF, generate text embeddings, and insert them into the Pinecone Vector Database. This will keep the AI chatbot aware of the newest course materials automatically instead of requiring manual admin syncs.
+
+4. Task Ownership Authorization
+   - Implement deep authorization checks for modifying and deleting tasks to ensure only the owning teacher (or admin) can alter them. Currently, `taskController.js` just assumes any authenticated teacher can delete a task.
+
+5. Student Dashboard "History" View
+   - Create a "History" or "Completed" tab for students in the dashboard to review their past work and grades, since completed items currently just disappear from active views.
+
+6. Single Module View API
+   - Implement the backend endpoint to fetch granular details of a single module (noted as missing in `moduleRoutes.js`).
