@@ -1,0 +1,21 @@
+Task Name: Calculate Sum
+Problem Statement: Write a program to add two integers and print the result.
+Difficulty: EASY
+Points: 10
+Time Limit: 30
+Language: Python
+Expected Output: Print the sum of the two integers.
+Sample Input: 2 3
+Sample Output: 5
+Constraints: Use basic arithmetic only.
+
+Task Name: Find Maximum
+Problem Statement: Write a program to find the maximum among three integers.
+Difficulty: MEDIUM
+Points: 20
+Time Limit: 30
+Language: Python
+Expected Output: Print the largest of the three numbers.
+Sample Input: 4 9 2
+Sample Output: 9
+Constraints: Do not use sorting.

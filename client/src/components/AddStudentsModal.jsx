@@ -6,21 +6,20 @@ import '../components/ModalForm.css'
 function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
     const { translations, t: translate } = useI18n()
     const t = translations.forms.addStudents
-    const [activeTab, setActiveTab] = useState('range') // 'range' | 'excel'
-    const [startEnrollment, setStartEnrollment] = useState('')
-    const [endEnrollment, setEndEnrollment] = useState('')
+    const [activeTab, setActiveTab] = useState('email') // 'email' | 'excel'
+    const [studentEmails, setStudentEmails] = useState('')
     const [excelFile, setExcelFile] = useState(null)
     const [loading, setLoading] = useState(false)
     const [result, setResult] = useState(null)
     const [error, setError] = useState('')
 
-    const handleRangeSubmit = async (e) => {
+    const handleEmailSubmit = async (e) => {
         e.preventDefault()
         setError('')
         setResult(null)
 
-        if (!startEnrollment || !endEnrollment) {
-            setError(t.rangeRequired)
+        if (!studentEmails.trim()) {
+            setError(t.emailRequired)
             return
         }
 
@@ -29,8 +28,12 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
         try {
             const userStr = localStorage.getItem('user')
             const token = userStr ? JSON.parse(userStr).token : null
+            const parsedEmails = studentEmails
+                .split(/[\n,;]+/)
+                .map((email) => email.trim())
+                .filter(Boolean)
 
-            const response = await fetch(`${API_BASE_URL}/api/enrollments/bulk`, {
+            const response = await fetch(`${API_BASE_URL}/api/enrollments/bulk-email`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -38,8 +41,7 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
                 },
                 body: JSON.stringify({
                     course_id: courseId,
-                    start_enrollment: startEnrollment.trim(),
-                    end_enrollment: endEnrollment.trim()
+                    student_emails: parsedEmails
                 })
             })
 
@@ -49,10 +51,10 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
                 setResult(data)
                 if (onStudentsAdded) onStudentsAdded()
             } else {
-                setError(data.message || t.bulkFailed)
+                setError(data.message || t.emailFailed)
             }
         } catch (err) {
-            console.error('Bulk enroll error:', err)
+            console.error('Email enroll error:', err)
             setError(translations.common.errors.somethingWentWrong)
         } finally {
             setLoading(false)
@@ -105,62 +107,56 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content add-students-modal" onClick={(e) => e.stopPropagation()}>
                 <h2>{t.title}</h2>
 
-                <div className="modal-tabs" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                    <button type="button" onClick={() => { setActiveTab('range'); setError(''); setResult(null); }} style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', borderBottom: activeTab === 'range' ? '2px solid var(--primary-color)' : 'none', color: activeTab === 'range' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: activeTab === 'range' ? '600' : 'normal' }}>{t.byRange}</button>
-                    <button type="button" onClick={() => { setActiveTab('excel'); setError(''); setResult(null); }} style={{ background: 'none', border: 'none', padding: '0.5rem 1rem', cursor: 'pointer', borderBottom: activeTab === 'excel' ? '2px solid var(--primary-color)' : 'none', color: activeTab === 'excel' ? 'var(--primary-color)' : 'var(--text-secondary)', fontWeight: activeTab === 'excel' ? '600' : 'normal' }}>{t.uploadExcel}</button>
+                <div className="modal-tabs add-students-tabs">
+                    <button
+                        type="button"
+                        className={`add-students-tab ${activeTab === 'email' ? 'is-active' : ''}`}
+                        onClick={() => { setActiveTab('email'); setError(''); setResult(null); }}
+                    >
+                        {t.byEmail}
+                    </button>
+                    <button
+                        type="button"
+                        className={`add-students-tab ${activeTab === 'excel' ? 'is-active' : ''}`}
+                        onClick={() => { setActiveTab('excel'); setError(''); setResult(null); }}
+                    >
+                        {t.uploadExcel}
+                    </button>
                 </div>
 
                 {error && <div className="error-message">{error}</div>}
 
                 {result && (
-                    <div style={{
-                        background: 'var(--status-success-bg)',
-                        border: '1px solid var(--status-success-border)',
-                        borderRadius: 'var(--border-radius-sm)',
-                        padding: '1rem',
-                        marginBottom: '1rem',
-                        color: 'var(--text-primary)',
-                        fontSize: '0.95rem'
-                    }}>
-                        <strong style={{ color: 'var(--status-success-text)' }}>✓ {result.message}</strong>
-                        <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    <div className="add-students-result">
+                        <strong className="add-students-result__title">✓ {result.message}</strong>
+                        <div className="add-students-result__grid">
                             <span>{translate('forms.addStudents.enrolled', { count: result.enrolled })}</span>
                             <span>{translate('forms.addStudents.skipped', { count: result.skipped })}</span>
                             {result.not_found !== undefined && <span>{translate('forms.addStudents.notFound', { count: result.not_found })}</span>}
-                            {result.total_in_range !== undefined && <span>{translate('forms.addStudents.foundInRange', { count: result.total_in_range })}</span>}
+                            {result.invalid !== undefined && <span>{translate('forms.addStudents.invalidEmails', { count: result.invalid })}</span>}
+                            {result.total_processed !== undefined && <span>{translate('forms.addStudents.processed', { count: result.total_processed })}</span>}
                         </div>
                     </div>
                 )}
 
-                {activeTab === 'range' ? (
-                    <form onSubmit={handleRangeSubmit}>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                            {t.rangeHelp}
+                {activeTab === 'email' ? (
+                    <form onSubmit={handleEmailSubmit} className="add-students-form">
+                        <p className="add-students-help">
+                            {t.emailHelp}
                         </p>
-                        <div className="form-group-row" style={{ display: 'flex', gap: '1rem' }}>
-                            <div className="form-group" style={{ flex: 1 }}>
-                                <label>{t.fromEnrollment}</label>
-                                <input
-                                    type="text"
-                                    value={startEnrollment}
-                                    onChange={(e) => setStartEnrollment(e.target.value)}
-                                    placeholder={t.enrollmentPlaceholderStart}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group" style={{ flex: 1 }}>
-                                <label>{t.toEnrollment}</label>
-                                <input
-                                    type="text"
-                                    value={endEnrollment}
-                                    onChange={(e) => setEndEnrollment(e.target.value)}
-                                    placeholder={t.enrollmentPlaceholderEnd}
-                                    required
-                                />
-                            </div>
+                        <div className="form-group">
+                            <label>{t.studentEmails}</label>
+                            <textarea
+                                className="add-students-textarea"
+                                value={studentEmails}
+                                onChange={(e) => setStudentEmails(e.target.value)}
+                                placeholder={t.studentEmailsPlaceholder}
+                                rows={10}
+                                required
+                            />
                         </div>
 
                         <div className="modal-actions">
@@ -173,8 +169,8 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
                         </div>
                     </form>
                 ) : (
-                    <form onSubmit={handleExcelSubmit}>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                    <form onSubmit={handleExcelSubmit} className="add-students-form">
+                        <p className="add-students-help">
                             {t.excelHelp}
                         </p>
                         <div className="form-group">

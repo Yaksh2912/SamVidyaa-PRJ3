@@ -42,6 +42,20 @@ const enrollStudent = async (req, res) => {
     }
 };
 
+const authorizeCourseEnrollmentAccess = async (courseId, user) => {
+    const course = await Course.findById(courseId);
+
+    if (!course) {
+        return { error: { status: 404, message: 'Course not found' } };
+    }
+
+    if (course.instructor.toString() !== user._id.toString() && user.role !== 'ADMIN') {
+        return { error: { status: 401, message: 'Not authorized' } };
+    }
+
+    return { course };
+};
+
 // @desc    Get all students enrolled in a course
 // @route   GET /api/enrollments/course/:courseId
 // @access  Private
@@ -179,6 +193,101 @@ const bulkEnrollByRange = async (req, res) => {
     }
 };
 
+// @desc    Bulk enroll students by email list
+// @route   POST /api/enrollments/bulk-email
+// @access  Private (Instructor/Admin)
+const bulkEnrollByEmail = async (req, res) => {
+    try {
+        const { course_id, student_emails } = req.body;
+
+        if (!course_id || !student_emails) {
+            return res.status(400).json({ message: 'Course ID and student emails are required' });
+        }
+
+        const authorization = await authorizeCourseEnrollmentAccess(course_id, req.user);
+        if (authorization.error) {
+            return res.status(authorization.error.status).json({ message: authorization.error.message });
+        }
+
+        const rawEmails = Array.isArray(student_emails)
+            ? student_emails
+            : String(student_emails).split(/[\n,;]+/);
+
+        const submittedEmails = rawEmails
+            .map((email) => String(email || '').trim().toLowerCase())
+            .filter(Boolean);
+
+        if (!submittedEmails.length) {
+            return res.status(400).json({ message: 'At least one student email is required' });
+        }
+
+        const uniqueEmails = [...new Set(submittedEmails)];
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const validEmails = uniqueEmails.filter((email) => emailPattern.test(email));
+        const invalid = uniqueEmails.length - validEmails.length;
+
+        if (!validEmails.length) {
+            return res.status(400).json({ message: 'No valid student emails were provided' });
+        }
+
+        const students = await User.find({
+            role: 'STUDENT',
+            email: { $in: validEmails }
+        }).select('_id email');
+
+        const studentsByEmail = new Map(
+            students.map((student) => [student.email.toLowerCase(), student])
+        );
+
+        let enrolled = 0;
+        let skipped = 0;
+        let not_found = 0;
+
+        for (const email of validEmails) {
+            const student = studentsByEmail.get(email);
+
+            if (!student) {
+                not_found++;
+                continue;
+            }
+
+            try {
+                const existing = await Enrollment.findOne({ course_id, student_id: student._id });
+                if (existing) {
+                    if (existing.status === 'REJECTED' || existing.status === 'DROPPED') {
+                        existing.status = 'ACTIVE';
+                        await existing.save();
+                        enrolled++;
+                    } else {
+                        skipped++;
+                    }
+                } else {
+                    await Enrollment.create({
+                        course_id,
+                        student_id: student._id,
+                        status: 'ACTIVE'
+                    });
+                    enrolled++;
+                }
+            } catch (err) {
+                skipped++;
+            }
+        }
+
+        res.status(200).json({
+            message: 'Email enrollment processed',
+            enrolled,
+            skipped,
+            not_found,
+            invalid,
+            total_processed: uniqueEmails.length
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Email enrollment failed' });
+    }
+};
+
 // @desc    Bulk enroll students from Excel file
 // @route   POST /api/enrollments/excel-upload
 // @access  Private (Instructor)
@@ -277,5 +386,6 @@ module.exports = {
     getStudentEnrollments,
     updateEnrollmentStatus,
     bulkEnrollByRange,
+    bulkEnrollByEmail,
     bulkEnrollByExcel
 };

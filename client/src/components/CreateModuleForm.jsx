@@ -4,13 +4,13 @@ import API_BASE_URL from '../config';
 import { useI18n } from '../context/I18nContext';
 import './ModalForm.css';
 
-function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
+function CreateModuleForm({ onClose, onModuleSaved, courseId, initialData = null }) {
     const { translations } = useI18n();
     const t = translations.forms.module;
+    const isEditing = Boolean(initialData);
     const [formData, setFormData] = useState({
         module_name: '',
         description: '',
-        module_order: 1,
         tasks_per_module: 10,
         module_test_questions: 3,
         is_active: true,
@@ -19,6 +19,19 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
     const [files, setFiles] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+
+    React.useEffect(() => {
+        if (!initialData) return;
+
+        setFormData({
+            module_name: initialData.module_name || '',
+            description: initialData.description || '',
+            tasks_per_module: initialData.tasks_per_module || 10,
+            module_test_questions: initialData.module_test_questions || 3,
+            is_active: typeof initialData.is_active === 'boolean' ? initialData.is_active : true,
+            points: initialData.points || 100
+        });
+    }, [initialData]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -34,7 +47,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
         setIsSubmitting(true);
         setError('');
 
-        if (!formData.module_name || !formData.module_order) {
+        if (!formData.module_name) {
             setError(t.required);
             setIsSubmitting(false);
             return;
@@ -45,7 +58,6 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
         submitData.append('course_id', courseId);
         submitData.append('module_name', formData.module_name);
         submitData.append('description', formData.description);
-        submitData.append('module_order', formData.module_order);
         submitData.append('tasks_per_module', formData.tasks_per_module);
         submitData.append('module_test_questions', formData.module_test_questions);
         submitData.append('points', formData.points);
@@ -59,8 +71,8 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
             const userStr = localStorage.getItem('user');
             const token = userStr ? JSON.parse(userStr).token : null;
 
-            const response = await fetch(`${API_BASE_URL}/api/modules`, {
-                method: 'POST',
+            const response = await fetch(isEditing ? `${API_BASE_URL}/api/modules/${initialData._id}` : `${API_BASE_URL}/api/modules`, {
+                method: isEditing ? 'PUT' : 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -69,11 +81,11 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.message || t.createFailed);
+                throw new Error(data.message || (isEditing ? t.updateFailed : t.createFailed));
             }
 
-            const newModule = await response.json();
-            onModuleCreated(newModule);
+            const savedModule = await response.json();
+            onModuleSaved(savedModule, isEditing);
             onClose();
         } catch (err) {
             console.error(err);
@@ -90,32 +102,19 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
             >
-                <h2>{t.title}</h2>
+                <h2>{isEditing ? t.editTitle : t.title}</h2>
                 {error && <div className="error-message">{error}</div>}
                 <form onSubmit={handleSubmit}>
-                    <div className="form-row">
-                        <div className="form-group" style={{ flex: 1 }}>
-                            <label>{t.moduleOrder}</label>
-                            <input
-                                type="number"
-                                name="module_order"
-                                value={formData.module_order}
-                                onChange={handleChange}
-                                required
-                                min="1"
-                            />
-                        </div>
-                        <div className="form-group" style={{ flex: 3 }}>
-                            <label>{t.moduleName}</label>
-                            <input
-                                type="text"
-                                name="module_name"
-                                value={formData.module_name}
-                                onChange={handleChange}
-                                required
-                                placeholder={t.moduleNamePlaceholder}
-                            />
-                        </div>
+                    <div className="form-group">
+                        <label>{t.moduleName}</label>
+                        <input
+                            type="text"
+                            name="module_name"
+                            value={formData.module_name}
+                            onChange={handleChange}
+                            required
+                            placeholder={t.moduleNamePlaceholder}
+                        />
                     </div>
 
                     <div className="form-group">
@@ -186,7 +185,7 @@ function CreateModuleForm({ onClose, onModuleCreated, courseId }) {
                     <div className="modal-actions">
                         <button type="button" className="btn btn-secondary" onClick={onClose}>{t.cancel}</button>
                         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                            {isSubmitting ? t.creating : t.create}
+                            {isSubmitting ? (isEditing ? t.updating : t.creating) : (isEditing ? t.update : t.create)}
                         </button>
                     </div>
                 </form>

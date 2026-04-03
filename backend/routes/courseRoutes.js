@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
     createCourse,
+    updateCourse,
     getCourses,
     getCourseById,
     deleteCourse,
@@ -22,6 +23,7 @@ router.get('/:id/analytics', protect, getCourseAnalytics);
 
 router.route('/:id')
     .get(protect, getCourseById)
+    .put(protect, updateCourse)
     .delete(protect, deleteCourse);
 
 router.get('/:id/export', protect, require('../controllers/courseController').exportCourse);

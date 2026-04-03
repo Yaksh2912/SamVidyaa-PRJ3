@@ -3,9 +3,10 @@ import { motion } from 'framer-motion';
 import API_BASE_URL from '../config';
 import { useI18n } from '../context/I18nContext';
 
-function CreateCourseForm({ onClose, onCourseCreated }) {
+function CreateCourseForm({ onClose, onCourseSaved, initialData = null }) {
     const { translations } = useI18n();
     const t = translations.forms.course;
+    const isEditing = Boolean(initialData);
     const [formData, setFormData] = useState({
         course_name: '',
         course_code: '',
@@ -16,6 +17,19 @@ function CreateCourseForm({ onClose, onCourseCreated }) {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+
+    React.useEffect(() => {
+        if (!initialData) return;
+
+        setFormData({
+            course_name: initialData.course_name || '',
+            course_code: initialData.course_code || '',
+            subject: initialData.subject || '',
+            description: initialData.description || '',
+            course_test_questions: initialData.course_test_questions || 5,
+            points: initialData.points || 1000
+        });
+    }, [initialData]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -31,8 +45,8 @@ function CreateCourseForm({ onClose, onCourseCreated }) {
             const userStr = localStorage.getItem('user');
             const token = userStr ? JSON.parse(userStr).token : null;
 
-            const response = await fetch(`${API_BASE_URL}/api/courses`, {
-                method: 'POST',
+            const response = await fetch(isEditing ? `${API_BASE_URL}/api/courses/${initialData._id}` : `${API_BASE_URL}/api/courses`, {
+                method: isEditing ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -42,11 +56,11 @@ function CreateCourseForm({ onClose, onCourseCreated }) {
 
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.message || t.createFailed);
+                throw new Error(data.message || (isEditing ? t.updateFailed : t.createFailed));
             }
 
-            const newCourse = await response.json();
-            onCourseCreated(newCourse);
+            const savedCourse = await response.json();
+            onCourseSaved(savedCourse, isEditing);
             onClose();
         } catch (err) {
             console.error(err);
@@ -63,7 +77,7 @@ function CreateCourseForm({ onClose, onCourseCreated }) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
             >
-                <h2>{t.title}</h2>
+                <h2>{isEditing ? t.editTitle : t.title}</h2>
                 {error && <div className="error-message">{error}</div>}
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
@@ -125,7 +139,7 @@ function CreateCourseForm({ onClose, onCourseCreated }) {
                     <div className="modal-actions">
                         <button type="button" className="btn btn-secondary" onClick={onClose}>{t.cancel}</button>
                         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                            {isSubmitting ? t.creating : t.create}
+                            {isSubmitting ? (isEditing ? t.updating : t.creating) : (isEditing ? t.update : t.create)}
                         </button>
                     </div>
                 </form>

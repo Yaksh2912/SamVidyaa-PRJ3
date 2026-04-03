@@ -7,6 +7,7 @@ import './ModalForm.css';
 function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
     const { translations } = useI18n();
     const t = translations.forms.task;
+    const isEditing = !!initialData;
     const [formData, setFormData] = useState({
         task_name: '',
         problem_statement: '',
@@ -24,9 +25,40 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
 
     const [testCases, setTestCases] = useState([]);
     const [newTestCase, setNewTestCase] = useState({ input: '', expected_output: '', is_sample: false });
-
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
     const [error, setError] = useState('');
+    const [importError, setImportError] = useState('');
+    const [importFile, setImportFile] = useState(null);
+
+    const getAuthToken = () => {
+        const userStr = localStorage.getItem('user');
+        return userStr ? JSON.parse(userStr).token : null;
+    };
+
+    const saveTask = async (payload, taskId = null) => {
+        const token = getAuthToken();
+        const editingTask = Boolean(taskId);
+        const url = editingTask
+            ? `${API_BASE_URL}/api/tasks/${taskId}`
+            : `${API_BASE_URL}/api/tasks`;
+
+        const response = await fetch(url, {
+            method: editingTask ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || (editingTask ? t.updateFailed : t.createFailed));
+        }
+
+        return response.json();
+    };
 
     useEffect(() => {
         if (initialData) {
@@ -44,17 +76,18 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                 language: initialData.language || 'Python',
                 constraints: initialData.constraints || ''
             });
-            if (initialData.test_cases) {
-                setTestCases(initialData.test_cases);
-            }
+            setTestCases(initialData.test_cases || []);
+        } else {
+            setImportFile(null);
+            setImportError('');
         }
     }, [initialData]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setFormData(prev => ({ 
-            ...prev, 
-            [name]: type === 'checkbox' ? checked : value 
+        setFormData((prev) => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
         }));
     };
 
@@ -63,12 +96,67 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
             alert(t.testCaseRequired);
             return;
         }
-        setTestCases([...testCases, { ...newTestCase, order_index: testCases.length + 1 }]);
+        setTestCases((prev) => [...prev, { ...newTestCase, order_index: prev.length + 1 }]);
         setNewTestCase({ input: '', expected_output: '', is_sample: false });
     };
 
     const removeTestCase = (index) => {
-        setTestCases(testCases.filter((_, i) => i !== index));
+        setTestCases((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
+    };
+
+    const handleImportDocument = async () => {
+        if (!importFile) {
+            setImportError(t.importFileRequired);
+            return;
+        }
+
+        setIsImporting(true);
+        setImportError('');
+        setError('');
+
+        try {
+            const token = getAuthToken();
+            const payload = new FormData();
+            payload.append('module_id', moduleId);
+            payload.append('document', importFile);
+
+            const response = await fetch(`${API_BASE_URL}/api/tasks/import`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: payload
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (Array.isArray(data.missingFields) && data.missingFields.length) {
+                    const details = data.missingFields
+                        .map((item) => `Task ${item.taskIndex}: ${item.fields.join(', ')}`)
+                        .join('\n');
+                    const popupMessage = `${data.message || t.importFailed}\n\n${details}`;
+                    setImportError(popupMessage);
+                    alert(popupMessage);
+                    return;
+                }
+
+                throw new Error(data.message || t.importFailed);
+            }
+
+            const createdTasks = Array.isArray(data.tasks) ? data.tasks : [];
+            createdTasks.forEach((task) => onTaskCreated(task, false));
+            alert(data.message || (createdTasks.length === 1
+                ? t.createdSuccess
+                : t.importCreatedMany.replace('{count}', createdTasks.length)));
+            onClose();
+        } catch (err) {
+            console.error(err);
+            setImportError(err.message || t.importFailed);
+            alert(err.message || t.importFailed);
+        } finally {
+            setIsImporting(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -83,9 +171,6 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
         }
 
         try {
-            const userStr = localStorage.getItem('user');
-            const token = userStr ? JSON.parse(userStr).token : null;
-
             const payload = {
                 module_id: moduleId,
                 ...formData,
@@ -93,26 +178,7 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                 test_cases_count: testCases.length
             };
 
-            const isEditing = !!initialData;
-            const url = isEditing 
-                ? `${API_BASE_URL}/api/tasks/${initialData._id}` 
-                : `${API_BASE_URL}/api/tasks`;
-            
-            const response = await fetch(url, {
-                method: isEditing ? 'PUT' : 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.message || (isEditing ? t.updateFailed : t.createFailed));
-            }
-
-            const savedTask = await response.json();
+            const savedTask = await saveTask(payload, initialData?._id);
             onTaskCreated(savedTask, isEditing);
             alert(isEditing ? t.updatedSuccess : t.createdSuccess);
             onClose();
@@ -131,8 +197,59 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
             >
-                <h2>{initialData ? t.editTitle : t.createTitle}</h2>
+                <h2>{isEditing ? t.editTitle : t.createTitle}</h2>
                 {error && <div className="error-message">{error}</div>}
+
+                {!isEditing && (
+                    <div className="task-import-panel">
+                        <div className="task-import-panel__header">
+                            <div>
+                                <h3>{t.importTitle}</h3>
+                                <p>{t.importHelp}</p>
+                                <div className="task-import-panel__links">
+                                    <a className="task-import-panel__link" href="/templates/task-import-template.csv" download>
+                                        {t.downloadCsvTemplate}
+                                    </a>
+                                    <a className="task-import-panel__link" href="/templates/task-import-template.doc" download>
+                                        {t.downloadDocTemplate}
+                                    </a>
+                                    <a className="task-import-panel__link" href="/templates/task-import-template.pdf" download>
+                                        {t.downloadPdfTemplate}
+                                    </a>
+                                </div>
+                            </div>
+                            <span className="task-import-panel__badge">{t.importFormats}</span>
+                        </div>
+
+                        {importError && <div className="error-message" style={{ marginBottom: '1rem' }}>{importError}</div>}
+
+                        <div className="task-import-panel__controls">
+                            <div className="form-group task-import-field">
+                                <label>{t.importLabel}</label>
+                                <label className="task-file-picker">
+                                    <input
+                                        type="file"
+                                        accept=".pdf,.doc,.docx,.rtf,.txt,.md,.csv,.xlsx,.xls"
+                                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                                    />
+                                    <span className="task-file-picker__button">{t.chooseFile}</span>
+                                    <span className={`task-file-picker__name ${importFile ? 'has-file' : ''}`}>
+                                        {importFile?.name || t.noFileChosen}
+                                    </span>
+                                </label>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={handleImportDocument}
+                                disabled={isImporting || isSubmitting}
+                            >
+                                {isImporting ? t.importing : t.importAction}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="task-form">
                     <div className="form-group">
                         <label>{t.taskName}</label>
@@ -174,32 +291,30 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                         </div>
                     </div>
 
-                    <div className="form-row" style={{ alignItems: 'flex-start', background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-                        <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
-                            <label className="checkbox-label" style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                <input 
-                                    type="checkbox" 
+                    <div className="task-collaboration-panel">
+                        <div className="task-collaboration-panel__copy">
+                            <label className="task-collaboration-toggle">
+                                <input
+                                    type="checkbox"
                                     name="allow_collaboration"
-                                    checked={formData.allow_collaboration} 
+                                    checked={formData.allow_collaboration}
                                     onChange={handleChange}
-                                    style={{ transform: 'scale(1.2)' }}
                                 />
-                                {t.allowCollaboration}
+                                <span>{t.allowCollaboration}</span>
                             </label>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem', marginLeft: '1.75rem' }}>{t.collaborationHelp}</p>
+                            <p>{t.collaborationHelp}</p>
                         </div>
-                        
+
                         {formData.allow_collaboration && (
-                            <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
-                                <label style={{ color: 'var(--accent-blue)' }}>{t.peerShare}</label>
-                                <input 
-                                    type="number" 
-                                    name="collab_percentage" 
-                                    value={formData.collab_percentage} 
-                                    onChange={handleChange} 
-                                    min="1" 
-                                    max="100" 
-                                    style={{ borderColor: 'var(--accent-blue)' }}
+                            <div className="form-group task-collaboration-panel__share">
+                                <label>{t.peerShare}</label>
+                                <input
+                                    type="number"
+                                    name="collab_percentage"
+                                    value={formData.collab_percentage}
+                                    onChange={handleChange}
+                                    min="1"
+                                    max="100"
                                 />
                             </div>
                         )}
@@ -288,7 +403,7 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                     <div className="modal-actions">
                         <button type="button" className="btn btn-secondary" onClick={onClose}>{t.cancel}</button>
                         <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                            {isSubmitting ? t.saving : (initialData ? t.update : t.create)}
+                            {isSubmitting ? t.saving : (isEditing ? t.update : t.create)}
                         </button>
                     </div>
                 </form>

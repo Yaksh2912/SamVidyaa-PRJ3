@@ -1,11 +1,22 @@
 import React from 'react'
 import { HiBookOpen, HiBolt, HiChartBar, HiStar, HiUsers, HiXMark } from 'react-icons/hi2'
+import { AnalyticsColumnChart, AnalyticsDonutChart } from './AnalyticsGraphs'
 
 const formatPercent = (value) => `${Math.round(value || 0)}%`
 
-const formatDate = (value, fallback) => {
-  if (!value) return fallback
-  return new Date(value).toLocaleDateString()
+const getInitials = (name = '') => name
+  .split(' ')
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part[0]?.toUpperCase() || '')
+  .join('') || 'ST'
+
+const PROGRESS_BAND_COLORS = {
+  completed: '#10b981',
+  on_track: '#0d9488',
+  steady: '#3b82f6',
+  needs_support: '#ef4444',
+  not_started: '#8b5cf6'
 }
 
 function CourseAnalyticsModal({ course, analytics, loading, onClose, labels, common }) {
@@ -16,6 +27,20 @@ function CourseAnalyticsModal({ course, analytics, loading, onClose, labels, com
   const topPerformer = overview?.topPerformer
   const bottleneckModule = overview?.bottleneckModule
   const progressBands = modalLabels.progressBands
+  const progressDonutItems = Object.entries(analytics?.distributions?.progressBand || {}).map(([key, value]) => ({
+    key,
+    label: progressBands[key] || key,
+    value,
+    color: PROGRESS_BAND_COLORS[key] || '#0d9488'
+  }))
+  const moduleGraphItems = (analytics?.moduleAnalytics || []).slice(0, 6).map((module) => ({
+    key: module.moduleId,
+    label: module.moduleName,
+    shortLabel: module.moduleName?.split(' ').slice(0, 2).join(' ') || module.moduleName,
+    value: module.completedRate || 0,
+    meta: formatPercent(module.averageScore),
+    color: 'var(--accent-gradient)'
+  }))
 
   return (
     <div className="neumorphic-modal-overlay" onClick={onClose}>
@@ -118,6 +143,21 @@ function CourseAnalyticsModal({ course, analytics, loading, onClose, labels, com
                 </div>
               </div>
 
+              <div className="analytics-visual-grid">
+                <AnalyticsDonutChart
+                  title={modalLabels.charts.progressMix}
+                  totalLabel={modalLabels.overview.activeLearners}
+                  totalValue={overview?.activeStudents || 0}
+                  items={progressDonutItems}
+                  emptyLabel={modalLabels.emptyStudents}
+                />
+                <AnalyticsColumnChart
+                  title={modalLabels.charts.completionGraph}
+                  items={moduleGraphItems}
+                  emptyLabel={modalLabels.emptyModules}
+                />
+              </div>
+
               <div className="course-analytics-grid">
                 <section className="course-analytics-panel">
                   <div className="course-analytics-panel__header">
@@ -181,7 +221,7 @@ function CourseAnalyticsModal({ course, analytics, loading, onClose, labels, com
                 </section>
               </div>
 
-              <div className="course-analytics-grid course-analytics-grid--bottom">
+              <div className="course-analytics-grid course-analytics-grid--bottom course-analytics-grid--single">
                 <section className="course-analytics-panel">
                   <div className="course-analytics-panel__header">
                     <h3>{modalLabels.charts.attentionNeeded}</h3>
@@ -195,9 +235,12 @@ function CourseAnalyticsModal({ course, analytics, loading, onClose, labels, com
                       {analytics.attentionNeeded.map((student) => (
                         <article key={student.studentId} className="analytics-student-card analytics-student-card--attention">
                           <div className="analytics-student-card__top">
-                            <div>
-                              <strong>{student.name}</strong>
-                              <p>{student.email}</p>
+                            <div className="analytics-student-card__identity">
+                              <div className="analytics-student-avatar">{getInitials(student.name)}</div>
+                              <div>
+                                <strong>{student.name}</strong>
+                                <p>{student.email}</p>
+                              </div>
                             </div>
                             <span className={`analytics-band analytics-band--${student.progressBand.replace('_', '-')}`}>
                               {progressBands[student.progressBand] || student.progressBand}
@@ -207,42 +250,6 @@ function CourseAnalyticsModal({ course, analytics, loading, onClose, labels, com
                             <span>{modalLabels.fields.completion}: {formatPercent(student.completionRate)}</span>
                             <span>{modalLabels.fields.score}: {formatPercent(student.averageScore)}</span>
                             <span>{common.points}: {student.globalPoints || 0}</span>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  )}
-                </section>
-
-                <section className="course-analytics-panel">
-                  <div className="course-analytics-panel__header">
-                    <h3>{modalLabels.charts.studentSnapshot}</h3>
-                    <span>{analytics.studentAnalytics?.length || 0}</span>
-                  </div>
-
-                  {!analytics.studentAnalytics?.length ? (
-                    <p className="empty-state">{modalLabels.emptyStudents}</p>
-                  ) : (
-                    <div className="analytics-student-grid">
-                      {analytics.studentAnalytics.slice(0, 6).map((student) => (
-                        <article key={student.studentId} className="analytics-student-card">
-                          <div className="analytics-student-card__top">
-                            <div>
-                              <strong>{student.name}</strong>
-                              <p>{student.enrollmentNumber || student.email}</p>
-                            </div>
-                            <span className={`analytics-band analytics-band--${student.progressBand.replace('_', '-')}`}>
-                              {progressBands[student.progressBand] || student.progressBand}
-                            </span>
-                          </div>
-                          <div className="analytics-student-card__metrics">
-                            <span>{modalLabels.fields.completion}: {formatPercent(student.completionRate)}</span>
-                            <span>{modalLabels.fields.score}: {formatPercent(student.averageScore)}</span>
-                            <span>{modalLabels.fields.engagement}: {formatPercent(student.engagementScore)}</span>
-                          </div>
-                          <div className="analytics-student-card__footer">
-                            <span>{common.points}: {student.globalPoints || 0}</span>
-                            <span>{modalLabels.fields.lastActivity}: {formatDate(student.lastActivityAt, modalLabels.noRecentActivity)}</span>
                           </div>
                         </article>
                       ))}

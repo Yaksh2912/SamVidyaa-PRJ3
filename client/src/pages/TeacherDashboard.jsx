@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
-import { HiUsers, HiBookOpen, HiDocumentText, HiChartBar, HiFolderPlus, HiArrowDownTray, HiTrash, HiPlus, HiListBullet, HiUserGroup, HiPaperClip, HiGift, HiStar } from 'react-icons/hi2'
+import { HiUsers, HiBookOpen, HiDocumentText, HiChartBar, HiFolderPlus, HiArrowDownTray, HiTrash, HiPlus, HiListBullet, HiUserGroup, HiPaperClip, HiGift, HiStar, HiPencilSquare } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import CreateModuleForm from '../components/CreateModuleForm'
 import CreateCourseForm from '../components/CreateCourseForm'
@@ -13,6 +13,7 @@ import CreateTaskForm from '../components/CreateTaskForm'
 import AddStudentsModal from '../components/AddStudentsModal'
 import ManageRewardsModal from '../components/ManageRewardsModal'
 import CourseAnalyticsModal from '../components/CourseAnalyticsModal'
+import { AnalyticsColumnChart, AnalyticsDonutChart } from '../components/AnalyticsGraphs'
 import './Dashboard.css'
 
 const COURSE_GRADIENTS = [
@@ -31,6 +32,65 @@ const getCourseGradient = (id) => {
   return COURSE_GRADIENTS[Math.abs(hash) % COURSE_GRADIENTS.length]
 }
 
+const formatPercent = (value) => `${Math.round(value || 0)}%`
+
+const getInitials = (name = '') => name
+  .split(' ')
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part[0]?.toUpperCase() || '')
+  .join('') || 'ST'
+
+const DEFAULT_PERFORMANCE_ANALYTICS = {
+  activeLearners: 0,
+  avgCompletionRate: 0,
+  avgScore: 0,
+  studentsNeedingSupport: 0,
+  progressBandBreakdown: {
+    completed: 0,
+    on_track: 0,
+    steady: 0,
+    needs_support: 0,
+    not_started: 0
+  },
+  topPerformers: [],
+  attentionNeeded: [],
+  studentCount: 0,
+  dataMode: 'enrollment_only'
+}
+
+const PERFORMANCE_BAND_ORDER = ['completed', 'on_track', 'steady', 'needs_support', 'not_started']
+const PROGRESS_BAND_COLORS = {
+  completed: '#10b981',
+  on_track: '#0d9488',
+  steady: '#3b82f6',
+  needs_support: '#ef4444',
+  not_started: '#8b5cf6'
+}
+
+const formatFileSize = (size) => {
+  if (!size || Number(size) <= 0) return ''
+
+  const units = ['B', 'KB', 'MB', 'GB']
+  const sizeValue = Number(size)
+  const unitIndex = Math.min(Math.floor(Math.log(sizeValue) / Math.log(1024)), units.length - 1)
+  const formattedValue = sizeValue / (1024 ** unitIndex)
+
+  return `${formattedValue >= 10 || unitIndex === 0 ? Math.round(formattedValue) : formattedValue.toFixed(1)} ${units[unitIndex]}`
+}
+
+const getUploadFileUrl = (filePath = '') => `${API_BASE_URL.replace('/api', '')}/${filePath.replace(/\\/g, '/')}`
+
+const sortModulesByOrder = (moduleList = []) => [...moduleList].sort((left, right) => {
+  const orderDelta = (Number(left?.module_order) || 0) - (Number(right?.module_order) || 0)
+  if (orderDelta !== 0) return orderDelta
+
+  const createdAtDelta = new Date(left?.createdAt || 0).getTime() - new Date(right?.createdAt || 0).getTime()
+  if (createdAtDelta !== 0) return createdAtDelta
+
+  return (left?.module_name || '').localeCompare(right?.module_name || '')
+})
+
 function TeacherDashboard() {
   const { theme } = useTheme()
   const { translations, language, changeLanguage, t: translate } = useI18n()
@@ -42,6 +102,8 @@ function TeacherDashboard() {
 
   const [showModuleForm, setShowModuleForm] = React.useState(false)
   const [showCourseForm, setShowCourseForm] = React.useState(false)
+  const [editingCourse, setEditingCourse] = React.useState(null)
+  const [editingModule, setEditingModule] = React.useState(null)
   const [showTaskForm, setShowTaskForm] = React.useState(false) // For creating/editing task
   const [editingTask, setEditingTask] = React.useState(null) // Holds task object when editing
 
@@ -75,8 +137,9 @@ function TeacherDashboard() {
     activeClasses: 0,
     totalStudents: 0,
     pendingGrading: 0,
-    avgPerformance: '0%'
-  });
+    avgPerformance: '0%',
+    performanceAnalytics: DEFAULT_PERFORMANCE_ANALYTICS
+  })
 
   const fetchStats = async () => {
     try {
@@ -120,7 +183,7 @@ function TeacherDashboard() {
       })
       if (response.ok) {
         const data = await response.json()
-        setModules(data)
+        setModules(sortModulesByOrder(data))
       }
     } catch (error) {
       console.error('Failed to fetch modules', error)
@@ -235,8 +298,25 @@ function TeacherDashboard() {
     fetchStats()
   }, [])
 
-  const handleCourseCreated = (newCourse) => {
-    setCourses([...courses, newCourse])
+  const openCourseForm = (course = null) => {
+    setEditingCourse(course)
+    setShowCourseForm(true)
+  }
+
+  const openModuleForm = (module = null) => {
+    setEditingModule(module)
+    setShowModuleForm(true)
+  }
+
+  const handleCourseSaved = (courseData, isEditing = false) => {
+    if (isEditing) {
+      setCourses((prev) => prev.map((course) => course._id === courseData._id ? courseData : course))
+      setSelectedCourse((prev) => prev && prev._id === courseData._id ? { ...prev, ...courseData } : prev)
+      setEditingCourse(null)
+      return
+    }
+
+    setCourses((prev) => [...prev, courseData])
   }
 
   const handleCourseSelect = (course) => {
@@ -256,6 +336,35 @@ function TeacherDashboard() {
     fetchTasks(module._id);
   }
 
+  const handleDeleteModuleFile = async (filePath) => {
+    if (!selectedModule?._id || !filePath) return
+    if (!window.confirm(t.modules.resources.removeConfirm)) return
+
+    try {
+      const userStr = localStorage.getItem('user')
+      const token = userStr ? JSON.parse(userStr).token : null
+      const response = await fetch(`${API_BASE_URL}/api/modules/${selectedModule._id}/files`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ filePath })
+      })
+
+      if (!response.ok) {
+        throw new Error('delete_module_file_failed')
+      }
+
+      const updatedModule = await response.json()
+      setSelectedModule(updatedModule)
+      setModules((prev) => sortModulesByOrder(prev.map((module) => module._id === updatedModule._id ? updatedModule : module)))
+    } catch (error) {
+      console.error('Delete module file error', error)
+      alert(t.modules.resources.removeFailed)
+    }
+  }
+
   const handleBack = () => {
     if (selectedModule) {
       setSelectedModule(null);
@@ -266,25 +375,30 @@ function TeacherDashboard() {
     }
   }
 
-  const handleModuleCreated = (newModule) => {
-    setModules([newModule, ...modules])
+  const handleModuleSaved = (moduleData, isEditing = false) => {
+    if (isEditing) {
+      setModules((prev) => sortModulesByOrder(prev.map((module) => module._id === moduleData._id ? moduleData : module)))
+      setSelectedModule((prev) => prev && prev._id === moduleData._id ? { ...prev, ...moduleData } : prev)
+      setEditingModule(null)
+      return
+    }
+
+    setModules((prev) => sortModulesByOrder([...prev, moduleData]))
   }
 
   const handleTaskCreated = (taskData, isEditing = false) => {
     if (isEditing) {
-      setTasks(tasks.map(t => t._id === taskData._id ? taskData : t))
+      setTasks((prev) => prev.map((task) => task._id === taskData._id ? taskData : task))
       setEditingTask(null)
     } else {
-      // If viewing the specific module, update task list
       if (selectedModule && selectedModule._id === taskData.module_id) {
-        setTasks([...tasks, taskData]);
+        setTasks((prev) => [...prev, taskData]);
       }
 
-      // Update the module's task count in the module list
-      setModules(modules.map(m =>
-        m._id === taskData.module_id
-          ? { ...m, tasks_per_module: (m.tasks_per_module || 0) + 1 }
-          : m
+      setModules((prev) => prev.map((module) =>
+        module._id === taskData.module_id
+          ? { ...module, tasks_per_module: (module.tasks_per_module || 0) + 1 }
+          : module
       ));
     }
   }
@@ -509,6 +623,13 @@ function TeacherDashboard() {
 
   const selectedCourseTaskCount = modules.reduce((sum, module) => sum + (module.tasks_per_module || 0), 0)
   const selectedCourseFileCount = modules.reduce((sum, module) => sum + ((module.files && module.files.length) || 0), 0)
+  const orderedModules = React.useMemo(() => sortModulesByOrder(modules), [modules])
+  const selectedModuleDisplayOrder = React.useMemo(() => {
+    if (!selectedModule?._id) return selectedModule?.module_order || 1
+
+    const moduleIndex = orderedModules.findIndex((module) => module._id === selectedModule._id)
+    return moduleIndex >= 0 ? moduleIndex + 1 : (selectedModule.module_order || 1)
+  }, [orderedModules, selectedModule])
   const selectedModuleTotalPoints = tasks.reduce((sum, task) => sum + (task.points || 0), 0)
   const selectedModuleAverageTime = tasks.length > 0
     ? Math.round(tasks.reduce((sum, task) => sum + (task.time_limit || 0), 0) / tasks.length)
@@ -518,12 +639,34 @@ function TeacherDashboard() {
     dashboard: t.tabs.dashboard,
     myCourses: t.tabs.myCourses
   }
+  const performanceSection = t.dashboardAnalytics
+  const analyticsLabels = t.analyticsModal
+  const performanceAnalytics = stats.performanceAnalytics || DEFAULT_PERFORMANCE_ANALYTICS
+  const overallTopPerformer = performanceAnalytics.topPerformers?.[0] || null
+  const dashboardDonutItems = PERFORMANCE_BAND_ORDER.map((band) => ({
+    key: band,
+    label: analyticsLabels.progressBands[band] || band,
+    value: performanceAnalytics.progressBandBreakdown?.[band] || 0,
+    color: PROGRESS_BAND_COLORS[band]
+  }))
+  const dashboardColumnItems = (performanceAnalytics.topPerformers || []).slice(0, 5).map((student) => ({
+    key: student.studentId,
+    label: student.name,
+    shortLabel: student.name?.split(' ')[0] || student.name,
+    value: student.engagementScore || 0,
+    meta: formatPercent(student.averageScore),
+    color: 'var(--accent-gradient)'
+  }))
   const getDifficultyLabel = (difficulty) => translations.forms.task.difficulties[difficulty] || difficulty
   const getStatusLabel = (status) => common.statuses[status] || status
+  const showTopbarCourseBack = activeTab === 'myCourses' && !!selectedCourse
+  const topbarBackLabel = selectedModule
+    ? t.topbar.backToModules
+    : t.topbar.backToCourses
   const topbarTitle = activeTab === 'dashboard'
     ? translate('dashboard.teacher.topbar.welcomeBack', { name: user?.name || translations.auth.roles.teacher })
     : activeTab === 'myCourses'
-      ? (selectedCourse ? selectedCourse.course_name : '')
+      ? (selectedCourse ? '' : '')
       : tabTitles[activeTab]
 
   return (
@@ -563,9 +706,14 @@ function TeacherDashboard() {
       <main className="dashboard-content">
         <header className="dashboard-topbar">
           <div className="topbar-left">
+            {showTopbarCourseBack && (
+              <button className="btn btn-secondary topbar-back-button" onClick={handleBack}>
+                {topbarBackLabel}
+              </button>
+            )}
             {topbarTitle && <h2 className="topbar-title">{topbarTitle}</h2>}
             {activeTab === 'myCourses' && !selectedCourse && (
-              <button className="btn btn-primary topbar-create-button" onClick={() => setShowCourseForm(true)}>
+              <button className="btn btn-primary topbar-create-button" onClick={() => openCourseForm()}>
                 <span className="topbar-create-button__icon">
                   <HiFolderPlus />
                 </span>
@@ -628,6 +776,204 @@ function TeacherDashboard() {
                 </motion.div>
               </div>
 
+              <section className="dashboard-performance-section">
+                <div className="workspace-panel-header dashboard-performance-section__header">
+                  <div>
+                    <h3>{performanceSection.title}</h3>
+                    <p>{performanceSection.subtitle}</p>
+                  </div>
+                </div>
+
+                {performanceAnalytics.dataMode === 'enrollment_only' && performanceAnalytics.studentCount > 0 && (
+                  <div className="course-analytics-note dashboard-performance-note">
+                    {performanceSection.limitedData}
+                  </div>
+                )}
+
+                {!performanceAnalytics.studentCount ? (
+                  <p className="empty-state">{performanceSection.empty}</p>
+                ) : (
+                  <>
+                    <div className="course-analytics-highlights analytics-highlights--dashboard">
+                      <div className="course-analytics-highlight course-analytics-highlight--hero">
+                        <span className="course-analytics-highlight__label">{analyticsLabels.highlights.topPerformer}</span>
+                        {overallTopPerformer ? (
+                          <>
+                            <strong>{overallTopPerformer.name}</strong>
+                            <p>
+                              {analyticsLabels.fields.engagement}: {formatPercent(overallTopPerformer.engagementScore)} • {analyticsLabels.fields.score}: {formatPercent(overallTopPerformer.averageScore)}
+                            </p>
+                          </>
+                        ) : (
+                          <p>{analyticsLabels.emptyStudents}</p>
+                        )}
+                      </div>
+
+                      <div className="course-analytics-highlight course-analytics-highlight--hero course-analytics-highlight--warning">
+                        <span className="course-analytics-highlight__label">{analyticsLabels.overview.supportNeeded}</span>
+                        <strong>{performanceAnalytics.studentsNeedingSupport || 0}</strong>
+                        <p>
+                          {analyticsLabels.fields.completion}: {formatPercent(performanceAnalytics.avgCompletionRate)} • {analyticsLabels.overview.activeLearners}: {performanceAnalytics.activeLearners || 0}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="course-analytics-overview">
+                      <div className="course-analytics-stat">
+                        <div className="course-analytics-stat__icon">
+                          <HiUsers />
+                        </div>
+                        <div>
+                          <span>{analyticsLabels.overview.activeLearners}</span>
+                          <strong>{performanceAnalytics.activeLearners || 0}</strong>
+                        </div>
+                      </div>
+
+                      <div className="course-analytics-stat">
+                        <div className="course-analytics-stat__icon">
+                          <HiChartBar />
+                        </div>
+                        <div>
+                          <span>{analyticsLabels.overview.avgCompletion}</span>
+                          <strong>{formatPercent(performanceAnalytics.avgCompletionRate)}</strong>
+                        </div>
+                      </div>
+
+                      <div className="course-analytics-stat">
+                        <div className="course-analytics-stat__icon">
+                          <HiStar />
+                        </div>
+                        <div>
+                          <span>{analyticsLabels.overview.avgScore}</span>
+                          <strong>{formatPercent(performanceAnalytics.avgScore)}</strong>
+                        </div>
+                      </div>
+
+                      <div className="course-analytics-stat">
+                        <div className="course-analytics-stat__icon">
+                          <HiBookOpen />
+                        </div>
+                        <div>
+                          <span>{analyticsLabels.overview.supportNeeded}</span>
+                          <strong>{performanceAnalytics.studentsNeedingSupport || 0}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="analytics-visual-grid">
+                      <AnalyticsDonutChart
+                        title={performanceSection.charts.performanceMix}
+                        totalLabel={analyticsLabels.overview.activeLearners}
+                        totalValue={performanceAnalytics.activeLearners || 0}
+                        items={dashboardDonutItems}
+                        emptyLabel={analyticsLabels.emptyStudents}
+                      />
+                      <AnalyticsColumnChart
+                        title={performanceSection.charts.engagementGraph}
+                        items={dashboardColumnItems}
+                        emptyLabel={analyticsLabels.emptyStudents}
+                      />
+                    </div>
+
+                    <div className="course-analytics-grid">
+                      <section className="course-analytics-panel">
+                        <div className="course-analytics-panel__header">
+                          <h3>{analyticsLabels.charts.topPerformers}</h3>
+                          <span>{performanceAnalytics.topPerformers?.length || 0}</span>
+                        </div>
+
+                        {!performanceAnalytics.topPerformers?.length ? (
+                          <p className="empty-state">{analyticsLabels.emptyStudents}</p>
+                        ) : (
+                          <div className="course-analytics-bars">
+                            {performanceAnalytics.topPerformers.map((student) => (
+                              <div key={student.studentId} className="analytics-bar-row">
+                                <div className="analytics-bar-row__meta">
+                                  <strong>{student.name}</strong>
+                                  <span>{formatPercent(student.engagementScore)}</span>
+                                </div>
+                                <div className="analytics-bar-track">
+                                  <div className="analytics-bar-fill" style={{ width: `${student.engagementScore}%` }} />
+                                </div>
+                                <p>
+                                  {analyticsLabels.fields.completion}: {formatPercent(student.completionRate)} • {analyticsLabels.fields.score}: {formatPercent(student.averageScore)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </section>
+
+                      <section className="course-analytics-panel">
+                        <div className="course-analytics-panel__header">
+                          <h3>{performanceSection.charts.progressBreakdown}</h3>
+                          <span>{performanceAnalytics.studentCount || 0}</span>
+                        </div>
+
+                        <div className="course-analytics-bars">
+                          {PERFORMANCE_BAND_ORDER.map((band) => {
+                            const count = performanceAnalytics.progressBandBreakdown?.[band] || 0
+                            const share = performanceAnalytics.studentCount
+                              ? Math.round((count / performanceAnalytics.studentCount) * 100)
+                              : 0
+
+                            return (
+                              <div key={band} className="analytics-bar-row">
+                                <div className="analytics-bar-row__meta">
+                                  <strong>{analyticsLabels.progressBands[band] || band}</strong>
+                                  <span>{count}</span>
+                                </div>
+                                <div className="analytics-bar-track">
+                                  <div className="analytics-bar-fill analytics-bar-fill--strong" style={{ width: `${share}%` }} />
+                                </div>
+                                <p>{translate('dashboard.teacher.dashboardAnalytics.shareOfLearners', { percent: formatPercent(share) })}</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </section>
+                    </div>
+
+                    <div className="course-analytics-grid course-analytics-grid--bottom course-analytics-grid--single">
+                      <section className="course-analytics-panel">
+                        <div className="course-analytics-panel__header">
+                          <h3>{analyticsLabels.charts.attentionNeeded}</h3>
+                          <span>{performanceAnalytics.attentionNeeded?.length || 0}</span>
+                        </div>
+
+                        {!performanceAnalytics.attentionNeeded?.length ? (
+                          <p className="empty-state">{analyticsLabels.emptyAttention}</p>
+                        ) : (
+                          <div className="analytics-student-grid">
+                            {performanceAnalytics.attentionNeeded.map((student) => (
+                              <article key={student.studentId} className="analytics-student-card analytics-student-card--attention">
+                                <div className="analytics-student-card__top">
+                                  <div className="analytics-student-card__identity">
+                                    <div className="analytics-student-avatar">{getInitials(student.name)}</div>
+                                    <div>
+                                      <strong>{student.name}</strong>
+                                      <p>{student.email}</p>
+                                    </div>
+                                  </div>
+                                  <span className={`analytics-band analytics-band--${student.progressBand.replace('_', '-')}`}>
+                                    {analyticsLabels.progressBands[student.progressBand] || student.progressBand}
+                                  </span>
+                                </div>
+                                <div className="analytics-student-card__metrics">
+                                  <span>{analyticsLabels.fields.completion}: {formatPercent(student.completionRate)}</span>
+                                  <span>{analyticsLabels.fields.score}: {formatPercent(student.averageScore)}</span>
+                                  <span>{common.points}: {student.globalPoints || 0}</span>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        )}
+                      </section>
+                    </div>
+                  </>
+                )}
+              </section>
+
             </motion.div>
           )}
 
@@ -636,15 +982,29 @@ function TeacherDashboard() {
               {!selectedCourse ? (
                 /* COURSE LIST VIEW */
                 <div className="courses-section">
+                  {(() => {
+                    let previousCourseGradient = null
+
+                    return (
                   <div className="gc-course-grid teacher-course-grid">
-                    {courses.length === 0 ? <p className="no-data">{t.courses.empty}</p> : courses.map(course => (
+                    {courses.length === 0 ? <p className="no-data">{t.courses.empty}</p> : courses.map(course => {
+                      const baseGradient = getCourseGradient(course._id)
+                      const baseGradientIndex = COURSE_GRADIENTS.indexOf(baseGradient)
+                      const safeGradientIndex = baseGradient === previousCourseGradient
+                        ? (baseGradientIndex + 1) % COURSE_GRADIENTS.length
+                        : baseGradientIndex
+                      const cardGradient = COURSE_GRADIENTS[safeGradientIndex]
+
+                      previousCourseGradient = cardGradient
+
+                      return (
                       <motion.div
                         key={course._id}
                         className="gc-course-card teacher-course-card"
                         whileHover={{ y: -5 }}
                         onClick={() => handleCourseSelect(course)}
                       >
-                        <div className="gc-card-header" style={{ background: getCourseGradient(course._id) }}>
+                        <div className="gc-card-header" style={{ background: cardGradient }}>
                           <h3 title={course.course_name}>{course.course_name}</h3>
                           <p className="gc-course-teacher">{t.courses.instructorWorkspace} • {course.course_code}</p>
                         </div>
@@ -657,7 +1017,7 @@ function TeacherDashboard() {
                           <p className="gc-course-desc">{course.description || common.noDescription}</p>
                           <div className="teacher-course-meta">
                             <span className="teacher-course-chip">{course.subject || common.general}</span>
-                            <span className="teacher-course-chip">{translate('dashboard.teacher.courses.questionCount', { count: course.course_test_questions || 0 })}</span>
+                            <span className="teacher-course-chip">{translate('dashboard.teacher.courses.modulesCount', { count: course.modules_count || 0 })}</span>
                             <span className="teacher-course-chip">{translate('dashboard.student.pointShop.cost', { points: course.points || 0 })}</span>
                           </div>
                         </div>
@@ -672,6 +1032,16 @@ function TeacherDashboard() {
                             }}
                           >
                             <HiChartBar size={20} />
+                          </button>
+                          <button
+                            className="btn-icon"
+                            title={t.courses.editCourse}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openCourseForm(course)
+                            }}
+                          >
+                            <HiPencilSquare size={20} />
                           </button>
                           <button
                             className="btn-icon"
@@ -702,16 +1072,15 @@ function TeacherDashboard() {
                           </button>
                         </div>
                       </motion.div>
-                    ))}
+                    )})}
                   </div>
+                    )
+                  })()}
                 </div>
               ) : !selectedModule ? (
                 /* MODULE LIST VIEW */
                 <div className="teacher-course-shell">
                   <div className="view-header teacher-course-workspace-header">
-                    <button className="btn btn-secondary" onClick={handleBack}>
-                      {t.courses.backToCourses}
-                    </button>
                     <div className="teacher-course-hero">
                       <div className="view-title-info teacher-course-title-block">
                         <h2>{selectedCourse.course_name} <span className="course-code-large">({selectedCourse.course_code})</span></h2>
@@ -722,18 +1091,13 @@ function TeacherDashboard() {
                           <span className="teacher-workspace-chip">{translate('dashboard.teacher.courses.tasksCount', { count: selectedCourseTaskCount })}</span>
                         </div>
                       </div>
-                      <div className="course-actions teacher-course-action-bar">
+
+                      <div className="teacher-course-header-actions">
                         <button className="btn btn-outline" onClick={() => handleCourseExport(selectedCourse._id, selectedCourse.course_code)} title={t.courses.exportCourse}>
                           <HiArrowDownTray /> {t.courses.exportCourse}
                         </button>
-                        <button className="btn btn-secondary" onClick={handleViewStudents}>
-                          <HiUserGroup /> {t.courses.students}
-                        </button>
-                        <button className="btn btn-secondary" onClick={() => setShowRewardsModal(true)}>
-                          <HiGift /> {t.courses.rewards}
-                        </button>
-                        <button className="btn btn-primary" onClick={() => setShowModuleForm(true)}>
-                          <HiFolderPlus /> {t.courses.addModule}
+                        <button className="btn btn-outline" onClick={() => openCourseForm(selectedCourse)}>
+                          <HiPencilSquare /> {t.courses.editCourse}
                         </button>
                       </div>
 
@@ -769,51 +1133,80 @@ function TeacherDashboard() {
                         <p>{t.courses.summaries.coursePointsDesc}</p>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Handout section */}
-                  <div className={`course-handout-panel ${selectedCourse.handout_path ? 'is-attached' : ''}`}>
-                    <HiPaperClip className="course-handout-icon" />
-                    {selectedCourse.handout_path ? (
-                      <>
-                        <span className="course-handout-content">
-                          <a
-                            className="course-handout-link"
-                            href={`${API_BASE_URL.replace('/api', '')}/${selectedCourse.handout_path.replace(/\\/g, '/')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {selectedCourse.handout_filename}
-                          </a>
-                        </span>
-                        <div className="course-handout-actions">
-                          <button
-                            className="btn btn-outline"
-                            onClick={() => handoutInputRef.current?.click()}
-                            disabled={handoutUploading}
-                          >
-                            {handoutUploading ? common.uploading : `↑ ${t.handout.replace}`}
-                          </button>
-                          <button
-                            className="btn btn-danger"
-                            onClick={handleHandoutDelete}
-                          >
-                            <HiTrash /> {t.handout.remove}
-                          </button>
+                    <div className="course-actions teacher-course-action-bar">
+                      <button className="btn btn-secondary" onClick={handleViewStudents}>
+                        <HiUserGroup /> {t.courses.students}
+                      </button>
+                      <button className="btn btn-secondary" onClick={() => setShowRewardsModal(true)}>
+                        <HiGift /> {t.courses.rewards}
+                      </button>
+                      <button className="btn btn-primary" onClick={() => openModuleForm()}>
+                        <HiFolderPlus /> {t.courses.addModule}
+                      </button>
+                    </div>
+
+                    <section className={`course-handout-panel ${selectedCourse.handout_path ? 'is-attached' : ''}`}>
+                      <div className="course-handout-panel__header">
+                        <div className="course-handout-panel__title">
+                          <span className="course-handout-panel__eyebrow">{common.handout}</span>
+                          <strong>
+                            {selectedCourse.handout_path ? selectedCourse.handout_filename : t.handout.none}
+                          </strong>
                         </div>
-                      </>
-                    ) : (
-                      <>
-                        <span className="course-handout-empty">{t.handout.none}</span>
-                        <button
-                          className="btn btn-outline"
-                          onClick={() => handoutInputRef.current?.click()}
-                          disabled={handoutUploading}
-                        >
-                          <HiPaperClip /> {handoutUploading ? common.uploading : t.handout.upload}
-                        </button>
-                      </>
-                    )}
+                        <div className="course-handout-actions">
+                          {selectedCourse.handout_path ? (
+                            <>
+                              <button
+                                className="btn btn-outline"
+                                onClick={() => handoutInputRef.current?.click()}
+                                disabled={handoutUploading}
+                              >
+                                {handoutUploading ? common.uploading : `↑ ${t.handout.replace}`}
+                              </button>
+                              <button
+                                className="btn btn-danger"
+                                onClick={handleHandoutDelete}
+                              >
+                                <HiTrash /> {t.handout.remove}
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="btn btn-outline"
+                              onClick={() => handoutInputRef.current?.click()}
+                              disabled={handoutUploading}
+                            >
+                              <HiPaperClip /> {handoutUploading ? common.uploading : t.handout.upload}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="course-handout-panel__body">
+                        <span className="course-handout-icon">
+                          <HiPaperClip />
+                        </span>
+                        {selectedCourse.handout_path ? (
+                          <div className="course-handout-content">
+                            <a
+                              className="course-handout-link"
+                              href={`${API_BASE_URL.replace('/api', '')}/${selectedCourse.handout_path.replace(/\\/g, '/')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {selectedCourse.handout_filename}
+                            </a>
+                            <p className="course-handout-caption">{t.handout.upload}</p>
+                          </div>
+                        ) : (
+                          <div className="course-handout-content">
+                            <span className="course-handout-empty">{t.handout.none}</span>
+                            <p className="course-handout-caption">{t.modules.description}</p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
                   </div>
 
                   <div className="modules-section">
@@ -825,41 +1218,70 @@ function TeacherDashboard() {
                     </div>
                     {loadingModules ? <p>{t.modules.loading}</p> : (
                       <div className="teacher-module-grid">
-                        {modules.length === 0 ? <p className="no-modules">{t.modules.empty}</p> : modules.map(module => (
+                        {orderedModules.length === 0 ? <p className="no-modules">{t.modules.empty}</p> : orderedModules.map((module, index) => (
                           <div key={module._id} className="teacher-module-card">
-                            <div className="teacher-module-top">
-                              <div className="teacher-module-heading">
-                                <span className="teacher-module-order">{translate('dashboard.teacher.modules.moduleLabel', { order: module.module_order })}</span>
-                                <h4>{module.module_name}</h4>
-                              </div>
-                              <span className="teacher-module-points">{translate('dashboard.student.pointShop.cost', { points: module.points || 0 })}</span>
-                            </div>
-
-                            <p className="teacher-module-description">{module.description || t.modules.noDescription}</p>
-
-                            <div className="teacher-module-meta">
-                              <span className="teacher-workspace-chip">{translate('dashboard.teacher.modules.filesCount', { count: module.files.length })}</span>
-                              <span className="teacher-workspace-chip">{translate('dashboard.teacher.modules.tasksCount', { count: module.tasks_per_module || 0 })}</span>
-                              <span className="teacher-workspace-chip">{translate('dashboard.teacher.modules.order', { order: module.module_order })}</span>
-                            </div>
-
-                            <div className="teacher-module-actions">
-                              <div className="teacher-module-primary-actions">
-                                <button className="btn btn-outline" onClick={() => handleModuleSelect(module)} title={t.modules.viewTasks}>
-                                  <HiListBullet /> {t.modules.viewTasks}
-                                </button>
-                                <button className="btn btn-outline" onClick={() => openTaskForm(module._id)} title={t.modules.addTask}>
-                                  <HiPlus /> {t.modules.addTask}
-                                </button>
+                            <div className="teacher-module-card-body">
+                              <div className="teacher-module-top">
+                                <div className="teacher-module-heading">
+                                  <span className="teacher-module-order">{translate('dashboard.teacher.modules.moduleLabel', { order: index + 1 })}</span>
+                                  <h4>{module.module_name}</h4>
+                                </div>
+                                <div className="teacher-module-header-actions">
+                                  <button className="btn-icon" onClick={() => handleModuleExport(module._id, module.module_name)} title={t.modules.exportModule}>
+                                    <HiArrowDownTray size={20} />
+                                  </button>
+                                  <button className="btn-icon" onClick={() => openModuleForm(module)} title={t.modules.editModule}>
+                                    <HiPencilSquare size={20} />
+                                  </button>
+                                  <button className="btn-icon delete-btn" onClick={() => handleDeleteModule(module._id)} title={t.modules.deleteModule}>
+                                    <HiTrash size={20} />
+                                  </button>
+                                </div>
                               </div>
 
-                              <div className="teacher-module-secondary-actions">
-                                <button className="btn btn-outline" onClick={() => handleModuleExport(module._id, module.module_name)} title={t.modules.exportModule}>
-                                  <HiArrowDownTray /> {t.modules.export}
-                                </button>
-                                <button className="btn btn-danger" onClick={() => handleDeleteModule(module._id)} title={t.modules.deleteModule}>
-                                  <HiTrash /> {t.modules.delete}
-                                </button>
+                              <p className="teacher-module-description">{module.description || t.modules.noDescription}</p>
+
+                              <div className="teacher-module-stat-grid">
+                                <div className="teacher-module-stat-card">
+                                  <span className="teacher-module-stat-icon">
+                                    <HiListBullet />
+                                  </span>
+                                  <div className="teacher-module-stat-copy">
+                                    <strong>{module.tasks_per_module || 0}</strong>
+                                    <span>{t.modules.stats.tasks}</span>
+                                  </div>
+                                </div>
+
+                                <div className="teacher-module-stat-card">
+                                  <span className="teacher-module-stat-icon">
+                                    <HiPaperClip />
+                                  </span>
+                                  <div className="teacher-module-stat-copy">
+                                    <strong>{module.files?.length || 0}</strong>
+                                    <span>{t.modules.stats.files}</span>
+                                  </div>
+                                </div>
+
+                                <div className="teacher-module-stat-card">
+                                  <span className="teacher-module-stat-icon">
+                                    <HiStar />
+                                  </span>
+                                  <div className="teacher-module-stat-copy">
+                                    <strong>{module.points || 0}</strong>
+                                    <span>{t.modules.stats.points}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="teacher-module-actions">
+                                <div className="teacher-module-primary-actions">
+                                  <button className="btn btn-primary" onClick={() => handleModuleSelect(module)} title={t.modules.viewTasks}>
+                                    <HiListBullet /> {t.modules.viewTasks}
+                                  </button>
+                                  <button className="btn btn-outline" onClick={() => openTaskForm(module._id)} title={t.modules.addTask}>
+                                    <HiPlus /> {t.modules.addTask}
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -872,12 +1294,9 @@ function TeacherDashboard() {
                 /* TASK LIST VIEW */
                 <div className="teacher-course-shell">
                   <div className="view-header teacher-course-workspace-header">
-                    <button className="btn btn-secondary" onClick={handleBack}>
-                      {t.taskView.backToModules}
-                    </button>
                     <div className="teacher-course-hero">
                       <div className="view-title-info teacher-course-title-block">
-                        <h2>{selectedModule.module_name} <span className="module-order">{translate('dashboard.teacher.taskView.moduleLabel', { order: selectedModule.module_order })}</span></h2>
+                        <h2>{selectedModule.module_name} <span className="module-order">{translate('dashboard.teacher.taskView.moduleLabel', { order: selectedModuleDisplayOrder })}</span></h2>
                         <p className="view-description">{selectedModule.description}</p>
                         <div className="teacher-course-inline-meta">
                           <span className="teacher-workspace-chip">{translate('dashboard.teacher.courses.tasksCount', { count: tasks.length })}</span>
@@ -885,9 +1304,14 @@ function TeacherDashboard() {
                           <span className="teacher-workspace-chip">{translate('dashboard.teacher.taskView.avgTime', { count: selectedModuleAverageTime })}</span>
                         </div>
                       </div>
-                      <button className="btn btn-primary" onClick={() => openTaskForm(selectedModule._id, null)}>
-                        <HiPlus /> {t.taskView.createTask}
-                      </button>
+                      <div className="teacher-task-actions">
+                        <button className="btn btn-outline" onClick={() => openModuleForm(selectedModule)}>
+                          <HiPencilSquare /> {t.modules.editModule}
+                        </button>
+                        <button className="btn btn-primary" onClick={() => openTaskForm(selectedModule._id, null)}>
+                          <HiPlus /> {t.taskView.createTask}
+                        </button>
+                      </div>
                     </div>
 
                     <div className="teacher-course-summary-grid">
@@ -912,6 +1336,55 @@ function TeacherDashboard() {
                         <p>{t.taskView.summaries.timeProfileDesc}</p>
                       </div>
                     </div>
+
+                    <section className="module-resources-panel">
+                      <div className="module-resources-panel__header">
+                        <div>
+                          <h3>{t.modules.resources.title}</h3>
+                          <p>{translate('dashboard.teacher.modules.filesCount', { count: selectedModule.files?.length || 0 })}</p>
+                        </div>
+                      </div>
+
+                      {selectedModule.files?.length ? (
+                        <div className="module-resource-list">
+                          {selectedModule.files.map((file, index) => (
+                            <div key={`${file.path}-${index}`} className="module-resource-item">
+                              <div className="module-resource-item__copy">
+                                <span className="module-resource-item__icon">
+                                  <HiPaperClip />
+                                </span>
+                                <div>
+                                  <strong>{file.name}</strong>
+                                  <span>{formatFileSize(file.size) || file.mimetype || t.modules.stats.files}</span>
+                                </div>
+                              </div>
+                              <div className="module-resource-item__actions">
+                                <a
+                                  className="btn btn-outline"
+                                  href={getUploadFileUrl(file.path)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <HiArrowDownTray /> {t.modules.resources.open}
+                                </a>
+                                <button
+                                  type="button"
+                                  className="btn btn-danger"
+                                  onClick={() => handleDeleteModuleFile(file.path)}
+                                >
+                                  <HiTrash /> {t.modules.resources.remove}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="module-resource-empty">
+                          <HiPaperClip />
+                          <span>{t.modules.resources.empty}</span>
+                        </div>
+                      )}
+                    </section>
                   </div>
 
                   <div className="modules-section">
@@ -980,16 +1453,18 @@ function TeacherDashboard() {
 
       {showCourseForm && (
         <CreateCourseForm
-          onClose={() => setShowCourseForm(false)}
-          onCourseCreated={handleCourseCreated}
+          onClose={() => { setShowCourseForm(false); setEditingCourse(null) }}
+          onCourseSaved={handleCourseSaved}
+          initialData={editingCourse}
         />
       )}
 
       {showModuleForm && selectedCourse && (
         <CreateModuleForm
-          onClose={() => setShowModuleForm(false)}
-          onModuleCreated={handleModuleCreated}
+          onClose={() => { setShowModuleForm(false); setEditingModule(null) }}
+          onModuleSaved={handleModuleSaved}
           courseId={selectedCourse._id}
+          initialData={editingModule}
         />
       )}
 

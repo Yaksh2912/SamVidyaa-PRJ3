@@ -34,7 +34,7 @@ const handoutUploadMiddleware = handoutUpload.single('handout');
 // @access  Private (Instructor/Admin)
 const createCourse = async (req, res) => {
     try {
-        const { course_code, course_name, description, subject, course_test_questions } = req.body;
+        const { course_code, course_name, description, subject, course_test_questions, points } = req.body;
 
         const courseExists = await Course.findOne({ course_code });
 
@@ -50,6 +50,7 @@ const createCourse = async (req, res) => {
             subject,
             instructor: req.user._id, // Assign logged-in user as instructor
             course_test_questions,
+            points,
         });
 
         res.status(201).json(course);
@@ -57,6 +58,89 @@ const createCourse = async (req, res) => {
         console.error(error);
         res.status(400).json({ message: 'Failed to create course' });
     }
+};
+
+// @desc    Update a course
+// @route   PUT /api/courses/:id
+// @access  Private (Instructor/Admin)
+const updateCourse = async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id);
+
+        if (!course) {
+            return res.status(404).json({ message: 'Course not found' });
+        }
+
+        if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const {
+            course_code,
+            course_name,
+            description,
+            subject,
+            course_test_questions,
+            points,
+            is_active,
+        } = req.body;
+
+        if (course_code && course_code.toUpperCase() !== course.course_code) {
+            const existingCourse = await Course.findOne({
+                course_code: course_code.toUpperCase(),
+                _id: { $ne: course._id }
+            });
+
+            if (existingCourse) {
+                return res.status(400).json({ message: 'Course code already exists' });
+            }
+
+            course.course_code = course_code;
+        }
+
+        course.course_name = course_name ?? course.course_name;
+        course.description = description ?? course.description;
+        course.subject = subject ?? course.subject;
+        course.course_test_questions = course_test_questions ?? course.course_test_questions;
+        course.points = points ?? course.points;
+        if (typeof is_active === 'boolean') course.is_active = is_active;
+
+        const updatedCourse = await course.save();
+        res.json(updatedCourse);
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ message: 'Failed to update course' });
+    }
+};
+
+const clampPercent = (value) => {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.min(100, Math.round(value)));
+};
+
+const average = (values) => {
+    if (!values.length) return 0;
+    return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+};
+
+const deriveProgressBand = ({ enrollmentCompleted = false, recordCount = 0, completionRate = 0, moduleCompletionRate = 0 }) => {
+    if (enrollmentCompleted || moduleCompletionRate >= 100) {
+        return 'completed';
+    }
+
+    if (recordCount === 0) {
+        return 'not_started';
+    }
+
+    if (completionRate >= 70 || moduleCompletionRate >= 60) {
+        return 'on_track';
+    }
+
+    if (completionRate >= 30 || moduleCompletionRate >= 25) {
+        return 'steady';
+    }
+
+    return 'needs_support';
 };
 
 // @desc    Get all courses (or instructor's courses)
@@ -76,7 +160,37 @@ const getCourses = async (req, res) => {
         }
 
         const courses = await Course.find(query).populate('instructor', 'name email');
-        res.json(courses);
+        const courseIds = courses.map((course) => course._id);
+
+        let moduleCountsByCourse = new Map();
+
+        if (courseIds.length) {
+            const moduleCounts = await Module.aggregate([
+                {
+                    $match: {
+                        course_id: { $in: courseIds }
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$course_id',
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            moduleCountsByCourse = new Map(
+                moduleCounts.map((entry) => [entry._id.toString(), entry.count])
+            );
+        }
+
+        const coursesWithModuleCounts = courses.map((course) => {
+            const courseObject = course.toObject();
+            courseObject.modules_count = moduleCountsByCourse.get(course._id.toString()) || 0;
+            return courseObject;
+        });
+
+        res.json(coursesWithModuleCounts);
     } catch (error) {
         console.error(error);
         res.status(400).json({ message: 'Failed to fetch courses' });
@@ -130,42 +244,193 @@ const deleteCourse = async (req, res) => {
 // @access  Private (Instructor)
 const getTeacherStats = async (req, res) => {
     try {
-        // 1. Get all courses by this instructor
-        const courses = await Course.find({ instructor: req.user._id });
+        const courses = await Course.find({ instructor: req.user._id }).select('_id');
         const courseIds = courses.map(c => c._id);
-
-        // 2. Count active classes
         const activeClasses = courses.length;
+        const defaultPerformanceAnalytics = {
+            activeLearners: 0,
+            avgCompletionRate: 0,
+            avgScore: 0,
+            studentsNeedingSupport: 0,
+            progressBandBreakdown: {
+                completed: 0,
+                on_track: 0,
+                steady: 0,
+                needs_support: 0,
+                not_started: 0,
+            },
+            topPerformers: [],
+            attentionNeeded: [],
+            studentCount: 0,
+            dataMode: 'enrollment_only',
+        };
 
-        // 3. Count total unique students enrolled in these courses
-        const distinctStudents = await Enrollment.distinct('student_id', {
-            course_id: { $in: courseIds }
-        });
+        if (!courseIds.length) {
+            return res.json({
+                activeClasses,
+                totalStudents: 0,
+                pendingGrading: 0,
+                avgPerformance: '0%',
+                performanceAnalytics: defaultPerformanceAnalytics,
+            });
+        }
+
+        const [distinctStudents, modules, enrollments, progressRecords] = await Promise.all([
+            Enrollment.distinct('student_id', { course_id: { $in: courseIds } }),
+            Module.find({ course_id: { $in: courseIds } }).select('course_id'),
+            Enrollment.find({ course_id: { $in: courseIds } })
+                .populate('student_id', 'name email enrollment_number points last_login'),
+            StudentProgress.find({ course_id: { $in: courseIds } }).lean(),
+        ]);
+
         const totalStudents = distinctStudents.length;
+        const moduleIds = modules.map((module) => module._id);
+        const tasks = moduleIds.length
+            ? await Task.find({ module_id: { $in: moduleIds } }).select('module_id').lean()
+            : [];
 
-        // 4. Return stats
+        const moduleToCourseMap = new Map(modules.map((module) => [module._id.toString(), module.course_id.toString()]));
+        const moduleTotalsByCourse = modules.reduce((acc, module) => {
+            const courseId = module.course_id.toString();
+            acc[courseId] = (acc[courseId] || 0) + 1;
+            return acc;
+        }, {});
+        const taskTotalsByCourse = tasks.reduce((acc, task) => {
+            const courseId = moduleToCourseMap.get(task.module_id.toString());
+            if (!courseId) return acc;
+            acc[courseId] = (acc[courseId] || 0) + 1;
+            return acc;
+        }, {});
+
+        const activeEnrollmentStatuses = new Set(['ACTIVE', 'COMPLETED']);
+        const activeStudentsById = new Map();
+
+        for (const enrollment of enrollments) {
+            if (!activeEnrollmentStatuses.has(enrollment.status) || !enrollment.student_id) continue;
+
+            const student = enrollment.student_id;
+            const studentId = student._id.toString();
+
+            if (!activeStudentsById.has(studentId)) {
+                activeStudentsById.set(studentId, {
+                    studentId,
+                    student,
+                    courseIds: new Set(),
+                    enrollmentCompleted: false,
+                    latestEnrollmentActivity: null,
+                });
+            }
+
+            const entry = activeStudentsById.get(studentId);
+            entry.courseIds.add(enrollment.course_id.toString());
+            entry.enrollmentCompleted = entry.enrollmentCompleted || enrollment.status === 'COMPLETED';
+
+            const enrollmentUpdatedAt = enrollment.updatedAt ? new Date(enrollment.updatedAt).getTime() : null;
+            if (enrollmentUpdatedAt && (!entry.latestEnrollmentActivity || enrollmentUpdatedAt > entry.latestEnrollmentActivity)) {
+                entry.latestEnrollmentActivity = enrollmentUpdatedAt;
+            }
+        }
+
+        const progressByStudent = new Map();
+        for (const record of progressRecords) {
+            const studentId = record.student_id?.toString();
+            if (!studentId || !activeStudentsById.has(studentId)) continue;
+
+            if (!progressByStudent.has(studentId)) progressByStudent.set(studentId, []);
+            progressByStudent.get(studentId).push(record);
+        }
+
+        const studentAnalytics = [...activeStudentsById.values()].map(({ studentId, student, courseIds: enrolledCourseIds, enrollmentCompleted, latestEnrollmentActivity }) => {
+            const eligibleCourseIds = [...enrolledCourseIds];
+            const eligibleCourseIdSet = new Set(eligibleCourseIds);
+            const records = (progressByStudent.get(studentId) || []).filter((record) =>
+                eligibleCourseIdSet.has(record.course_id?.toString())
+            );
+
+            const completedTasks = records.reduce((sum, record) => sum + (record.completed_tasks || 0), 0);
+            const moduleCompletionCount = records.filter((record) =>
+                record.module_status === 'MODULE_COMPLETED' || record.module_test_completed
+            ).length;
+            const averageScore = average(records.map((record) => record.total_score || 0));
+            const eligibleTotalTasks = eligibleCourseIds.reduce((sum, courseId) => sum + (taskTotalsByCourse[courseId] || 0), 0);
+            const eligibleTotalModules = eligibleCourseIds.reduce((sum, courseId) => sum + (moduleTotalsByCourse[courseId] || 0), 0);
+            const completionRate = eligibleTotalTasks ? clampPercent((completedTasks / eligibleTotalTasks) * 100) : 0;
+            const moduleCompletionRate = eligibleTotalModules ? clampPercent((moduleCompletionCount / eligibleTotalModules) * 100) : 0;
+            const engagementScore = clampPercent((completionRate * 0.55) + (moduleCompletionRate * 0.25) + (Math.min(averageScore, 100) * 0.2));
+            const progressBand = deriveProgressBand({
+                enrollmentCompleted,
+                recordCount: records.length,
+                completionRate,
+                moduleCompletionRate,
+            });
+
+            const latestProgressUpdate = records
+                .map((record) => new Date(record.updatedAt).getTime())
+                .filter(Boolean)
+                .sort((a, b) => b - a)[0];
+
+            return {
+                studentId,
+                name: student.name,
+                email: student.email,
+                enrollmentNumber: student.enrollment_number,
+                globalPoints: student.points || 0,
+                enrolledCourses: eligibleCourseIds.length,
+                completedTasks,
+                completionRate,
+                moduleCompletionCount,
+                moduleCompletionRate,
+                averageScore,
+                engagementScore,
+                progressBand,
+                lastActivityAt: latestProgressUpdate
+                    ? new Date(latestProgressUpdate).toISOString()
+                    : latestEnrollmentActivity
+                        ? new Date(latestEnrollmentActivity).toISOString()
+                        : student.last_login || null,
+                lastLoginAt: student.last_login || null,
+            };
+        }).sort((a, b) => {
+            if (b.engagementScore !== a.engagementScore) return b.engagementScore - a.engagementScore;
+            if (b.averageScore !== a.averageScore) return b.averageScore - a.averageScore;
+            if (b.completedTasks !== a.completedTasks) return b.completedTasks - a.completedTasks;
+            return b.globalPoints - a.globalPoints;
+        });
+
+        const progressBandBreakdown = studentAnalytics.reduce((acc, student) => {
+            acc[student.progressBand] = (acc[student.progressBand] || 0) + 1;
+            return acc;
+        }, { completed: 0, on_track: 0, steady: 0, needs_support: 0, not_started: 0 });
+
+        const attentionNeeded = [...studentAnalytics]
+            .filter((student) => ['needs_support', 'not_started'].includes(student.progressBand))
+            .sort((a, b) => a.engagementScore - b.engagementScore)
+            .slice(0, 5);
+
+        const performanceAnalytics = {
+            activeLearners: studentAnalytics.length,
+            avgCompletionRate: average(studentAnalytics.map((student) => student.completionRate)),
+            avgScore: average(studentAnalytics.map((student) => student.averageScore)),
+            studentsNeedingSupport: (progressBandBreakdown.needs_support || 0) + (progressBandBreakdown.not_started || 0),
+            progressBandBreakdown,
+            topPerformers: studentAnalytics.slice(0, 5),
+            attentionNeeded,
+            studentCount: studentAnalytics.length,
+            dataMode: progressRecords.length ? 'progress' : 'enrollment_only',
+        };
+
         res.json({
             activeClasses,
             totalStudents,
-            // Mocking these for now as we don't have full grading/performance logic yet
             pendingGrading: 0,
-            avgPerformance: '0%'
+            avgPerformance: `${performanceAnalytics.avgScore}%`,
+            performanceAnalytics,
         });
 
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Failed to fetch stats' });
     }
-};
-
-const clampPercent = (value) => {
-    if (!Number.isFinite(value)) return 0;
-    return Math.max(0, Math.min(100, Math.round(value)));
-};
-
-const average = (values) => {
-    if (!values.length) return 0;
-    return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
 };
 
 // @desc    Get detailed analytics for a single course
@@ -601,4 +866,4 @@ const deleteHandout = async (req, res) => {
     }
 };
 
-module.exports = { createCourse, getCourses, getCourseById, deleteCourse, getTeacherStats, getCourseAnalytics, exportCourse, uploadHandout, deleteHandout, handoutUploadMiddleware };
+module.exports = { createCourse, updateCourse, getCourses, getCourseById, deleteCourse, getTeacherStats, getCourseAnalytics, exportCourse, uploadHandout, deleteHandout, handoutUploadMiddleware };

@@ -29,6 +29,19 @@ const getCourseGradient = (id) => {
   return COURSE_GRADIENTS[Math.abs(hash) % COURSE_GRADIENTS.length];
 };
 
+const formatFileSize = (size) => {
+  if (!size || Number(size) <= 0) return ''
+
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const sizeValue = Number(size);
+  const unitIndex = Math.min(Math.floor(Math.log(sizeValue) / Math.log(1024)), units.length - 1);
+  const formattedValue = sizeValue / (1024 ** unitIndex);
+
+  return `${formattedValue >= 10 || unitIndex === 0 ? Math.round(formattedValue) : formattedValue.toFixed(1)} ${units[unitIndex]}`;
+};
+
+const getUploadFileUrl = (filePath = '') => `${API_BASE_URL}/${filePath.replace(/\\/g, '/')}`;
+
 function StudentDashboard() {
   const { theme } = useTheme()
   const { translations, language, changeLanguage, t: translate } = useI18n()
@@ -865,6 +878,37 @@ function StudentDashboard() {
 
                       {expandedModule === module._id && (
                         <div className="neumorphic-module-tasks">
+                          {module.files?.length > 0 && (
+                            <div className="module-resource-list module-resource-list--student">
+                              <div className="module-resource-list__heading">
+                                <h5>{translate('dashboard.student.courseModal.resourcesTitle', { count: module.files.length })}</h5>
+                              </div>
+                              {module.files.map((file, index) => (
+                                <div key={`${file.path}-${index}`} className="module-resource-item">
+                                  <div className="module-resource-item__copy">
+                                    <span className="module-resource-item__icon">
+                                      <HiPaperClip />
+                                    </span>
+                                    <div>
+                                      <strong>{file.name}</strong>
+                                      <span>{formatFileSize(file.size) || file.mimetype || t.courseModal.handout}</span>
+                                    </div>
+                                  </div>
+                                  <div className="module-resource-item__actions">
+                                    <a
+                                      className="btn btn-outline"
+                                      href={getUploadFileUrl(file.path)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      <HiArrowDownTray /> {t.courseModal.openResource}
+                                    </a>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
                           <h5>{translate('dashboard.student.courseModal.taskCount', { count: courseTasks[module._id]?.length || 0 })}</h5>
                           
                           {!courseTasks[module._id] ? (

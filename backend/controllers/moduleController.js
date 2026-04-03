@@ -10,9 +10,17 @@ const createModule = async (req, res) => {
     try {
         const { course_id, module_name, description, module_order, tasks_per_module, module_test_questions } = req.body;
 
-        if (!course_id || !module_name || !module_order) {
+        if (!course_id || !module_name) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
+
+        const lastModule = await Module.findOne({ course_id })
+            .sort({ module_order: -1, createdAt: -1 })
+            .select('module_order');
+
+        const resolvedModuleOrder = Number(module_order) > 0
+            ? Number(module_order)
+            : ((lastModule?.module_order || 0) + 1);
 
         // req.files is array because of upload.array() middleware
         const files = req.files ? req.files.map(file => ({
@@ -26,7 +34,7 @@ const createModule = async (req, res) => {
             course_id,
             module_name,
             description,
-            module_order,
+            module_order: resolvedModuleOrder,
             tasks_per_module,
             module_test_questions,
             files,
@@ -37,6 +45,61 @@ const createModule = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(400).json({ message: 'Failed to create module' });
+    }
+};
+
+// @desc    Update a module
+// @route   PUT /api/modules/:id
+// @access  Private (Teacher/Admin)
+const updateModule = async (req, res) => {
+    try {
+        const module = await Module.findById(req.params.id);
+
+        if (!module) {
+            return res.status(404).json({ message: 'Module not found' });
+        }
+
+        if (module.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin' && req.user.role !== 'ADMIN') {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const {
+            module_name,
+            description,
+            module_order,
+            tasks_per_module,
+            module_test_questions,
+            points,
+            is_active,
+        } = req.body;
+
+        const newFiles = req.files ? req.files.map(file => ({
+            name: file.originalname,
+            path: file.path,
+            mimetype: file.mimetype,
+            size: file.size
+        })) : [];
+
+        module.module_name = module_name ?? module.module_name;
+        module.description = description ?? module.description;
+        module.module_order = module_order ?? module.module_order;
+        module.tasks_per_module = tasks_per_module ?? module.tasks_per_module;
+        module.module_test_questions = module_test_questions ?? module.module_test_questions;
+        module.points = points ?? module.points;
+
+        if (typeof is_active !== 'undefined') {
+            module.is_active = is_active === true || is_active === 'true';
+        }
+
+        if (newFiles.length) {
+            module.files = [...(module.files || []), ...newFiles];
+        }
+
+        const updatedModule = await module.save();
+        res.json(updatedModule);
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ message: 'Failed to update module' });
     }
 };
 
@@ -72,6 +135,47 @@ const getCourseModules = async (req, res) => {
         res.json(modules);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Delete a single uploaded resource file from a module
+// @route   DELETE /api/modules/:id/files
+// @access  Private (Teacher/Admin)
+const deleteModuleFile = async (req, res) => {
+    try {
+        const { filePath } = req.body;
+        const module = await Module.findById(req.params.id);
+
+        if (!module) {
+            return res.status(404).json({ message: 'Module not found' });
+        }
+
+        if (module.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin' && req.user.role !== 'ADMIN') {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        if (!filePath) {
+            return res.status(400).json({ message: 'File path is required' });
+        }
+
+        const existingFile = module.files?.find((file) => file.path === filePath);
+
+        if (!existingFile) {
+            return res.status(404).json({ message: 'Resource file not found' });
+        }
+
+        const absoluteFilePath = path.join(__dirname, '..', existingFile.path);
+        if (fs.existsSync(absoluteFilePath)) {
+            fs.unlinkSync(absoluteFilePath);
+        }
+
+        module.files = (module.files || []).filter((file) => file.path !== filePath);
+        const updatedModule = await module.save();
+
+        res.json(updatedModule);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to delete module file' });
     }
 };
 
@@ -212,8 +316,10 @@ const exportModule = async (req, res) => {
 
 module.exports = {
     createModule,
+    updateModule,
     getTeacherModules,
     getCourseModules,
+    deleteModuleFile,
     deleteModule,
     exportModule
 };

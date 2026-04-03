@@ -318,6 +318,8 @@ export const translations = {
           coursePoints: '{points} Course Points',
           moduleCount: '{count} Modules',
           handout: 'Handout',
+          resourcesTitle: 'Resources ({count})',
+          openResource: 'Open File',
           close: 'Close',
           syllabusLoading: 'Loading syllabus...',
           empty: 'No modules available for this course yet.',
@@ -350,7 +352,9 @@ export const translations = {
           myCourses: 'My Courses'
         },
         topbar: {
-          welcomeBack: 'Welcome, {name}'
+          welcomeBack: 'Welcome, {name}',
+          backToCourses: '← Back to Courses',
+          backToModules: '← Back to Modules'
         },
         stats: {
           totalStudents: 'Total Students',
@@ -358,6 +362,18 @@ export const translations = {
           pendingGrading: 'Pending Grading',
           avgPerformance: 'Avg. Performance',
           quickStats: 'Quick Stats'
+        },
+        dashboardAnalytics: {
+          title: 'Student Performance Analytics',
+          subtitle: 'Cross-course learner progress after your quick stats',
+          limitedData: 'Detailed progress snapshots are limited right now. These insights are based on enrollments plus any saved progress records.',
+          empty: 'No learner analytics are available yet.',
+          shareOfLearners: '{percent} of active learners',
+          charts: {
+            progressBreakdown: 'Progress Breakdown',
+            performanceMix: 'Performance Mix',
+            engagementGraph: 'Learner Engagement Graph'
+          }
         },
         sections: {
           createAssignment: 'Create Assignment',
@@ -387,6 +403,7 @@ export const translations = {
         courses: {
           title: 'My Courses',
           createCourse: 'Create Course',
+          editCourse: 'Edit Course',
           analytics: 'Analytics',
           empty: 'No courses created yet.',
           instructorWorkspace: 'Instructor Workspace',
@@ -426,13 +443,15 @@ export const translations = {
           },
           highlights: {
             topPerformer: 'Top Performer',
-            bottleneck: 'Bottleneck Module'
+            bottleneck: 'Lowest Completion Module'
           },
           charts: {
             topPerformers: 'Top Performers',
             moduleProgress: 'Module Progress',
             attentionNeeded: 'Learners Needing Attention',
-            studentSnapshot: 'Student Snapshot'
+            studentSnapshot: 'Student Snapshot',
+            progressMix: 'Progress Mix',
+            completionGraph: 'Module Completion Graph'
           },
           fields: {
             completion: 'Completion',
@@ -476,10 +495,25 @@ export const translations = {
           order: 'Order #{order}',
           viewTasks: 'View Tasks',
           addTask: 'Add Task',
+          editModule: 'Edit Module',
           export: 'Export',
           exportModule: 'Export Module',
           delete: 'Delete',
-          deleteModule: 'Delete Module'
+          deleteModule: 'Delete Module',
+          resources: {
+            title: 'Module Resources',
+            empty: 'No resource files uploaded for this module yet.',
+            open: 'Open File',
+            remove: 'Delete File',
+            removeConfirm: 'Delete this uploaded resource file?',
+            removeFailed: 'Failed to delete resource file'
+          },
+          stats: {
+            tasks: 'Tasks',
+            files: 'Files',
+            points: 'Points',
+            order: 'Sequence'
+          }
         },
         taskView: {
           backToModules: '← Back to Modules',
@@ -538,6 +572,7 @@ export const translations = {
     forms: {
       course: {
         title: 'Create New Course',
+        editTitle: 'Edit Course',
         courseName: 'Course Name',
         courseNamePlaceholder: 'e.g., Intro to Python',
         courseCode: 'Course Code',
@@ -549,11 +584,15 @@ export const translations = {
         descriptionPlaceholder: 'Course details...',
         cancel: 'Cancel',
         create: 'Create Course',
+        update: 'Update Course',
         creating: 'Creating...',
-        createFailed: 'Failed to create course'
+        updating: 'Updating...',
+        createFailed: 'Failed to create course',
+        updateFailed: 'Failed to update course'
       },
       module: {
         title: 'Create New Module',
+        editTitle: 'Edit Module',
         moduleOrder: 'Module Order',
         moduleName: 'Module Name',
         moduleNamePlaceholder: 'e.g., Variables',
@@ -567,13 +606,37 @@ export const translations = {
         resources: 'Resources (Files)',
         cancel: 'Cancel',
         create: 'Create Module',
+        update: 'Update Module',
         creating: 'Creating...',
+        updating: 'Updating...',
         required: 'Module name and order are required.',
-        createFailed: 'Failed to create module'
+        createFailed: 'Failed to create module',
+        updateFailed: 'Failed to update module'
       },
       task: {
         createTitle: 'Create New Task',
         editTitle: 'Edit Task',
+        importTitle: 'Create From Document',
+        importHelp: 'Upload a PDF, DOC, DOCX, RTF, TXT, CSV, XLSX, or XLS file containing one or more tasks. Valid tasks are added immediately; if required fields are missing, import stops and shows the missing fields.',
+        importFormats: 'PDF, DOC, DOCX, RTF, TXT, CSV, XLSX',
+        importLabel: 'Task Document',
+        importAction: 'Import Tasks',
+        importing: 'Importing...',
+        downloadCsvTemplate: 'Download CSV Template',
+        downloadDocTemplate: 'Download DOC Template',
+        downloadPdfTemplate: 'Download PDF Template',
+        chooseFile: 'Choose File',
+        noFileChosen: 'No file selected',
+        importResults: '{count} drafts found',
+        loadIntoForm: 'Load Into Form',
+        importedTaskLabel: 'Imported Task',
+        createImportedTasks: 'Create {count} Imported Tasks',
+        creatingImported: 'Creating...',
+        importFileRequired: 'Please choose a task document to import.',
+        importFailed: 'Failed to import tasks from document',
+        importTasksEmpty: 'No imported task drafts are available yet.',
+        importCreateFailed: 'Failed to create imported tasks',
+        importCreatedMany: '{count} tasks created successfully!',
         taskName: 'Task Name',
         taskNamePlaceholder: 'e.g., Calculate Sum',
         difficulty: 'Difficulty',
@@ -618,13 +681,11 @@ export const translations = {
       },
       addStudents: {
         title: 'Add Students',
-        byRange: 'By Enrollment Range',
+        byEmail: 'By Email',
         uploadExcel: 'Upload Excel',
-        rangeHelp: 'Enter a range of enrollment numbers to enroll all matching students into this course.',
-        fromEnrollment: 'From Enrollment Number',
-        toEnrollment: 'To Enrollment Number',
-        enrollmentPlaceholderStart: 'e.g. 220101',
-        enrollmentPlaceholderEnd: 'e.g. 220150',
+        emailHelp: 'Enter one or more student emails to enroll them into this course. Separate emails with commas or new lines.',
+        studentEmails: 'Student Emails',
+        studentEmailsPlaceholder: 'student1@example.com\nstudent2@example.com',
         excelHelp: 'Upload an Excel file containing list of students. File must include email and enrollment number columns.',
         selectExcel: 'Select Excel File (.xlsx, .xls, .csv)',
         cancel: 'Cancel',
@@ -632,14 +693,15 @@ export const translations = {
         enrollStudents: 'Enroll Students',
         uploading: 'Uploading...',
         uploadAndEnroll: 'Upload & Enroll',
-        rangeRequired: 'Both enrollment numbers are required',
+        emailRequired: 'At least one student email is required',
         excelRequired: 'Please select an Excel file',
-        bulkFailed: 'Bulk enrollment failed',
+        emailFailed: 'Email enrollment failed',
         excelFailed: 'Excel upload failed',
         enrolled: '{count} enrolled',
         skipped: '{count} skipped',
         notFound: '{count} not found',
-        foundInRange: '{count} found in range'
+        invalidEmails: '{count} invalid emails',
+        processed: '{count} processed'
       },
       rewards: {
         manageTitle: 'Manage Course Rewards',
@@ -1020,6 +1082,8 @@ export const translations = {
           coursePoints: '{points} कोर्स अंक',
           moduleCount: '{count} मॉड्यूल',
           handout: 'हैंडआउट',
+          resourcesTitle: 'संसाधन ({count})',
+          openResource: 'फाइल खोलें',
           close: 'बंद करें',
           syllabusLoading: 'सिलेबस लोड हो रहा है...',
           empty: 'इस कोर्स के लिए अभी कोई मॉड्यूल उपलब्ध नहीं है।',
@@ -1052,7 +1116,9 @@ export const translations = {
           myCourses: 'मेरे कोर्स'
         },
         topbar: {
-          welcomeBack: 'स्वागत है, {name}'
+          welcomeBack: 'स्वागत है, {name}',
+          backToCourses: '← कोर्स पर वापस जाएं',
+          backToModules: '← मॉड्यूल पर वापस जाएं'
         },
         stats: {
           totalStudents: 'कुल छात्र',
@@ -1060,6 +1126,18 @@ export const translations = {
           pendingGrading: 'लंबित ग्रेडिंग',
           avgPerformance: 'औसत प्रदर्शन',
           quickStats: 'त्वरित आँकड़े'
+        },
+        dashboardAnalytics: {
+          title: 'छात्र प्रदर्शन एनालिटिक्स',
+          subtitle: 'त्वरित आँकड़ों के बाद सभी कोर्सों की सीखने की प्रगति',
+          limitedData: 'विस्तृत प्रगति स्नैपशॉट अभी सीमित हैं। ये आँकड़े नामांकन और उपलब्ध प्रगति रिकॉर्ड्स पर आधारित हैं।',
+          empty: 'अभी कोई छात्र एनालिटिक्स उपलब्ध नहीं है।',
+          shareOfLearners: '{percent} सक्रिय शिक्षार्थी',
+          charts: {
+            progressBreakdown: 'प्रगति वितरण',
+            performanceMix: 'प्रदर्शन मिश्रण',
+            engagementGraph: 'शिक्षार्थी सक्रियता ग्राफ'
+          }
         },
         sections: {
           createAssignment: 'असाइनमेंट बनाएं',
@@ -1089,6 +1167,7 @@ export const translations = {
         courses: {
           title: 'मेरे कोर्स',
           createCourse: 'कोर्स बनाएं',
+          editCourse: 'कोर्स संपादित करें',
           analytics: 'एनालिटिक्स',
           empty: 'अभी तक कोई कोर्स नहीं बनाया गया है।',
           instructorWorkspace: 'इंस्ट्रक्टर वर्कस्पेस',
@@ -1128,13 +1207,15 @@ export const translations = {
           },
           highlights: {
             topPerformer: 'शीर्ष प्रदर्शनकर्ता',
-            bottleneck: 'रुकावट वाला मॉड्यूल'
+            bottleneck: 'सबसे कम पूर्णता वाला मॉड्यूल'
           },
           charts: {
             topPerformers: 'शीर्ष प्रदर्शनकर्ता',
             moduleProgress: 'मॉड्यूल प्रगति',
             attentionNeeded: 'ध्यान चाहने वाले छात्र',
-            studentSnapshot: 'छात्र स्नैपशॉट'
+            studentSnapshot: 'छात्र स्नैपशॉट',
+            progressMix: 'प्रगति मिश्रण',
+            completionGraph: 'मॉड्यूल पूर्णता ग्राफ'
           },
           fields: {
             completion: 'पूर्णता',
@@ -1178,10 +1259,25 @@ export const translations = {
           order: 'क्रम #{order}',
           viewTasks: 'कार्य देखें',
           addTask: 'कार्य जोड़ें',
+          editModule: 'मॉड्यूल संपादित करें',
           export: 'एक्सपोर्ट',
           exportModule: 'मॉड्यूल एक्सपोर्ट करें',
           delete: 'हटाएं',
-          deleteModule: 'मॉड्यूल हटाएं'
+          deleteModule: 'मॉड्यूल हटाएं',
+          resources: {
+            title: 'मॉड्यूल संसाधन',
+            empty: 'इस मॉड्यूल के लिए अभी कोई संसाधन फाइल अपलोड नहीं की गई है।',
+            open: 'फाइल खोलें',
+            remove: 'फाइल हटाएं',
+            removeConfirm: 'क्या इस अपलोड की गई संसाधन फाइल को हटाना है?',
+            removeFailed: 'संसाधन फाइल हटाई नहीं जा सकी'
+          },
+          stats: {
+            tasks: 'कार्य',
+            files: 'फाइलें',
+            points: 'अंक',
+            order: 'क्रम'
+          }
         },
         taskView: {
           backToModules: '← मॉड्यूल पर वापस जाएं',
@@ -1240,6 +1336,7 @@ export const translations = {
     forms: {
       course: {
         title: 'नया कोर्स बनाएं',
+        editTitle: 'कोर्स संपादित करें',
         courseName: 'कोर्स नाम',
         courseNamePlaceholder: 'जैसे, Python का परिचय',
         courseCode: 'कोर्स कोड',
@@ -1251,11 +1348,15 @@ export const translations = {
         descriptionPlaceholder: 'कोर्स विवरण...',
         cancel: 'रद्द करें',
         create: 'कोर्स बनाएं',
+        update: 'कोर्स अपडेट करें',
         creating: 'बनाया जा रहा है...',
-        createFailed: 'कोर्स नहीं बनाया जा सका'
+        updating: 'अपडेट किया जा रहा है...',
+        createFailed: 'कोर्स नहीं बनाया जा सका',
+        updateFailed: 'कोर्स अपडेट नहीं किया जा सका'
       },
       module: {
         title: 'नया मॉड्यूल बनाएं',
+        editTitle: 'मॉड्यूल संपादित करें',
         moduleOrder: 'मॉड्यूल क्रम',
         moduleName: 'मॉड्यूल नाम',
         moduleNamePlaceholder: 'जैसे, Variables',
@@ -1269,13 +1370,37 @@ export const translations = {
         resources: 'संसाधन (फाइलें)',
         cancel: 'रद्द करें',
         create: 'मॉड्यूल बनाएं',
+        update: 'मॉड्यूल अपडेट करें',
         creating: 'बनाया जा रहा है...',
+        updating: 'अपडेट किया जा रहा है...',
         required: 'मॉड्यूल नाम और क्रम आवश्यक हैं।',
-        createFailed: 'मॉड्यूल नहीं बनाया जा सका'
+        createFailed: 'मॉड्यूल नहीं बनाया जा सका',
+        updateFailed: 'मॉड्यूल अपडेट नहीं किया जा सका'
       },
       task: {
         createTitle: 'नया कार्य बनाएं',
         editTitle: 'कार्य संपादित करें',
+        importTitle: 'दस्तावेज़ से कार्य बनाएं',
+        importHelp: 'ऐसी PDF, DOC, DOCX, RTF, TXT, CSV, XLSX या XLS फाइल अपलोड करें जिसमें एक या अधिक कार्य हों। सही कार्य तुरंत जोड़ दिए जाएंगे; यदि आवश्यक फील्ड गायब हैं, तो इम्पोर्ट रुक जाएगा और गायब फील्ड दिखाई जाएंगी।',
+        importFormats: 'PDF, DOC, DOCX, RTF, TXT, CSV, XLSX',
+        importLabel: 'कार्य दस्तावेज़',
+        importAction: 'कार्य इम्पोर्ट करें',
+        importing: 'इम्पोर्ट हो रहा है...',
+        downloadCsvTemplate: 'CSV टेम्पलेट डाउनलोड करें',
+        downloadDocTemplate: 'DOC टेम्पलेट डाउनलोड करें',
+        downloadPdfTemplate: 'PDF टेम्पलेट डाउनलोड करें',
+        chooseFile: 'फाइल चुनें',
+        noFileChosen: 'कोई फाइल चुनी नहीं गई',
+        importResults: '{count} ड्राफ्ट मिले',
+        loadIntoForm: 'फॉर्म में लोड करें',
+        importedTaskLabel: 'इम्पोर्ट किया गया कार्य',
+        createImportedTasks: '{count} इम्पोर्ट किए गए कार्य बनाएं',
+        creatingImported: 'बनाया जा रहा है...',
+        importFileRequired: 'कृपया इम्पोर्ट करने के लिए कार्य दस्तावेज़ चुनें।',
+        importFailed: 'दस्तावेज़ से कार्य इम्पोर्ट नहीं किए जा सके',
+        importTasksEmpty: 'अभी कोई इम्पोर्टेड कार्य ड्राफ्ट उपलब्ध नहीं है।',
+        importCreateFailed: 'इम्पोर्ट किए गए कार्य नहीं बनाए जा सके',
+        importCreatedMany: '{count} कार्य सफलतापूर्वक बनाए गए!',
         taskName: 'कार्य नाम',
         taskNamePlaceholder: 'जैसे, Calculate Sum',
         difficulty: 'कठिनाई',
@@ -1320,13 +1445,11 @@ export const translations = {
       },
       addStudents: {
         title: 'छात्र जोड़ें',
-        byRange: 'नामांकन रेंज से',
+        byEmail: 'ईमेल से',
         uploadExcel: 'Excel अपलोड करें',
-        rangeHelp: 'इस कोर्स में सभी मिलते-जुलते छात्रों को नामांकित करने के लिए नामांकन नंबर की रेंज दर्ज करें।',
-        fromEnrollment: 'नामांकन संख्या से',
-        toEnrollment: 'नामांकन संख्या तक',
-        enrollmentPlaceholderStart: 'जैसे 220101',
-        enrollmentPlaceholderEnd: 'जैसे 220150',
+        emailHelp: 'इस कोर्स में छात्रों को नामांकित करने के लिए एक या अधिक ईमेल दर्ज करें। ईमेल को कॉमा या नई लाइन से अलग करें।',
+        studentEmails: 'छात्र ईमेल',
+        studentEmailsPlaceholder: 'student1@example.com\nstudent2@example.com',
         excelHelp: 'छात्रों की सूची वाली Excel फाइल अपलोड करें। फाइल में email और enrollment number कॉलम होने चाहिए।',
         selectExcel: 'Excel फाइल चुनें (.xlsx, .xls, .csv)',
         cancel: 'रद्द करें',
@@ -1334,14 +1457,15 @@ export const translations = {
         enrollStudents: 'छात्र नामांकित करें',
         uploading: 'अपलोड हो रहा है...',
         uploadAndEnroll: 'अपलोड और नामांकन करें',
-        rangeRequired: 'दोनों नामांकन संख्याएँ आवश्यक हैं',
+        emailRequired: 'कम से कम एक छात्र ईमेल आवश्यक है',
         excelRequired: 'कृपया एक Excel फाइल चुनें',
-        bulkFailed: 'बल्क नामांकन विफल रहा',
+        emailFailed: 'ईमेल नामांकन विफल रहा',
         excelFailed: 'Excel अपलोड विफल रहा',
         enrolled: '{count} नामांकित',
         skipped: '{count} छोड़े गए',
         notFound: '{count} नहीं मिले',
-        foundInRange: '{count} रेंज में मिले'
+        invalidEmails: '{count} अमान्य ईमेल',
+        processed: '{count} प्रोसेस किए गए'
       },
       rewards: {
         manageTitle: 'कोर्स रिवॉर्ड्स प्रबंधित करें',
