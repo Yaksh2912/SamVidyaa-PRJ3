@@ -88,6 +88,34 @@ function LandingPage() {
   };
 
   const t = translations;
+  const contactPhoneHref = t.contact?.phoneValue
+    ? `tel:${t.contact.phoneValue.replace(/[^+\d]/g, '')}`
+    : undefined;
+  const contactEmailHref = t.contact?.emailValue
+    ? `mailto:${t.contact.emailValue}`
+    : undefined;
+  const contactDetails = [
+    {
+      key: 'address',
+      icon: FiMapPin,
+      label: t.contact?.address,
+      value: t.contact?.addressValue,
+    },
+    {
+      key: 'phone',
+      icon: FiPhone,
+      label: t.contact?.phone,
+      value: t.contact?.phoneValue,
+      href: contactPhoneHref,
+    },
+    {
+      key: 'email',
+      icon: FiMail,
+      label: t.contact?.email,
+      value: t.contact?.emailValue,
+      href: contactEmailHref,
+    },
+  ];
   const numberFormatter = new Intl.NumberFormat(language === 'hi' ? 'hi-IN' : 'en-US');
   const animatedCourseCount = useCountUp(platformStats.totalCourses);
   const animatedUserCount = useCountUp(platformStats.totalUsers);
@@ -569,35 +597,25 @@ function LandingPage() {
           <motion.p className="section-subtitle" variants={fadeInUp}>{t.contact?.subtitle}</motion.p>
 
           <div className="contact-container">
-            <motion.div className="contact-info" variants={fadeInUp}>
-              <div className="contact-item">
-                <div className="contact-icon">
-                  <FiMapPin />
-                </div>
-                <div>
-                  <h3>{t.contact?.address}</h3>
-                  <p>{t.contact?.addressValue}</p>
-                </div>
-              </div>
-
-              <div className="contact-item">
-                <div className="contact-icon">
-                  <FiPhone />
-                </div>
-                <div>
-                  <h3>{t.contact?.phone}</h3>
-                  <p>{t.contact?.phoneValue}</p>
-                </div>
-              </div>
-
-              <div className="contact-item">
-                <div className="contact-icon">
-                  <FiMail />
-                </div>
-                <div>
-                  <h3>{t.contact?.email}</h3>
-                  <p>{t.contact?.emailValue}</p>
-                </div>
+            <motion.div className="contact-panel" variants={fadeInUp}>
+              <div className="contact-info">
+                {contactDetails.map(({ key, icon: Icon, label, value, href }) => (
+                  <div className="contact-item" key={key}>
+                    <div className="contact-icon">
+                      <Icon />
+                    </div>
+                    <div className="contact-item__content">
+                      <h3>{label}</h3>
+                      {href ? (
+                        <a className="contact-item__link" href={href}>
+                          {value}
+                        </a>
+                      ) : (
+                        <p>{value}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </motion.div>
 
@@ -606,17 +624,27 @@ function LandingPage() {
               onSubmit={(e) => e.preventDefault()}
               variants={fadeInUp}
             >
-              <div className="form-group">
-                <input type="text" placeholder={t.contact?.namePlaceholder} required />
+              <div className="contact-form__header">
+                <h3 className="contact-form__title">{t.contact?.sendButton}</h3>
+                <p className="contact-form__subtitle">{t.contact?.subtitle}</p>
               </div>
-              <div className="form-group">
-                <input type="email" placeholder={t.contact?.emailPlaceholder} required />
-              </div>
-              <div className="form-group">
-                <input type="text" placeholder={t.contact?.subjectPlaceholder} required />
-              </div>
-              <div className="form-group">
-                <textarea placeholder={t.contact?.messagePlaceholder} required></textarea>
+              <div className="contact-form__grid">
+                <label className="form-field">
+                  <span className="form-field__label">{t.contact?.namePlaceholder}</span>
+                  <input type="text" placeholder={t.contact?.namePlaceholder} required />
+                </label>
+                <label className="form-field">
+                  <span className="form-field__label">{t.contact?.emailPlaceholder}</span>
+                  <input type="email" placeholder={t.contact?.emailPlaceholder} required />
+                </label>
+                <label className="form-field form-field--full">
+                  <span className="form-field__label">{t.contact?.subjectPlaceholder}</span>
+                  <input type="text" placeholder={t.contact?.subjectPlaceholder} required />
+                </label>
+                <label className="form-field form-field--full">
+                  <span className="form-field__label">{t.contact?.messagePlaceholder}</span>
+                  <textarea placeholder={t.contact?.messagePlaceholder} required></textarea>
+                </label>
               </div>
               <button type="submit" className="btn btn-primary btn-full">
                 {t.contact?.sendButton} <FiSend style={{ marginLeft: '0.5rem' }} />
