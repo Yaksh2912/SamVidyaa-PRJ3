@@ -1,7 +1,31 @@
-TODO List - Features to Implement:
+TODO List
+
+Recently Completed:
+
+1. Optional Task Deadlines
+   - Teachers can now choose whether a task has a deadline.
+   - When enabled, the teacher can set both the date and time.
+   - Student submission behavior now respects overdue tasks.
+
+2. Landing Page Redesign
+   - Reworked the hero section into a more polished product-style layout.
+   - Replaced oversized metric cards with a single stats ribbon.
+   - Added improved spacing, navbar consistency, and hero layout refinements.
+
+3. Desktop App Distribution
+   - Added admin upload support for desktop installer files.
+   - Added public download availability on the landing page.
+   - Added download tracking support for installer downloads.
+
+4. Testimonials Management
+   - Added admin-managed testimonials with optional instructor images.
+   - Added a landing page testimonials section before the FAQ.
+   - Added a carousel with autoplay and manual previous/next navigation.
+
+Remaining Backlog:
 
 1. Code Execution & Automated Grading Engine
-   - Create a mechanism to actually evaluate code. 
+   - Create a mechanism to actually evaluate code.
    - Update `completeTask` controller to utilize a sandbox or code execution API to compile, run, and verify student submissions against test cases instead of blindly awarding points.
    - Create a Submission schema to store student code answers.
 
@@ -12,11 +36,8 @@ TODO List - Features to Implement:
 3. Automated RAG Document Embeddings
    - Add logic that triggers upon PDF handout upload to parse the PDF, generate text embeddings, and insert them into the Pinecone Vector Database. This will keep the AI chatbot aware of the newest course materials automatically instead of requiring manual admin syncs.
 
-4. Task Ownership Authorization
-   - Implement deep authorization checks for modifying and deleting tasks to ensure only the owning teacher (or admin) can alter them. Currently, `taskController.js` just assumes any authenticated teacher can delete a task.
-
-5. Student Dashboard "History" View
+4. Student Dashboard "History" View
    - Create a "History" or "Completed" tab for students in the dashboard to review their past work and grades, since completed items currently just disappear from active views.
 
-6. Single Module View API
+5. Single Module View API
    - Implement the backend endpoint to fetch granular details of a single module (noted as missing in `moduleRoutes.js`).

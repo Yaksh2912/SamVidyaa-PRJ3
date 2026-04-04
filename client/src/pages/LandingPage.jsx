@@ -59,6 +59,7 @@ function LandingPage() {
     totalCourses: null,
     totalUsers: null,
   });
+  const testimonialAutoplayIntervalRef = React.useRef(null);
   const testimonialAutoResumeTimeoutRef = React.useRef(null);
   const { theme, toggleTheme, isDark } = useTheme();
   const { translations, language, changeLanguage, t: translate } = useI18n();
@@ -216,20 +217,32 @@ function LandingPage() {
   }, []);
 
   useEffect(() => () => {
+    if (testimonialAutoplayIntervalRef.current) {
+      window.clearInterval(testimonialAutoplayIntervalRef.current);
+    }
+
     if (testimonialAutoResumeTimeoutRef.current) {
       window.clearTimeout(testimonialAutoResumeTimeoutRef.current);
     }
   }, []);
 
   useEffect(() => {
+    if (testimonialAutoplayIntervalRef.current) {
+      window.clearInterval(testimonialAutoplayIntervalRef.current);
+      testimonialAutoplayIntervalRef.current = null;
+    }
+
     if (testimonials.length <= 1 || isTestimonialsAutoPaused) return undefined;
 
-    const intervalId = window.setInterval(() => {
+    testimonialAutoplayIntervalRef.current = window.setInterval(() => {
       advanceTestimonials(1);
-    }, 4500);
+    }, 4200);
 
     return () => {
-      window.clearInterval(intervalId);
+      if (testimonialAutoplayIntervalRef.current) {
+        window.clearInterval(testimonialAutoplayIntervalRef.current);
+        testimonialAutoplayIntervalRef.current = null;
+      }
     };
   }, [advanceTestimonials, isTestimonialsAutoPaused, testimonials.length]);
 

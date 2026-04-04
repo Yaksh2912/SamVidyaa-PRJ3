@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import CompleteTaskModal from '../components/CompleteTaskModal'
 import AskCollaborationModal from '../components/AskCollaborationModal'
 import ChatBot from '../components/ChatBot'
-import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification, HiUserGroup, HiCheck, HiXMark } from 'react-icons/hi2'
+import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification, HiUserGroup, HiCheck, HiXMark, HiBellAlert } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import './Dashboard.css'
 
@@ -62,6 +62,10 @@ function StudentDashboard() {
     dateStyle: 'medium',
     timeStyle: 'short'
   })
+  const announcementDateFormatter = new Intl.DateTimeFormat(language === 'hi' ? 'hi-IN' : 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  })
 
   const formatTaskDeadline = (deadlineAt) => {
     if (!deadlineAt) return ''
@@ -104,6 +108,9 @@ function StudentDashboard() {
   // Collaboration State
   const [collaborations, setCollaborations] = useState({ incoming: [], outgoing: [] });
   const [collabModalTask, setCollabModalTask] = useState(null);
+  const [announcements, setAnnouncements] = useState([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [showAnnouncementsPopup, setShowAnnouncementsPopup] = useState(false);
 
   // Mapping of icon names to actual components
   const MAP_ICONS = {
@@ -211,6 +218,29 @@ function StudentDashboard() {
       console.error('Error fetching rewards:', error);
     } finally {
       setLoadingRewards(false);
+    }
+  };
+
+  const fetchAnnouncements = async () => {
+    try {
+      setLoadingAnnouncements(true);
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      if (!token) return;
+      const res = await fetch(`${API_BASE_URL}/api/announcements/student`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAnnouncements(Array.isArray(data) ? data : []);
+      } else {
+        setAnnouncements([]);
+      }
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+      setAnnouncements([]);
+    } finally {
+      setLoadingAnnouncements(false);
     }
   };
 
@@ -375,6 +405,7 @@ function StudentDashboard() {
     fetchUserPoints();
     fetchRewards();
     fetchCollaborations();
+    fetchAnnouncements();
   }, []);
 
   const handleHandoutDownload = async (handoutPath, filename) => {
@@ -418,6 +449,7 @@ function StudentDashboard() {
 
       if (response.ok) {
         await fetchData(); // Refresh lists
+        await fetchAnnouncements();
         alert(translations.dashboard.student.availableCourses.enrollSuccess);
       } else {
         const data = await response.json();
@@ -511,6 +543,21 @@ function StudentDashboard() {
             </select>
             <button className="theme-toggle topbar-theme-toggle" onClick={toggleTheme} aria-label={common.toggleTheme}>
               {isDark ? <FiSun size={18} /> : <FiMoon size={18} />}
+            </button>
+            <button
+              type="button"
+              className="topbar-notification-button"
+              aria-label={t.topbar.openAnnouncements}
+              title={t.topbar.openAnnouncements}
+              onClick={() => {
+                setShowAnnouncementsPopup(true)
+                fetchAnnouncements()
+              }}
+            >
+              <HiBellAlert />
+              {announcements.length ? (
+                <span className="topbar-notification-badge">{announcements.length}</span>
+              ) : null}
             </button>
             <div 
               className="points-badge-premium" 
@@ -839,6 +886,63 @@ function StudentDashboard() {
           )}
         </div>
       </main>
+
+      {showAnnouncementsPopup && (
+        <div className="neumorphic-modal-overlay" onClick={() => setShowAnnouncementsPopup(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 18 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="neumorphic-modal-content announcement-popup-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="neumorphic-modal-header announcement-popup-modal__header">
+              <div>
+                <h2>{t.announcements.title}</h2>
+                <p className="announcement-popup-modal__subtitle">{t.announcements.popupSubtitle}</p>
+              </div>
+              <button
+                type="button"
+                className="btn-neumorphic-close"
+                onClick={() => setShowAnnouncementsPopup(false)}
+              >
+                {common.close}
+              </button>
+            </div>
+
+            <div className="announcement-popup-modal__body">
+              {loadingAnnouncements ? (
+                <p className="admin-installer-panel__status">{common.loading}</p>
+              ) : announcements.length === 0 ? (
+                <p className="empty-state">{t.announcements.empty}</p>
+              ) : (
+                <div className="student-announcements-list">
+                  {announcements.map((announcement) => (
+                    <article key={announcement._id} className="student-announcement-card">
+                      <div className="student-announcement-card__topline">
+                        <p className="student-announcement-card__eyebrow">
+                          {announcement.course_id?.course_name || t.announcements.generalAudience}
+                          {' • '}
+                          {announcement.created_by?.name || translations.auth.roles.teacher}
+                        </p>
+                        <div className="student-announcement-card__meta">
+                          <div className="student-announcement-card__badge">
+                            {announcement.audience_type === 'GLOBAL' ? t.announcements.globalBadge : announcement.course_id?.course_code || t.announcements.courseBadge}
+                          </div>
+                          <span className="student-announcement-card__time">
+                            {announcementDateFormatter.format(new Date(announcement.createdAt))}
+                          </span>
+                        </div>
+                      </div>
+                      <h4 className="student-announcement-card__title">{announcement.title}</h4>
+                      <p className="student-announcement-card__body">{announcement.message}</p>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* NEUMORPHIC COURSE DETAILS MODAL */}
       {selectedCourse && (

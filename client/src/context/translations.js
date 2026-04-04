@@ -21,6 +21,7 @@ export const translations = {
       export: 'Export',
       upload: 'Upload',
       uploading: 'Uploading...',
+      deleting: 'Deleting...',
       replace: 'Replace',
       add: 'Add',
       subject: 'Subject',
@@ -278,6 +279,31 @@ export const translations = {
           removeFailed: 'Failed to remove desktop app.',
           onlyFormats: 'Accepted formats: .exe, .msi'
         },
+        announcements: {
+          title: 'Student Announcements',
+          description: 'Post updates for all students or target a specific course when the message only applies to one cohort.',
+          audienceLabel: 'Audience',
+          audienceGlobal: 'All Students',
+          audienceCourse: 'Specific Course',
+          courseLabel: 'Course',
+          selectCourse: 'Select a course',
+          titleLabel: 'Announcement Title',
+          titlePlaceholder: 'e.g. Lab schedule update',
+          messageLabel: 'Announcement Message',
+          messagePlaceholder: 'Share the update students should see in their dashboard.',
+          create: 'Publish Announcement',
+          creating: 'Publishing...',
+          clear: 'Clear',
+          delete: 'Delete',
+          deleting: 'Deleting...',
+          empty: 'No announcements published yet.',
+          generalAudience: 'All students',
+          courseAudience: 'Course students',
+          created: 'Announcement published successfully.',
+          deleted: 'Announcement deleted successfully.',
+          createFailed: 'Failed to publish announcement.',
+          deleteFailed: 'Failed to delete announcement.'
+        },
         testimonials: {
           title: 'Instructor Testimonials',
           description: 'Add or update testimonials shown on the landing page. Instructor images are optional.',
@@ -314,6 +340,7 @@ export const translations = {
         roleLabel: 'Student',
         tabs: {
           dashboard: 'Dashboard',
+          announcements: 'Announcements',
           myCourses: 'My Courses',
           availableCourses: 'Available Courses',
           pointShop: 'Point Shop',
@@ -321,6 +348,7 @@ export const translations = {
         },
         topbar: {
           welcomeBack: 'Welcome Back, {name}',
+          openAnnouncements: 'Open announcements',
           openPointShop: 'Open Point Shop',
           totalPoints: 'Total Points'
         },
@@ -341,6 +369,14 @@ export const translations = {
           accept: 'Accept',
           decline: 'Decline',
           updateFailed: 'Failed to update request'
+        },
+        announcements: {
+          title: 'Announcements',
+          popupSubtitle: 'Updates from your teachers and admins.',
+          empty: 'No announcements yet. New updates from your teachers and admins will appear here.',
+          globalBadge: 'Global',
+          courseBadge: 'Course',
+          generalAudience: 'All students'
         },
         courses: {
           title: 'My Backpack',
@@ -431,7 +467,8 @@ export const translations = {
         roleLabel: 'Teacher',
         tabs: {
           dashboard: 'Dashboard',
-          myCourses: 'My Courses'
+          myCourses: 'My Courses',
+          announcements: 'Announcements'
         },
         topbar: {
           welcomeBack: 'Welcome, {name}',
@@ -444,6 +481,27 @@ export const translations = {
           pendingGrading: 'Pending Grading',
           avgPerformance: 'Avg. Performance',
           quickStats: 'Quick Stats'
+        },
+        announcements: {
+          title: 'Announcements',
+          description: 'Send quick updates to students in one of your courses. The latest posts appear in the student announcements view.',
+          courseLabel: 'Course',
+          selectCourse: 'Select a course',
+          titleLabel: 'Announcement Title',
+          titlePlaceholder: 'e.g. Bring your laptops tomorrow',
+          messageLabel: 'Announcement Message',
+          messagePlaceholder: 'Write the update your students should see.',
+          create: 'Publish Announcement',
+          creating: 'Publishing...',
+          clear: 'Clear',
+          delete: 'Delete',
+          generalAudience: 'General',
+          noCourses: 'Create a course first to publish announcements.',
+          empty: 'No announcements published yet.',
+          created: 'Announcement published successfully.',
+          deleted: 'Announcement deleted successfully.',
+          createFailed: 'Failed to publish announcement.',
+          deleteFailed: 'Failed to delete announcement.'
         },
         dashboardAnalytics: {
           title: 'Student Performance Analytics',
@@ -879,6 +937,7 @@ export const translations = {
       export: 'एक्सपोर्ट',
       upload: 'अपलोड',
       uploading: 'अपलोड हो रहा है...',
+      deleting: 'हटाया जा रहा है...',
       replace: 'बदलें',
       add: 'जोड़ें',
       subject: 'विषय',
@@ -1136,6 +1195,31 @@ export const translations = {
           removeFailed: 'डेस्कटॉप ऐप हटाया नहीं जा सका।',
           onlyFormats: 'स्वीकार्य फ़ॉर्मैट: .exe, .msi'
         },
+        announcements: {
+          title: 'छात्र घोषणाएँ',
+          description: 'सभी छात्रों के लिए अपडेट पोस्ट करें या केवल एक विशेष कोर्स के लिए संदेश भेजें।',
+          audienceLabel: 'दर्शक',
+          audienceGlobal: 'सभी छात्र',
+          audienceCourse: 'विशिष्ट कोर्स',
+          courseLabel: 'कोर्स',
+          selectCourse: 'कोर्स चुनें',
+          titleLabel: 'घोषणा शीर्षक',
+          titlePlaceholder: 'जैसे लैब शेड्यूल अपडेट',
+          messageLabel: 'घोषणा संदेश',
+          messagePlaceholder: 'वह अपडेट लिखें जो छात्रों को अपने डैशबोर्ड में दिखना चाहिए।',
+          create: 'घोषणा प्रकाशित करें',
+          creating: 'प्रकाशित किया जा रहा है...',
+          clear: 'साफ़ करें',
+          delete: 'हटाएँ',
+          deleting: 'हटाया जा रहा है...',
+          empty: 'अभी तक कोई घोषणा प्रकाशित नहीं हुई है।',
+          generalAudience: 'सभी छात्र',
+          courseAudience: 'कोर्स के छात्र',
+          created: 'घोषणा सफलतापूर्वक प्रकाशित हो गई।',
+          deleted: 'घोषणा सफलतापूर्वक हट गई।',
+          createFailed: 'घोषणा प्रकाशित नहीं हो सकी।',
+          deleteFailed: 'घोषणा हटाई नहीं जा सकी।'
+        },
         testimonials: {
           title: 'शिक्षक प्रशंसापत्र',
           description: 'लैंडिंग पेज पर दिखने वाले प्रशंसापत्र जोड़ें या अपडेट करें। शिक्षक की छवि वैकल्पिक है।',
@@ -1172,6 +1256,7 @@ export const translations = {
         roleLabel: 'छात्र',
         tabs: {
           dashboard: 'डैशबोर्ड',
+          announcements: 'घोषणाएँ',
           myCourses: 'मेरे कोर्स',
           availableCourses: 'उपलब्ध कोर्स',
           pointShop: 'पॉइंट शॉप',
@@ -1179,6 +1264,7 @@ export const translations = {
         },
         topbar: {
           welcomeBack: 'स्वागत है, {name}',
+          openAnnouncements: 'घोषणाएँ खोलें',
           openPointShop: 'पॉइंट शॉप खोलें',
           totalPoints: 'कुल अंक'
         },
@@ -1199,6 +1285,14 @@ export const translations = {
           accept: 'स्वीकार करें',
           decline: 'अस्वीकार करें',
           updateFailed: 'अनुरोध अपडेट नहीं हो सका'
+        },
+        announcements: {
+          title: 'घोषणाएँ',
+          popupSubtitle: 'आपके शिक्षकों और प्रशासकों की अपडेट यहाँ दिखेंगी।',
+          empty: 'अभी कोई घोषणा नहीं है। शिक्षकों और प्रशासकों की नई अपडेट यहाँ दिखेंगी।',
+          globalBadge: 'सामान्य',
+          courseBadge: 'कोर्स',
+          generalAudience: 'सभी छात्र'
         },
         courses: {
           title: 'मेरा बैकपैक',
@@ -1289,7 +1383,8 @@ export const translations = {
         roleLabel: 'शिक्षक',
         tabs: {
           dashboard: 'डैशबोर्ड',
-          myCourses: 'मेरे कोर्स'
+          myCourses: 'मेरे कोर्स',
+          announcements: 'घोषणाएँ'
         },
         topbar: {
           welcomeBack: 'स्वागत है, {name}',
@@ -1302,6 +1397,27 @@ export const translations = {
           pendingGrading: 'लंबित ग्रेडिंग',
           avgPerformance: 'औसत प्रदर्शन',
           quickStats: 'त्वरित आँकड़े'
+        },
+        announcements: {
+          title: 'घोषणाएँ',
+          description: 'अपने किसी कोर्स के छात्रों के लिए त्वरित अपडेट भेजें। नवीनतम पोस्ट छात्र घोषणाएँ दृश्य में दिखाई देंगी।',
+          courseLabel: 'कोर्स',
+          selectCourse: 'कोर्स चुनें',
+          titleLabel: 'घोषणा शीर्षक',
+          titlePlaceholder: 'जैसे कल लैपटॉप लेकर आएँ',
+          messageLabel: 'घोषणा संदेश',
+          messagePlaceholder: 'वह अपडेट लिखें जो आपके छात्रों को दिखना चाहिए।',
+          create: 'घोषणा प्रकाशित करें',
+          creating: 'प्रकाशित किया जा रहा है...',
+          clear: 'साफ़ करें',
+          delete: 'हटाएँ',
+          generalAudience: 'सामान्य',
+          noCourses: 'घोषणा प्रकाशित करने के लिए पहले एक कोर्स बनाएं।',
+          empty: 'अभी तक कोई घोषणा प्रकाशित नहीं हुई है।',
+          created: 'घोषणा सफलतापूर्वक प्रकाशित हो गई।',
+          deleted: 'घोषणा सफलतापूर्वक हट गई।',
+          createFailed: 'घोषणा प्रकाशित नहीं हो सकी।',
+          deleteFailed: 'घोषणा हटाई नहीं जा सकी।'
         },
         dashboardAnalytics: {
           title: 'छात्र प्रदर्शन एनालिटिक्स',

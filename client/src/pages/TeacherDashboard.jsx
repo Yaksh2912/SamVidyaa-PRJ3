@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import { useNavigate } from 'react-router-dom'
-import { HiUsers, HiBookOpen, HiDocumentText, HiChartBar, HiFolderPlus, HiArrowDownTray, HiTrash, HiPlus, HiListBullet, HiUserGroup, HiPaperClip, HiGift, HiStar, HiPencilSquare } from 'react-icons/hi2'
+import { HiUsers, HiBookOpen, HiDocumentText, HiChartBar, HiFolderPlus, HiArrowDownTray, HiTrash, HiPlus, HiListBullet, HiUserGroup, HiPaperClip, HiGift, HiStar, HiPencilSquare, HiBellAlert } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import CreateModuleForm from '../components/CreateModuleForm'
 import CreateCourseForm from '../components/CreateCourseForm'
@@ -109,6 +109,10 @@ function TeacherDashboard() {
     dateStyle: 'medium',
     timeStyle: 'short'
   })
+  const announcementDateFormatter = new Intl.DateTimeFormat(language === 'hi' ? 'hi-IN' : 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  })
 
   const formatTaskDeadline = (deadlineAt) => {
     if (!deadlineAt) return ''
@@ -155,6 +159,16 @@ function TeacherDashboard() {
   const [handoutUploading, setHandoutUploading] = React.useState(false)
   const handoutInputRef = React.useRef(null)
   const [activeTab, setActiveTab] = React.useState('dashboard')
+  const [announcements, setAnnouncements] = React.useState([])
+  const [loadingAnnouncements, setLoadingAnnouncements] = React.useState(false)
+  const [savingAnnouncement, setSavingAnnouncement] = React.useState(false)
+  const [deletingAnnouncementId, setDeletingAnnouncementId] = React.useState(null)
+  const [announcementMessage, setAnnouncementMessage] = React.useState('')
+  const [announcementForm, setAnnouncementForm] = React.useState({
+    courseId: '',
+    title: '',
+    message: ''
+  })
 
   const [stats, setStats] = React.useState({
     activeClasses: 0,
@@ -193,6 +207,25 @@ function TeacherDashboard() {
       }
     } catch (error) {
       console.error('Failed to fetch courses', error)
+    }
+  }
+
+  const fetchAnnouncements = async () => {
+    setLoadingAnnouncements(true)
+    try {
+      const userStr = localStorage.getItem('user')
+      const token = userStr ? JSON.parse(userStr).token : null
+      const response = await fetch(`${API_BASE_URL}/api/announcements/manage`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setAnnouncements(Array.isArray(data) ? data : [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch announcements', error)
+    } finally {
+      setLoadingAnnouncements(false)
     }
   }
 
@@ -322,7 +355,97 @@ function TeacherDashboard() {
   React.useEffect(() => {
     fetchCourses()
     fetchStats()
+    fetchAnnouncements()
   }, [])
+
+  React.useEffect(() => {
+    if (!announcementForm.courseId && courses.length) {
+      setAnnouncementForm((prev) => ({ ...prev, courseId: courses[0]._id }))
+    }
+  }, [announcementForm.courseId, courses])
+
+  const handleAnnouncementFieldChange = (field, value) => {
+    setAnnouncementForm((prev) => ({ ...prev, [field]: value }))
+    setAnnouncementMessage('')
+  }
+
+  const resetAnnouncementForm = () => {
+    setAnnouncementForm({
+      courseId: courses[0]?._id || '',
+      title: '',
+      message: ''
+    })
+    setAnnouncementMessage('')
+  }
+
+  const handleCreateAnnouncement = async () => {
+    if (!announcementForm.courseId || !announcementForm.title.trim() || !announcementForm.message.trim()) return
+
+    setSavingAnnouncement(true)
+    setAnnouncementMessage('')
+
+    try {
+      const userStr = localStorage.getItem('user')
+      const token = userStr ? JSON.parse(userStr).token : null
+      const response = await fetch(`${API_BASE_URL}/api/announcements`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          course_id: announcementForm.courseId,
+          title: announcementForm.title.trim(),
+          message: announcementForm.message.trim()
+        })
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.message || 'announcement_create_failed')
+      }
+
+      setAnnouncements((prev) => [data, ...prev])
+      resetAnnouncementForm()
+      setAnnouncementMessage(t.announcements.created)
+    } catch (error) {
+      console.error('Create announcement failed', error)
+      setAnnouncementMessage(t.announcements.createFailed)
+    } finally {
+      setSavingAnnouncement(false)
+    }
+  }
+
+  const handleDeleteAnnouncement = async (announcementId) => {
+    if (!announcementId) return
+
+    setDeletingAnnouncementId(announcementId)
+    setAnnouncementMessage('')
+
+    try {
+      const userStr = localStorage.getItem('user')
+      const token = userStr ? JSON.parse(userStr).token : null
+      const response = await fetch(`${API_BASE_URL}/api/announcements/${announcementId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.message || 'announcement_delete_failed')
+      }
+
+      setAnnouncements((prev) => prev.filter((announcement) => announcement._id !== announcementId))
+      setAnnouncementMessage(t.announcements.deleted)
+    } catch (error) {
+      console.error('Delete announcement failed', error)
+      setAnnouncementMessage(t.announcements.deleteFailed)
+    } finally {
+      setDeletingAnnouncementId(null)
+    }
+  }
 
   const openCourseForm = (course = null) => {
     setEditingCourse(course)
@@ -693,7 +816,8 @@ function TeacherDashboard() {
   const selectedModuleLanguageCount = new Set(tasks.map(task => task.language).filter(Boolean)).size
   const tabTitles = {
     dashboard: t.tabs.dashboard,
-    myCourses: t.tabs.myCourses
+    myCourses: t.tabs.myCourses,
+    announcements: t.tabs.announcements
   }
   const performanceSection = t.dashboardAnalytics
   const analyticsLabels = t.analyticsModal
@@ -739,6 +863,9 @@ function TeacherDashboard() {
           </button>
           <button className={`sidebar-link ${activeTab === 'myCourses' ? 'active' : ''}`} onClick={() => setActiveTab('myCourses')}>
             <HiBookOpen className="sidebar-icon" /> {t.tabs.myCourses}
+          </button>
+          <button className={`sidebar-link ${activeTab === 'announcements' ? 'active' : ''}`} onClick={() => { setActiveTab('announcements'); handleBack(); }}>
+            <HiBellAlert className="sidebar-icon" /> {t.tabs.announcements}
           </button>
         </nav>
 
@@ -1511,6 +1638,108 @@ function TeacherDashboard() {
                   </div>
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {activeTab === 'announcements' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
+              <div className="workspace-panel-header">
+                <h3>{t.announcements.title}</h3>
+              </div>
+
+              <div className="dashboard-announcements-layout">
+                <div className="dashboard-announcement-form-card">
+                  <p className="dashboard-announcement-form-card__intro">{t.announcements.description}</p>
+
+                  <label className="admin-installer-panel__label">
+                    {t.announcements.courseLabel}
+                    <select
+                      className="admin-installer-panel__input"
+                      value={announcementForm.courseId}
+                      onChange={(event) => handleAnnouncementFieldChange('courseId', event.target.value)}
+                    >
+                      <option value="">{t.announcements.selectCourse}</option>
+                      {courses.map((course) => (
+                        <option key={course._id} value={course._id}>
+                          {course.course_name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="admin-installer-panel__label">
+                    {t.announcements.titleLabel}
+                    <input
+                      type="text"
+                      className="admin-installer-panel__input"
+                      value={announcementForm.title}
+                      placeholder={t.announcements.titlePlaceholder}
+                      onChange={(event) => handleAnnouncementFieldChange('title', event.target.value)}
+                    />
+                  </label>
+
+                  <label className="admin-installer-panel__label">
+                    {t.announcements.messageLabel}
+                    <textarea
+                      className="dashboard-announcement-form-card__textarea"
+                      value={announcementForm.message}
+                      placeholder={t.announcements.messagePlaceholder}
+                      onChange={(event) => handleAnnouncementFieldChange('message', event.target.value)}
+                    />
+                  </label>
+
+                  <div className="admin-installer-panel__actions">
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={!courses.length || savingAnnouncement || !announcementForm.courseId || !announcementForm.title.trim() || !announcementForm.message.trim()}
+                      onClick={handleCreateAnnouncement}
+                    >
+                      {savingAnnouncement ? t.announcements.creating : t.announcements.create}
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={resetAnnouncementForm}>
+                      {t.announcements.clear}
+                    </button>
+                  </div>
+
+                  {!courses.length ? (
+                    <p className="admin-installer-panel__status">{t.announcements.noCourses}</p>
+                  ) : null}
+                  {announcementMessage ? (
+                    <p className="admin-installer-panel__status admin-installer-panel__status--message">{announcementMessage}</p>
+                  ) : null}
+                </div>
+
+                <div className="dashboard-announcements-feed">
+                  {loadingAnnouncements ? (
+                    <p className="admin-installer-panel__status">{common.loading}</p>
+                  ) : announcements.length ? announcements.map((announcement) => (
+                    <article key={announcement._id} className="dashboard-announcement-item">
+                      <div className="dashboard-announcement-item__meta">
+                        <div>
+                          <h4>{announcement.title}</h4>
+                          <p>
+                            {announcement.course_id?.course_name || t.announcements.generalAudience}
+                            {' • '}
+                            {announcementDateFormatter.format(new Date(announcement.createdAt))}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-secondary admin-installer-panel__remove"
+                          disabled={deletingAnnouncementId === announcement._id}
+                          onClick={() => handleDeleteAnnouncement(announcement._id)}
+                        >
+                          {deletingAnnouncementId === announcement._id ? common.deleting : t.announcements.delete}
+                        </button>
+                      </div>
+                      <p className="dashboard-announcement-item__body">{announcement.message}</p>
+                    </article>
+                  )) : (
+                    <p className="empty-state">{t.announcements.empty}</p>
+                  )}
+                </div>
+              </div>
             </motion.div>
           )}
 

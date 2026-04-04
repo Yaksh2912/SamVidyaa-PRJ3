@@ -374,6 +374,50 @@
   flex-shrink: 0;
 }
 
+.topbar-notification-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--border-light);
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow-xs);
+}
+
+.topbar-notification-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent-primary);
+  box-shadow: 0 10px 24px rgba(13, 148, 136, 0.12);
+}
+
+.topbar-notification-button svg {
+  font-size: 1.2rem;
+}
+
+.topbar-notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-primary);
+}
+
 .language-selector {
   padding: 0.45rem 0.7rem;
   border: 1px solid var(--border-light);
@@ -665,6 +709,10 @@
   margin-bottom: 3rem;
 }
 
+.admin-announcements-card {
+  margin-bottom: 3rem;
+}
+
 .admin-installer-panel {
   border-radius: 20px;
   padding: 1.5rem;
@@ -838,6 +886,203 @@
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.dashboard-announcements-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.dashboard-announcement-form-card,
+.dashboard-announcements-feed,
+.student-announcement-card {
+  border-radius: 20px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-tertiary);
+}
+
+.dashboard-announcement-form-card,
+.dashboard-announcements-feed {
+  padding: 1.5rem;
+}
+
+.dashboard-announcement-form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dashboard-announcement-form-card__intro {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.dashboard-announcement-form-card__textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.dashboard-announcement-form-card__textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+}
+
+.dashboard-announcements-feed,
+.student-announcements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dashboard-announcement-item,
+.student-announcement-card {
+  padding: 1.1rem 1.15rem;
+}
+
+.dashboard-announcement-item {
+  border-radius: 18px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+}
+
+.dashboard-announcement-item__meta,
+.student-announcement-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 0.85rem;
+}
+
+.dashboard-announcement-item__meta h4,
+.student-announcement-card__header h4 {
+  margin: 0 0 0.3rem;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.dashboard-announcement-item__meta p,
+.student-announcement-card__header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.dashboard-announcement-item__body,
+.student-announcement-card__body {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.student-announcement-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  border-radius: 22px;
+  border: 1px solid rgba(94, 234, 212, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+    var(--bg-tertiary);
+  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.18);
+}
+
+.student-announcement-card__topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.student-announcement-card__eyebrow {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.student-announcement-card__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+.student-announcement-card__title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.4rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.student-announcement-card__badge {
+  padding: 0.42rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.18);
+  color: #43e7dc;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.student-announcement-card__time {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.student-announcement-card__body {
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.announcement-popup-modal {
+  max-width: 760px;
+}
+
+.announcement-popup-modal__header {
+  align-items: center;
+}
+
+.announcement-popup-modal__subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+}
+
+.announcement-popup-modal__body {
+  padding: 1.5rem 2rem 2rem;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .student-announcement-card__topline {
+    flex-direction: column;
+  }
+
+  .student-announcement-card__meta {
+    align-items: flex-start;
+  }
+
+  .student-announcement-card__time {
+    white-space: normal;
+  }
 }
 
 /* ─── Activity Feed ─── */
@@ -3716,6 +3961,10 @@
   }
 
   .admin-testimonials-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-announcements-layout {
     grid-template-columns: 1fr;
   }
 

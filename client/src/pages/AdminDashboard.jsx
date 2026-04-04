@@ -36,6 +36,18 @@ function AdminDashboard() {
   const [testimonialMessage, setTestimonialMessage] = React.useState('')
   const [savingTestimonial, setSavingTestimonial] = React.useState(false)
   const [deletingTestimonialId, setDeletingTestimonialId] = React.useState(null)
+  const [courses, setCourses] = React.useState([])
+  const [announcements, setAnnouncements] = React.useState([])
+  const [announcementsLoading, setAnnouncementsLoading] = React.useState(true)
+  const [announcementMessage, setAnnouncementMessage] = React.useState('')
+  const [savingAnnouncement, setSavingAnnouncement] = React.useState(false)
+  const [deletingAnnouncementId, setDeletingAnnouncementId] = React.useState(null)
+  const [announcementForm, setAnnouncementForm] = React.useState({
+    audienceType: 'GLOBAL',
+    courseId: '',
+    title: '',
+    message: '',
+  })
 
   const handleLogout = () => {
     logout()
@@ -47,6 +59,10 @@ function AdminDashboard() {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+  })
+  const announcementDateFormatter = new Intl.DateTimeFormat(language === 'hi' ? 'hi-IN' : 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
   })
 
   React.useEffect(() => {
@@ -112,6 +128,53 @@ function AdminDashboard() {
     }
   }, [])
 
+  React.useEffect(() => {
+    let isMounted = true
+
+    const fetchCoursesAndAnnouncements = async () => {
+      try {
+        const token = user?.token
+        const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+        const [coursesResponse, announcementsResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/courses`, { headers }),
+          fetch(`${API_BASE_URL}/api/announcements/manage`, { headers }),
+        ])
+
+        if (coursesResponse.ok) {
+          const courseData = await coursesResponse.json()
+          if (isMounted) {
+            setCourses(Array.isArray(courseData) ? courseData : [])
+          }
+        }
+
+        if (announcementsResponse.ok) {
+          const announcementData = await announcementsResponse.json()
+          if (isMounted) {
+            setAnnouncements(Array.isArray(announcementData) ? announcementData : [])
+          }
+        } else if (isMounted) {
+          setAnnouncements([])
+        }
+      } catch (error) {
+        console.error('Failed to fetch admin announcements', error)
+        if (isMounted) {
+          setAnnouncements([])
+        }
+      } finally {
+        if (isMounted) {
+          setAnnouncementsLoading(false)
+        }
+      }
+    }
+
+    fetchCoursesAndAnnouncements()
+
+    return () => {
+      isMounted = false
+    }
+  }, [user?.token])
+
   const formatFileSize = (size) => {
     if (!size) return '0 B'
     const units = ['B', 'KB', 'MB', 'GB']
@@ -139,6 +202,16 @@ function AdminDashboard() {
     })
     setTestimonialMessage('')
     if (testimonialImageInputRef.current) testimonialImageInputRef.current.value = ''
+  }
+
+  const resetAnnouncementForm = () => {
+    setAnnouncementForm({
+      audienceType: 'GLOBAL',
+      courseId: '',
+      title: '',
+      message: '',
+    })
+    setAnnouncementMessage('')
   }
 
   const handleInstallerSelection = (event) => {
@@ -218,6 +291,96 @@ function AdminDashboard() {
       setDesktopAppMessage(error.message || t.desktopApp.removeFailed)
     } finally {
       setRemovingDesktopApp(false)
+    }
+  }
+
+  const handleAnnouncementFieldChange = (field, value) => {
+    setAnnouncementForm((prev) => {
+      if (field === 'audienceType') {
+        return {
+          ...prev,
+          audienceType: value,
+          courseId: value === 'GLOBAL' ? '' : prev.courseId
+        }
+      }
+
+      return { ...prev, [field]: value }
+    })
+    setAnnouncementMessage('')
+  }
+
+  const handleCreateAnnouncement = async () => {
+    if (!user?.token || !announcementForm.title.trim() || !announcementForm.message.trim()) {
+      return
+    }
+
+    if (announcementForm.audienceType === 'COURSE' && !announcementForm.courseId) {
+      return
+    }
+
+    setSavingAnnouncement(true)
+    setAnnouncementMessage('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/announcements`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          audience_type: announcementForm.audienceType,
+          course_id: announcementForm.audienceType === 'COURSE' ? announcementForm.courseId : null,
+          title: announcementForm.title.trim(),
+          message: announcementForm.message.trim(),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'announcement_create_failed')
+      }
+
+      setAnnouncements((prev) => [data, ...prev])
+      resetAnnouncementForm()
+      setAnnouncementMessage(t.announcements.created)
+    } catch (error) {
+      console.error('Create announcement failed', error)
+      setAnnouncementMessage(t.announcements.createFailed)
+    } finally {
+      setSavingAnnouncement(false)
+    }
+  }
+
+  const handleDeleteAnnouncement = async (announcementId) => {
+    if (!user?.token || !announcementId) {
+      return
+    }
+
+    setDeletingAnnouncementId(announcementId)
+    setAnnouncementMessage('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/announcements/${announcementId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.message || 'announcement_delete_failed')
+      }
+
+      setAnnouncements((prev) => prev.filter((item) => item._id !== announcementId))
+      setAnnouncementMessage(t.announcements.deleted)
+    } catch (error) {
+      console.error('Delete announcement failed', error)
+      setAnnouncementMessage(t.announcements.deleteFailed)
+    } finally {
+      setDeletingAnnouncementId(null)
     }
   }
 
@@ -560,6 +723,123 @@ function AdminDashboard() {
               {desktopAppMessage ? (
                 <p className="admin-installer-panel__status admin-installer-panel__status--message">{desktopAppMessage}</p>
               ) : null}
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="section-card admin-announcements-card"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.87 }}
+        >
+          <h3>{t.announcements.title}</h3>
+          <p>{t.announcements.description}</p>
+
+          <div className="admin-testimonials-layout">
+            <div className="admin-testimonial-form">
+              <label className="admin-installer-panel__label">
+                {t.announcements.audienceLabel}
+                <select
+                  className="admin-installer-panel__input"
+                  value={announcementForm.audienceType}
+                  onChange={(e) => handleAnnouncementFieldChange('audienceType', e.target.value)}
+                >
+                  <option value="GLOBAL">{t.announcements.audienceGlobal}</option>
+                  <option value="COURSE">{t.announcements.audienceCourse}</option>
+                </select>
+              </label>
+
+              {announcementForm.audienceType === 'COURSE' ? (
+                <label className="admin-installer-panel__label">
+                  {t.announcements.courseLabel}
+                  <select
+                    className="admin-installer-panel__input"
+                    value={announcementForm.courseId}
+                    onChange={(e) => handleAnnouncementFieldChange('courseId', e.target.value)}
+                  >
+                    <option value="">{t.announcements.selectCourse}</option>
+                    {courses.map((course) => (
+                      <option key={course._id} value={course._id}>
+                        {course.course_name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
+              <label className="admin-installer-panel__label">
+                {t.announcements.titleLabel}
+                <input
+                  type="text"
+                  className="admin-installer-panel__input"
+                  placeholder={t.announcements.titlePlaceholder}
+                  value={announcementForm.title}
+                  onChange={(e) => handleAnnouncementFieldChange('title', e.target.value)}
+                />
+              </label>
+
+              <label className="admin-installer-panel__label">
+                {t.announcements.messageLabel}
+                <textarea
+                  className="admin-testimonial-form__textarea"
+                  placeholder={t.announcements.messagePlaceholder}
+                  value={announcementForm.message}
+                  onChange={(e) => handleAnnouncementFieldChange('message', e.target.value)}
+                />
+              </label>
+
+              <div className="admin-installer-panel__actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={savingAnnouncement || !announcementForm.title.trim() || !announcementForm.message.trim() || (announcementForm.audienceType === 'COURSE' && !announcementForm.courseId)}
+                  onClick={handleCreateAnnouncement}
+                >
+                  {savingAnnouncement ? t.announcements.creating : t.announcements.create}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={resetAnnouncementForm}>
+                  {t.announcements.clear}
+                </button>
+              </div>
+
+              {announcementMessage ? (
+                <p className="admin-installer-panel__status admin-installer-panel__status--message">{announcementMessage}</p>
+              ) : null}
+            </div>
+
+            <div className="admin-testimonials-list">
+              {announcementsLoading ? (
+                <p className="admin-installer-panel__status">{translations.common.loading}</p>
+              ) : announcements.length ? announcements.map((announcement) => (
+                <article key={announcement._id} className="dashboard-announcement-item">
+                  <div className="dashboard-announcement-item__meta">
+                    <div>
+                      <h4>{announcement.title}</h4>
+                      <p>
+                        {announcement.audience_type === 'GLOBAL'
+                          ? t.announcements.generalAudience
+                          : announcement.course_id?.course_name || t.announcements.courseAudience}
+                        {' • '}
+                        {announcement.created_by?.name || translations.auth.roles.admin}
+                        {' • '}
+                        {announcementDateFormatter.format(new Date(announcement.createdAt))}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-secondary admin-installer-panel__remove"
+                      disabled={deletingAnnouncementId === announcement._id}
+                      onClick={() => handleDeleteAnnouncement(announcement._id)}
+                    >
+                      {deletingAnnouncementId === announcement._id ? t.announcements.deleting : t.announcements.delete}
+                    </button>
+                  </div>
+                  <p className="dashboard-announcement-item__body">{announcement.message}</p>
+                </article>
+              )) : (
+                <p className="admin-installer-panel__status">{t.announcements.empty}</p>
+              )}
             </div>
           </div>
         </motion.div>

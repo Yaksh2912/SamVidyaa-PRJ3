@@ -36,6 +36,7 @@ app.use('/api/leaderboard', require('./routes/leaderboardRoutes'));
 app.use('/api/collaborations', require('./routes/collaborationRoutes'));
 app.use('/api/desktop-app', require('./routes/desktopAppRoutes'));
 app.use('/api/testimonials', require('./routes/testimonialRoutes'));
+app.use('/api/announcements', require('./routes/announcementRoutes'));
 
 const PORT = process.env.PORT || 5001;
 
