@@ -657,6 +657,189 @@
   font-size: 0.95rem;
 }
 
+.admin-installer-card {
+  margin-bottom: 3rem;
+}
+
+.admin-testimonials-card {
+  margin-bottom: 3rem;
+}
+
+.admin-installer-panel {
+  border-radius: 20px;
+  padding: 1.5rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
+}
+
+.admin-installer-panel__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-installer-panel__label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.admin-installer-panel__input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.admin-installer-panel__input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+}
+
+.admin-installer-panel__file-input {
+  display: none;
+}
+
+.admin-installer-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.admin-installer-panel__remove {
+  color: #dc2626;
+}
+
+.admin-installer-panel__hint,
+.admin-installer-panel__status {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.admin-installer-panel__status--stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.admin-installer-panel__status--message {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.admin-testimonials-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.admin-testimonial-form,
+.admin-testimonials-list {
+  border-radius: 20px;
+  padding: 1.5rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
+}
+
+.admin-testimonial-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-testimonial-form__textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.admin-testimonial-form__textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+}
+
+.admin-testimonials-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-testimonial-item {
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.admin-testimonial-item__header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.9rem;
+}
+
+.admin-testimonial-item__avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border-light);
+}
+
+.admin-testimonial-item__avatar--placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-gradient-subtle);
+  color: var(--accent-primary);
+  font-weight: 800;
+}
+
+.admin-testimonial-item__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-testimonial-item__meta strong {
+  color: var(--text-primary);
+}
+
+.admin-testimonial-item__meta span {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.admin-testimonial-item__quote {
+  margin: 0 0 1rem;
+  color: var(--text-primary);
+  line-height: 1.65;
+}
+
+.admin-testimonial-item__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 /* ─── Activity Feed ─── */
 .recent-activity {
   background: var(--glass-bg);
@@ -3188,6 +3371,23 @@
   flex-wrap: wrap;
 }
 
+.task-deadline-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.14);
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+.task-deadline-badge.is-passed {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.18);
+  color: var(--accent-red);
+}
+
 .diff-easy { color: var(--status-success-text); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .diff-medium { color: var(--status-warning-text); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .diff-hard { color: var(--status-danger-text); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -3505,6 +3705,22 @@
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .admin-installer-panel__actions {
+    flex-direction: column;
+  }
+
+  .admin-installer-panel__actions .btn {
+    width: 100%;
+  }
+
+  .admin-testimonials-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-testimonial-item__actions .btn {
+    width: 100%;
   }
   
   .neumorphic-modal-overlay {

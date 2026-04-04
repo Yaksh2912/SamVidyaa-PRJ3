@@ -311,6 +311,32 @@ const verifyTaskAccess = async (taskId, user) => {
     return { task, module: access.module };
 };
 
+const normalizeDeadlineFields = (payload = {}) => {
+    const hasDeadline = payload.has_deadline === true || payload.has_deadline === 'true';
+
+    if (!hasDeadline) {
+        return {
+            has_deadline: false,
+            deadline_at: null
+        };
+    }
+
+    if (!payload.deadline_at) {
+        throw new Error('Deadline date and time are required when deadline is enabled');
+    }
+
+    const parsedDeadline = new Date(payload.deadline_at);
+
+    if (Number.isNaN(parsedDeadline.getTime())) {
+        throw new Error('Invalid deadline date or time');
+    }
+
+    return {
+        has_deadline: true,
+        deadline_at: parsedDeadline
+    };
+};
+
 // @desc    Create a new task
 // @route   POST /api/tasks
 // @access  Private (Teacher/Admin)
@@ -327,12 +353,15 @@ const createTask = async (req, res) => {
             return res.status(access.error.status).json({ message: access.error.message });
         }
 
+        const deadlineFields = normalizeDeadlineFields(rest);
+
         const task = await Task.create({
             module_id,
             task_name,
             problem_statement,
             test_cases,
-            ...rest
+            ...rest,
+            ...deadlineFields
         });
 
         // Update module task count
@@ -341,7 +370,7 @@ const createTask = async (req, res) => {
         res.status(201).json(task);
     } catch (error) {
         console.error(error);
-        res.status(400).json({ message: 'Failed to create task' });
+        res.status(400).json({ message: error.message || 'Failed to create task' });
     }
 };
 
@@ -475,6 +504,13 @@ const updateTask = async (req, res) => {
         }
         const { task } = access;
 
+        if ('has_deadline' in updateData || 'deadline_at' in updateData) {
+            const deadlineFields = normalizeDeadlineFields(updateData);
+            delete updateData.has_deadline;
+            delete updateData.deadline_at;
+            Object.assign(task, deadlineFields);
+        }
+
         // Apply updates
         Object.assign(task, updateData);
         
@@ -487,7 +523,7 @@ const updateTask = async (req, res) => {
         res.json(updatedTask);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Failed to update task' });
+        res.status(400).json({ message: error.message || 'Failed to update task' });
     }
 };
 
@@ -502,6 +538,10 @@ const completeTask = async (req, res) => {
         const task = await Task.findById(taskId);
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
+        }
+
+        if (task.has_deadline && task.deadline_at && new Date(task.deadline_at).getTime() < Date.now()) {
+            return res.status(400).json({ message: 'This task deadline has already passed' });
         }
 
         // 1. Calculate the split

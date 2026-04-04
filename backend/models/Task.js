@@ -48,6 +48,14 @@ const taskSchema = mongoose.Schema(
             type: Number,
             default: 30, // minutes
         },
+        has_deadline: {
+            type: Boolean,
+            default: false,
+        },
+        deadline_at: {
+            type: Date,
+            default: null,
+        },
         language: {
             type: String,
             default: 'Python',

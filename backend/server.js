@@ -34,6 +34,8 @@ app.use('/api/enrollments', require('./routes/enrollmentRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/leaderboard', require('./routes/leaderboardRoutes'));
 app.use('/api/collaborations', require('./routes/collaborationRoutes'));
+app.use('/api/desktop-app', require('./routes/desktopAppRoutes'));
+app.use('/api/testimonials', require('./routes/testimonialRoutes'));
 
 const PORT = process.env.PORT || 5001;
 

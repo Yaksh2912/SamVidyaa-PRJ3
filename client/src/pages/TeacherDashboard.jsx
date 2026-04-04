@@ -105,6 +105,23 @@ function TeacherDashboard() {
   const navigate = useNavigate()
   const t = translations.dashboard.teacher
   const common = translations.common
+  const deadlineFormatter = new Intl.DateTimeFormat(language === 'hi' ? 'hi-IN' : 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  })
+
+  const formatTaskDeadline = (deadlineAt) => {
+    if (!deadlineAt) return ''
+
+    const parsedDeadline = new Date(deadlineAt)
+    return Number.isNaN(parsedDeadline.getTime()) ? '' : deadlineFormatter.format(parsedDeadline)
+  }
+
+  const isTaskDeadlinePassed = (task) => Boolean(
+    (task?.has_deadline ?? Boolean(task?.deadline_at)) &&
+    task?.deadline_at &&
+    new Date(task.deadline_at).getTime() < Date.now()
+  )
 
   const [showModuleForm, setShowModuleForm] = React.useState(false)
   const [showCourseForm, setShowCourseForm] = React.useState(false)
@@ -1450,6 +1467,16 @@ function TeacherDashboard() {
                             <div className="teacher-task-meta">
                               <span className="teacher-workspace-chip">{translate('dashboard.teacher.taskView.language', { language: task.language })}</span>
                               <span className="teacher-workspace-chip">{translate('dashboard.teacher.taskView.time', { time: task.time_limit })}</span>
+                              {(task.has_deadline || task.deadline_at) && (
+                                <span className="teacher-workspace-chip">
+                                  {translate('dashboard.teacher.taskView.deadline', { date: formatTaskDeadline(task.deadline_at) })}
+                                </span>
+                              )}
+                              {isTaskDeadlinePassed(task) && (
+                                <span className="teacher-workspace-chip" style={{ color: 'var(--accent-red)', borderColor: 'rgba(239, 68, 68, 0.24)' }}>
+                                  {t.taskView.deadlinePassed}
+                                </span>
+                              )}
                               <span className="teacher-workspace-chip">{translate('dashboard.teacher.taskView.tests', { count: task.test_cases_count })}</span>
                               <span className="teacher-workspace-chip">{translate('dashboard.student.pointShop.cost', { points: task.points || 0 })}</span>
                             </div>

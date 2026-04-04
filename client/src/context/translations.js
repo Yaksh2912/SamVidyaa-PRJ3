@@ -58,6 +58,38 @@ export const translations = {
       getStarted: 'Get Started',
       signIn: 'Sign In'
     },
+    landingStats: {
+      eyebrow: 'Platform Snapshot',
+      title: 'Learning at a glance',
+      subtitle: 'Live counts from the platform so visitors can immediately see the scale of courses and users on SamVidyaa.',
+      cards: {
+        courses: {
+          label: 'Total Courses',
+          description: 'All courses currently available across the platform.'
+        },
+        users: {
+          label: 'Total Users',
+          description: 'Students, teachers, and admins already using SamVidyaa.'
+        }
+      }
+    },
+    landingDownload: {
+      badge: 'Desktop App',
+      title: 'Download the Windows app',
+      unavailable: 'Desktop installer will appear here once an admin uploads it.',
+      cta: 'Download for Windows',
+      downloadsLabel: 'Downloads',
+      installerLabel: 'Desktop Build',
+      version: 'Version {version}',
+      file: 'File: {name}',
+      size: 'Size: {size}',
+      availableNow: 'Available now'
+    },
+    landingTestimonials: {
+      title: 'What Instructors',
+      titleHighlight: 'Say',
+      subtitle: 'Real feedback from instructors using SamVidyaa in their teaching workflow.'
+    },
     features: {
       students: 'For Students',
       studentsDesc: 'Access lab assignments, submit work, and track your progress',
@@ -223,6 +255,54 @@ export const translations = {
           newTeacher: 'New teacher added',
           hoursAgo: '{hours} hours ago',
           dayAgo: '1 day ago'
+        },
+        desktopApp: {
+          title: 'Desktop App Installer',
+          description: 'Upload the latest Windows installer so visitors can download it directly from the landing page.',
+          versionLabel: 'Version',
+          versionPlaceholder: 'e.g. v1.0.0',
+          selectedFile: 'Selected file: {name}',
+          currentFile: 'Current file: {name}',
+          uploadedOn: 'Updated on {date}',
+          noFile: 'No desktop installer uploaded yet.',
+          chooseFile: 'Choose Installer',
+          upload: 'Upload Installer',
+          replace: 'Replace Installer',
+          download: 'Download Current',
+          remove: 'Remove Installer',
+          uploading: 'Uploading...',
+          removing: 'Removing...',
+          uploadSuccess: 'Desktop app uploaded successfully.',
+          removeSuccess: 'Desktop app removed successfully.',
+          uploadFailed: 'Failed to upload desktop app.',
+          removeFailed: 'Failed to remove desktop app.',
+          onlyFormats: 'Accepted formats: .exe, .msi'
+        },
+        testimonials: {
+          title: 'Instructor Testimonials',
+          description: 'Add or update testimonials shown on the landing page. Instructor images are optional.',
+          nameLabel: 'Instructor Name',
+          namePlaceholder: 'e.g. Dr. Priya Sharma',
+          roleLabel: 'Instructor Role',
+          rolePlaceholder: 'e.g. Professor, Computer Science',
+          quoteLabel: 'Testimonial',
+          quotePlaceholder: 'Share what the instructor says about SamVidyaa...',
+          imageLabel: 'Instructor Image',
+          chooseImage: 'Choose Image',
+          replaceImage: 'Replace Image',
+          selectedImage: 'Selected image: {name}',
+          noTestimonials: 'No testimonials added yet.',
+          add: 'Add Testimonial',
+          update: 'Update Testimonial',
+          edit: 'Edit',
+          delete: 'Delete',
+          cancelEdit: 'Cancel Edit',
+          created: 'Testimonial added successfully.',
+          updated: 'Testimonial updated successfully.',
+          deleted: 'Testimonial deleted successfully.',
+          createFailed: 'Failed to save testimonial.',
+          deleteFailed: 'Failed to delete testimonial.',
+          imageHint: 'Accepted formats: JPG, PNG, WEBP'
         }
       },
       student: {
@@ -328,6 +408,8 @@ export const translations = {
           taskCount: 'Tasks ({count})',
           loadingTasks: 'Loading tasks...',
           noTasks: 'No tasks assigned yet.',
+          deadline: 'Deadline',
+          deadlinePassed: 'Deadline passed',
           teamworkAllowed: 'Teamwork Allowed',
           askForCollaboration: 'Ask for Collaboration',
           complete: 'Complete',
@@ -537,6 +619,8 @@ export const translations = {
           empty: 'No tasks in this module.',
           language: 'Lang: {language}',
           time: 'Time: {time}m',
+          deadline: 'Deadline: {date}',
+          deadlinePassed: 'Past due',
           tests: 'Tests: {count}',
           constraints: 'Constraints:',
           editTask: 'Edit Task',
@@ -647,6 +731,14 @@ export const translations = {
         },
         basePoints: 'Base Points',
         timeLimit: 'Time Limit (mins)',
+        setDeadline: 'Set Deadline',
+        deadlineHelp: 'Enable this if the task should close at a specific date and time. Leave it off for open-ended tasks.',
+        deadlineDateTime: 'Deadline Date & Time',
+        deadlineDate: 'Date',
+        deadlineTime: 'Time',
+        deadlinePreview: 'Scheduled For',
+        deadlineLabel: 'Deadline',
+        deadlineRequired: 'Please choose a deadline date and time.',
         language: 'Language',
         allowCollaboration: 'Allow Collaboration',
         collaborationHelp: 'If enabled, students can choose to share their reward points with peers who helped them.',
@@ -737,6 +829,8 @@ export const translations = {
       completeTask: {
         title: 'Submit Task: {task}',
         totalPoints: 'This task is worth a total of {points} points.',
+        deadline: 'Deadline: {date}',
+        deadlinePassed: 'This task can no longer be submitted because its deadline has passed.',
         collaborationMode: 'Collaboration Mode',
         collaborationInfo: 'Your teacher has enabled collaboration for this task with a {percentage}% sharing split.',
         collaborationSummary: 'Because you selected {count} peer(s), you will earn {studentShare} points, and each peer will receive {peerShare} points!',
@@ -821,6 +915,38 @@ export const translations = {
       subtitle: 'अपने लैब कार्य, असाइनमेंट और संसाधनों को एक ही स्थान पर प्रबंधित करें। छात्रों, शिक्षकों और प्रशासकों के लिए डिज़ाइन किया गया।',
       getStarted: 'शुरू करें',
       signIn: 'साइन इन'
+    },
+    landingStats: {
+      eyebrow: 'प्लेटफ़ॉर्म झलक',
+      title: 'सीखने की एक नज़र',
+      subtitle: 'प्लेटफ़ॉर्म से लाइव आँकड़े ताकि विज़िटर तुरंत SamVidyaa पर कोर्स और उपयोगकर्ताओं का स्तर देख सकें।',
+      cards: {
+        courses: {
+          label: 'कुल कोर्स',
+          description: 'प्लेटफ़ॉर्म पर अभी उपलब्ध सभी कोर्स।'
+        },
+        users: {
+          label: 'कुल उपयोगकर्ता',
+          description: 'वे छात्र, शिक्षक और प्रशासक जो पहले से SamVidyaa का उपयोग कर रहे हैं।'
+        }
+      }
+    },
+    landingDownload: {
+      badge: 'डेस्कटॉप ऐप',
+      title: 'Windows ऐप डाउनलोड करें',
+      unavailable: 'जैसे ही प्रशासक इंस्टॉलर अपलोड करेगा, वह यहां दिखेगा।',
+      cta: 'Windows के लिए डाउनलोड करें',
+      downloadsLabel: 'डाउनलोड',
+      installerLabel: 'डेस्कटॉप बिल्ड',
+      version: 'संस्करण {version}',
+      file: 'फ़ाइल: {name}',
+      size: 'आकार: {size}',
+      availableNow: 'अभी उपलब्ध'
+    },
+    landingTestimonials: {
+      title: 'शिक्षक क्या',
+      titleHighlight: 'कहते हैं',
+      subtitle: 'SamVidyaa का उपयोग कर रहे शिक्षकों की वास्तविक प्रतिक्रिया।'
     },
     features: {
       students: 'छात्रों के लिए',
@@ -987,6 +1113,54 @@ export const translations = {
           newTeacher: 'नया शिक्षक जोड़ा गया',
           hoursAgo: '{hours} घंटे पहले',
           dayAgo: '1 दिन पहले'
+        },
+        desktopApp: {
+          title: 'डेस्कटॉप ऐप इंस्टॉलर',
+          description: 'नवीनतम Windows इंस्टॉलर अपलोड करें ताकि विज़िटर उसे सीधे लैंडिंग पेज से डाउनलोड कर सकें।',
+          versionLabel: 'संस्करण',
+          versionPlaceholder: 'जैसे v1.0.0',
+          selectedFile: 'चुनी गई फ़ाइल: {name}',
+          currentFile: 'वर्तमान फ़ाइल: {name}',
+          uploadedOn: '{date} को अपडेट किया गया',
+          noFile: 'अभी तक कोई डेस्कटॉप इंस्टॉलर अपलोड नहीं किया गया है।',
+          chooseFile: 'इंस्टॉलर चुनें',
+          upload: 'इंस्टॉलर अपलोड करें',
+          replace: 'इंस्टॉलर बदलें',
+          download: 'वर्तमान डाउनलोड करें',
+          remove: 'इंस्टॉलर हटाएँ',
+          uploading: 'अपलोड हो रहा है...',
+          removing: 'हटाया जा रहा है...',
+          uploadSuccess: 'डेस्कटॉप ऐप सफलतापूर्वक अपलोड हो गया।',
+          removeSuccess: 'डेस्कटॉप ऐप सफलतापूर्वक हट गया।',
+          uploadFailed: 'डेस्कटॉप ऐप अपलोड नहीं हो सका।',
+          removeFailed: 'डेस्कटॉप ऐप हटाया नहीं जा सका।',
+          onlyFormats: 'स्वीकार्य फ़ॉर्मैट: .exe, .msi'
+        },
+        testimonials: {
+          title: 'शिक्षक प्रशंसापत्र',
+          description: 'लैंडिंग पेज पर दिखने वाले प्रशंसापत्र जोड़ें या अपडेट करें। शिक्षक की छवि वैकल्पिक है।',
+          nameLabel: 'शिक्षक का नाम',
+          namePlaceholder: 'जैसे डॉ. प्रिया शर्मा',
+          roleLabel: 'शिक्षक की भूमिका',
+          rolePlaceholder: 'जैसे प्रोफेसर, कंप्यूटर साइंस',
+          quoteLabel: 'प्रशंसापत्र',
+          quotePlaceholder: 'लिखें कि शिक्षक SamVidyaa के बारे में क्या कहते हैं...',
+          imageLabel: 'शिक्षक की छवि',
+          chooseImage: 'छवि चुनें',
+          replaceImage: 'छवि बदलें',
+          selectedImage: 'चुनी गई छवि: {name}',
+          noTestimonials: 'अभी तक कोई प्रशंसापत्र नहीं जोड़ा गया है।',
+          add: 'प्रशंसापत्र जोड़ें',
+          update: 'प्रशंसापत्र अपडेट करें',
+          edit: 'संपादित करें',
+          delete: 'हटाएँ',
+          cancelEdit: 'संपादन रद्द करें',
+          created: 'प्रशंसापत्र सफलतापूर्वक जोड़ दिया गया।',
+          updated: 'प्रशंसापत्र सफलतापूर्वक अपडेट हो गया।',
+          deleted: 'प्रशंसापत्र सफलतापूर्वक हट गया।',
+          createFailed: 'प्रशंसापत्र सहेजा नहीं जा सका।',
+          deleteFailed: 'प्रशंसापत्र हटाया नहीं जा सका।',
+          imageHint: 'स्वीकार्य फ़ॉर्मैट: JPG, PNG, WEBP'
         }
       },
       student: {
@@ -1092,6 +1266,8 @@ export const translations = {
           taskCount: 'कार्य ({count})',
           loadingTasks: 'कार्य लोड हो रहे हैं...',
           noTasks: 'अभी कोई कार्य असाइन नहीं किया गया है।',
+          deadline: 'अंतिम तिथि',
+          deadlinePassed: 'समय सीमा समाप्त',
           teamworkAllowed: 'टीमवर्क अनुमत',
           askForCollaboration: 'सहयोग के लिए पूछें',
           complete: 'पूर्ण करें',
@@ -1301,6 +1477,8 @@ export const translations = {
           empty: 'इस मॉड्यूल में कोई कार्य नहीं है।',
           language: 'भाषा: {language}',
           time: 'समय: {time}मि',
+          deadline: 'अंतिम तिथि: {date}',
+          deadlinePassed: 'समय सीमा निकल गई',
           tests: 'टेस्ट: {count}',
           constraints: 'सीमाएँ:',
           editTask: 'कार्य संपादित करें',
@@ -1411,6 +1589,14 @@ export const translations = {
         },
         basePoints: 'मूल अंक',
         timeLimit: 'समय सीमा (मिनट)',
+        setDeadline: 'अंतिम तिथि सेट करें',
+        deadlineHelp: 'यदि कार्य को किसी निश्चित दिन और समय पर बंद करना है तो इसे सक्षम करें। खुले कार्यों के लिए इसे बंद रहने दें।',
+        deadlineDateTime: 'अंतिम तिथि और समय',
+        deadlineDate: 'तारीख',
+        deadlineTime: 'समय',
+        deadlinePreview: 'निर्धारित समय',
+        deadlineLabel: 'अंतिम तिथि',
+        deadlineRequired: 'कृपया अंतिम तिथि और समय चुनें।',
         language: 'भाषा',
         allowCollaboration: 'सहयोग की अनुमति दें',
         collaborationHelp: 'यदि यह सक्षम है, तो छात्र उनकी मदद करने वाले साथियों के साथ अपने रिवॉर्ड अंक साझा कर सकते हैं।',
@@ -1501,6 +1687,8 @@ export const translations = {
       completeTask: {
         title: 'कार्य जमा करें: {task}',
         totalPoints: 'यह कार्य कुल {points} अंकों का है।',
+        deadline: 'अंतिम तिथि: {date}',
+        deadlinePassed: 'इस कार्य की अंतिम तिथि निकल चुकी है, इसलिए अब इसे जमा नहीं किया जा सकता।',
         collaborationMode: 'सहयोग मोड',
         collaborationInfo: 'आपके शिक्षक ने इस कार्य के लिए {percentage}% शेयरिंग विभाजन के साथ सहयोग सक्षम किया है।',
         collaborationSummary: 'क्योंकि आपने {count} साथी चुने हैं, आपको {studentShare} अंक मिलेंगे और प्रत्येक साथी को {peerShare} अंक मिलेंगे!',

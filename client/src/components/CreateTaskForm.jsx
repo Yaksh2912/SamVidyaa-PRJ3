@@ -4,6 +4,28 @@ import API_BASE_URL from '../config';
 import { useI18n } from '../context/I18nContext';
 import './ModalForm.css';
 
+const toDateTimeLocalValue = (value) => {
+    if (!value) return '';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+
+    const pad = (part) => String(part).padStart(2, '0');
+
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const splitDeadlineValue = (value) => {
+    const localValue = toDateTimeLocalValue(value);
+
+    if (!localValue) {
+        return { deadline_date: '', deadline_time: '' };
+    }
+
+    const [deadline_date = '', deadline_time = ''] = localValue.split('T');
+    return { deadline_date, deadline_time };
+};
+
 function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
     const { translations } = useI18n();
     const t = translations.forms.task;
@@ -19,6 +41,9 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
         allow_collaboration: false,
         collab_percentage: 50,
         time_limit: 30,
+        has_deadline: false,
+        deadline_date: '',
+        deadline_time: '',
         language: 'Python',
         constraints: ''
     });
@@ -62,6 +87,7 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
 
     useEffect(() => {
         if (initialData) {
+            const deadlineParts = splitDeadlineValue(initialData.deadline_at);
             setFormData({
                 task_name: initialData.task_name || '',
                 problem_statement: initialData.problem_statement || '',
@@ -73,6 +99,9 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                 allow_collaboration: initialData.allow_collaboration || false,
                 collab_percentage: initialData.collab_percentage || 50,
                 time_limit: initialData.time_limit || 30,
+                has_deadline: initialData.has_deadline ?? Boolean(initialData.deadline_at),
+                deadline_date: deadlineParts.deadline_date,
+                deadline_time: deadlineParts.deadline_time,
                 language: initialData.language || 'Python',
                 constraints: initialData.constraints || ''
             });
@@ -87,7 +116,8 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
         const { name, value, type, checked } = e.target;
         setFormData((prev) => ({
             ...prev,
-            [name]: type === 'checkbox' ? checked : value
+            [name]: type === 'checkbox' ? checked : value,
+            ...(name === 'has_deadline' && !checked ? { deadline_date: '', deadline_time: '' } : {})
         }));
     };
 
@@ -170,13 +200,27 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
             return;
         }
 
+        if (formData.has_deadline && (!formData.deadline_date || !formData.deadline_time)) {
+            setError(t.deadlineRequired);
+            setIsSubmitting(false);
+            return;
+        }
+
         try {
+            const deadlineAt = formData.has_deadline && formData.deadline_date && formData.deadline_time
+                ? new Date(`${formData.deadline_date}T${formData.deadline_time}`).toISOString()
+                : null;
+
             const payload = {
                 module_id: moduleId,
                 ...formData,
+                deadline_at: deadlineAt,
                 test_cases: testCases,
                 test_cases_count: testCases.length
             };
+
+            delete payload.deadline_date;
+            delete payload.deadline_time;
 
             const savedTask = await saveTask(payload, initialData?._id);
             onTaskCreated(savedTask, isEditing);
@@ -289,6 +333,55 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                                 <option value="C++">C++</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div className="task-deadline-panel">
+                        <div className="task-deadline-panel__copy">
+                            <label className="task-deadline-toggle">
+                                <input
+                                    type="checkbox"
+                                    name="has_deadline"
+                                    checked={formData.has_deadline}
+                                    onChange={handleChange}
+                                />
+                                <span>{t.setDeadline}</span>
+                            </label>
+                            <p>{t.deadlineHelp}</p>
+                        </div>
+
+                        {formData.has_deadline && (
+                            <div className="task-deadline-panel__field">
+                                <label>{t.deadlineDateTime}</label>
+                                <div className="task-deadline-panel__inputs">
+                                    <div className="form-group task-deadline-panel__subfield">
+                                        <label>{t.deadlineDate}</label>
+                                        <input
+                                            type="date"
+                                            name="deadline_date"
+                                            value={formData.deadline_date}
+                                            onChange={handleChange}
+                                            required={formData.has_deadline}
+                                        />
+                                    </div>
+                                    <div className="form-group task-deadline-panel__subfield">
+                                        <label>{t.deadlineTime}</label>
+                                        <input
+                                            type="time"
+                                            name="deadline_time"
+                                            value={formData.deadline_time}
+                                            onChange={handleChange}
+                                            required={formData.has_deadline}
+                                        />
+                                    </div>
+                                </div>
+                                {formData.deadline_date && formData.deadline_time && (
+                                    <div className="task-deadline-panel__preview">
+                                        <span>{t.deadlinePreview}</span>
+                                        <strong>{formData.deadline_date} • {formData.deadline_time}</strong>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="task-collaboration-panel">

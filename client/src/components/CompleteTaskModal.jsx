@@ -6,13 +6,25 @@ import { useI18n } from '../context/I18nContext';
 import './ModalForm.css';
 
 function CompleteTaskModal({ task, courseId, onClose, onComplete }) {
-    const { translations, t: translate } = useI18n();
+    const { translations, language, t: translate } = useI18n();
     const t = translations.forms.completeTask;
+    const deadlineFormatter = new Intl.DateTimeFormat(language === 'hi' ? 'hi-IN' : 'en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+    });
     const [classmates, setClassmates] = useState([]);
     const [selectedPeers, setSelectedPeers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
+    const deadlinePassed = Boolean(
+        (task?.has_deadline ?? Boolean(task?.deadline_at)) &&
+        task?.deadline_at &&
+        new Date(task.deadline_at).getTime() < Date.now()
+    );
+    const formattedDeadline = task?.deadline_at
+        ? deadlineFormatter.format(new Date(task.deadline_at))
+        : '';
 
     useEffect(() => {
         const userStr = localStorage.getItem('user');
@@ -102,6 +114,20 @@ function CompleteTaskModal({ task, courseId, onClose, onComplete }) {
                     {translate('forms.completeTask.totalPoints', { points: task.points })}
                 </p>
 
+                {(task.has_deadline || task.deadline_at) && (
+                    <div style={{ background: 'var(--bg-tertiary)', padding: '0.85rem 1rem', borderRadius: '8px', marginBottom: '1rem', border: '1px solid var(--border-light)' }}>
+                        <p style={{ margin: 0, fontSize: '0.92rem', color: deadlinePassed ? 'var(--accent-red)' : 'var(--text-secondary)', fontWeight: 600 }}>
+                            {translate('forms.completeTask.deadline', { date: formattedDeadline })}
+                        </p>
+                    </div>
+                )}
+
+                {deadlinePassed && (
+                    <div className="error-message">
+                        {t.deadlinePassed}
+                    </div>
+                )}
+
                 {task.allow_collaboration && (
                     <div style={{ background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-blue)' }}>
                         <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-blue)', marginBottom: '0.5rem' }}>
@@ -123,7 +149,7 @@ function CompleteTaskModal({ task, courseId, onClose, onComplete }) {
                 )}
 
                 <form onSubmit={handleSubmit}>
-                    {task.allow_collaboration && (
+                    {task.allow_collaboration && !deadlinePassed && (
                         <div className="form-group">
                             <label>{t.selectCollaborators}</label>
                             {loading ? (
@@ -149,7 +175,7 @@ function CompleteTaskModal({ task, courseId, onClose, onComplete }) {
 
                     <div className="modal-actions" style={{ marginTop: '2rem' }}>
                         <button type="button" className="btn btn-secondary" onClick={onClose}>{t.cancel}</button>
-                        <button type="submit" className="btn btn-primary" disabled={submitting}>
+                        <button type="submit" className="btn btn-primary" disabled={submitting || deadlinePassed}>
                             <HiCheckCircle style={{ marginRight: '0.5rem' }}/> 
                             {submitting ? t.submitting : t.markComplete}
                         </button>

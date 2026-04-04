@@ -58,6 +58,23 @@ function StudentDashboard() {
   const { toggleTheme, isDark } = useTheme()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const deadlineFormatter = new Intl.DateTimeFormat(language === 'hi' ? 'hi-IN' : 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  })
+
+  const formatTaskDeadline = (deadlineAt) => {
+    if (!deadlineAt) return ''
+
+    const parsedDeadline = new Date(deadlineAt)
+    return Number.isNaN(parsedDeadline.getTime()) ? '' : deadlineFormatter.format(parsedDeadline)
+  }
+
+  const isTaskDeadlinePassed = (task) => Boolean(
+    (task?.has_deadline ?? Boolean(task?.deadline_at)) &&
+    task?.deadline_at &&
+    new Date(task.deadline_at).getTime() < Date.now()
+  )
 
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [availableCourses, setAvailableCourses] = useState([]);
@@ -928,13 +945,24 @@ function StudentDashboard() {
                             <p className="loading-tasks">{t.courseModal.noTasks}</p>
                           ) : (
                             <div className="neumorphic-task-list">
-                              {courseTasks[module._id].map(task => (
+                              {courseTasks[module._id].map(task => {
+                                const deadlinePassed = isTaskDeadlinePassed(task)
+
+                                return (
                                 <div key={task._id} className="neumorphic-task-item">
                                   <div className="task-info">
                                     <span className="task-name">{task.task_name}</span>
                                     <span className="task-meta">
                                       <span className={`diff-${task.difficulty.toLowerCase()}`}>{getDifficultyLabel(task.difficulty)}</span> | {task.language} | <HiClock/> {task.time_limit}m
                                       {task.allow_collaboration && <span style={{ marginLeft: '10px', color: '#3b82f6', fontWeight: 600 }}>• {t.courseModal.teamworkAllowed}</span>}
+                                      {(task.has_deadline || task.deadline_at) && (
+                                        <span className={`task-deadline-badge ${deadlinePassed ? 'is-passed' : ''}`}>
+                                          {t.courseModal.deadline}: {formatTaskDeadline(task.deadline_at)}
+                                        </span>
+                                      )}
+                                      {deadlinePassed && (
+                                        <span className="task-deadline-badge is-passed">{t.courseModal.deadlinePassed}</span>
+                                      )}
                                     </span>
                                   </div>
                                   <div className="task-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -958,13 +986,15 @@ function StudentDashboard() {
                                     <button 
                                       type="button"
                                       className="btn btn-primary task-complete-btn"
+                                      disabled={deadlinePassed}
                                       onClick={() => setCompletingTask(task)}
                                     >
-                                      <HiCheckCircle /> {t.courseModal.complete}
+                                      <HiCheckCircle /> {deadlinePassed ? t.courseModal.deadlinePassed : t.courseModal.complete}
                                     </button>
                                   </div>
                                 </div>
-                              ))}
+                                )
+                              })}
                             </div>
                           )}
                         </div>

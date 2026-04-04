@@ -1,6 +1,24 @@
 const User = require('../models/User');
+const Course = require('../models/Course');
 const Reward = require('../models/Reward');
 const PointTransaction = require('../models/PointTransaction');
+
+// @desc    Get public platform stats for landing page
+// @route   GET /api/users/public-stats
+// @access  Public
+const getPublicPlatformStats = async (_req, res) => {
+    try {
+        const [totalUsers, totalCourses] = await Promise.all([
+            User.countDocuments(),
+            Course.countDocuments(),
+        ]);
+
+        res.json({ totalUsers, totalCourses });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to fetch public platform stats' });
+    }
+};
 
 // @desc    Get current user's points
 // @route   GET /api/users/me/points
@@ -104,4 +122,4 @@ const addPoints = async (req, res) => {
     }
 };
 
-module.exports = { getUserPoints, claimReward, addPoints };
+module.exports = { getUserPoints, claimReward, addPoints, getPublicPlatformStats };
