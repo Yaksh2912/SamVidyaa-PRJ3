@@ -37,10 +37,16 @@ Recently Completed:
    - Added persistent task completion records and a backend history endpoint for student completions.
    - Completed tasks now move out of the active course task list after submission and appear in the history timeline.
 
+8. Automated Regression Test Foundation
+   - Added a lightweight backend test setup using Node's built-in test runner.
+   - Added regression coverage for student task flow and bulk enrollment counting behavior.
+   - Added regression coverage for announcement, reward, and leaderboard API behavior.
+   - Added an executable backend test script so critical API changes can be validated quickly.
+
 Remaining Backlog:
 
 1. Web App Backlog
-   - No remaining web-app backlog items are currently listed here.
+   - Expand automated test coverage to more API endpoints and UI-critical flows as the app grows.
 
 Out of Scope For This Repo:
 
