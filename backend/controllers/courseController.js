@@ -1,9 +1,14 @@
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const StudentProgress = require('../models/StudentProgress');
+const Module = require('../models/Module');
+const Task = require('../models/Task');
+const CodingQuestion = require('../models/CodingQuestion');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const archive = require('archiver');
+const { clearCourseHandoutVectors, resolveUploadPath, syncCourseHandout } = require('../services/courseHandoutIngestionService');
 
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
 const isInstructorRole = (role) => role === 'INSTRUCTOR' || role === 'instructor' || role === 'TEACHER' || role === 'teacher';
@@ -656,14 +661,6 @@ const getCourseAnalytics = async (req, res) => {
     }
 };
 
-const Module = require('../models/Module');
-const Task = require('../models/Task');
-const archive = require('archiver');
-
-
-
-const CodingQuestion = require('../models/CodingQuestion');
-
 // @desc    Export course as JSON
 // @route   GET /api/courses/:id/export
 // @access  Private (Instructor/Admin)
@@ -814,6 +811,26 @@ Modules Count: ${modulesData.length}
 // @desc    Upload / replace a handout PDF for a course
 // @route   POST /api/courses/:id/handout
 // @access  Private (Instructor)
+const applyHandoutIndexState = (course, syncResult = {}) => {
+    const status = syncResult.status || 'failed';
+
+    course.handout_embedding_status = status;
+    course.handout_last_indexed_at = status === 'indexed' ? new Date() : null;
+    course.handout_chunks_stored = syncResult.chunksStored || 0;
+    course.handout_pages = syncResult.pages || 0;
+    course.handout_index_error = syncResult.reason || null;
+};
+
+const resetHandoutState = (course) => {
+    course.handout_filename = null;
+    course.handout_path = null;
+    course.handout_embedding_status = 'not_uploaded';
+    course.handout_last_indexed_at = null;
+    course.handout_chunks_stored = 0;
+    course.handout_pages = 0;
+    course.handout_index_error = null;
+};
+
 const uploadHandout = async (req, res) => {
     try {
         const access = await verifyCourseAccess(req.params.id, req.user);
@@ -826,7 +843,7 @@ const uploadHandout = async (req, res) => {
 
         // Remove old handout file if one exists
         if (course.handout_path) {
-            const oldFile = path.join(__dirname, '..', course.handout_path);
+            const oldFile = resolveUploadPath(course.handout_path);
             if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
         }
 
@@ -835,12 +852,39 @@ const uploadHandout = async (req, res) => {
 
         course.handout_filename = req.file.originalname;
         course.handout_path = relativePath;
+        course.handout_embedding_status = 'processing';
+        course.handout_last_indexed_at = null;
+        course.handout_chunks_stored = 0;
+        course.handout_pages = 0;
+        course.handout_index_error = null;
+
+        let syncResult;
+        try {
+            syncResult = await syncCourseHandout(course);
+        } catch (ingestError) {
+            console.error('Handout indexing error:', ingestError);
+            syncResult = {
+                status: 'failed',
+                reason: ingestError.message || 'Failed to index handout.',
+                chunksStored: 0,
+                pages: 0,
+            };
+        }
+
+        applyHandoutIndexState(course, syncResult);
         await course.save();
 
         res.json({
-            message: 'Handout uploaded',
+            message: syncResult.status === 'indexed'
+                ? 'Handout uploaded and indexed.'
+                : `Handout uploaded, but indexing ${syncResult.status === 'skipped' ? 'was skipped' : 'failed'}.`,
             handout_filename: course.handout_filename,
             handout_path: course.handout_path,
+            handout_embedding_status: course.handout_embedding_status,
+            handout_last_indexed_at: course.handout_last_indexed_at,
+            handout_chunks_stored: course.handout_chunks_stored,
+            handout_pages: course.handout_pages,
+            handout_index_error: course.handout_index_error,
         });
     } catch (error) {
         console.error('Handout upload error:', error);
@@ -859,13 +903,18 @@ const deleteHandout = async (req, res) => {
         }
         const course = access.course;
 
+        try {
+            await clearCourseHandoutVectors(course._id);
+        } catch (vectorCleanupError) {
+            console.error('Handout vector cleanup error:', vectorCleanupError);
+        }
+
         if (course.handout_path) {
-            const filePath = path.join(__dirname, '..', course.handout_path);
+            const filePath = resolveUploadPath(course.handout_path);
             if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         }
 
-        course.handout_filename = null;
-        course.handout_path = null;
+        resetHandoutState(course);
         await course.save();
 
         res.json({ message: 'Handout removed' });

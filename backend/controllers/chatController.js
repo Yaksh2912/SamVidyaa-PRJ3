@@ -1,5 +1,6 @@
 const { handleChatMessage, getChatHistory, clearChatHistory } = require('../services/chatService');
 const { embedAndStore } = require('../services/vectorStore');
+const { ingestHandoutPdf } = require('../services/courseHandoutIngestionService');
 const path = require('path');
 const fs = require('fs');
 
@@ -116,34 +117,22 @@ const ingestPdf = async (req, res) => {
             return res.status(404).json({ message: 'File not found.' });
         }
 
-        // Dynamic import of pdf-parse (only needed for this endpoint)
-        let pdfParse;
-        try {
-            pdfParse = require('pdf-parse');
-        } catch (e) {
-            return res.status(500).json({
-                message: 'pdf-parse module not installed. Run: npm install pdf-parse',
-            });
-        }
-
-        const dataBuffer = fs.readFileSync(absolutePath);
-        const pdfData = await pdfParse(dataBuffer);
-
-        if (!pdfData.text || pdfData.text.trim().length === 0) {
-            return res.status(400).json({ message: 'Could not extract text from PDF.' });
-        }
-
-        const chunksStored = await embedAndStore(pdfData.text, {
+        const result = await ingestHandoutPdf({
+            relativePath: filePath,
             source: path.basename(filePath),
             courseId: courseId || '',
             courseName: courseName || '',
-            type: 'course-handout',
+            replaceExistingForCourse: Boolean(courseId),
         });
 
         res.json({
-            message: `PDF ingested successfully. ${chunksStored} chunks stored from ${pdfData.numpages} pages.`,
-            chunksStored,
-            pages: pdfData.numpages,
+            message: result.status === 'indexed'
+                ? `PDF ingested successfully. ${result.chunksStored} chunks stored from ${result.pages} pages.`
+                : `PDF ingestion skipped. ${result.reason}`,
+            status: result.status,
+            reason: result.reason || null,
+            chunksStored: result.chunksStored,
+            pages: result.pages,
         });
     } catch (error) {
         console.error('[ChatController] ingestPdf error:', error.message);

@@ -130,11 +130,32 @@ async function embedAndStore(documentText, metadata = {}) {
     const batchSize = 100;
     for (let i = 0; i < vectors.length; i += batchSize) {
         const batch = vectors.slice(i, i + batchSize);
-        await pineconeIndex.upsert(batch);
+        await pineconeIndex.upsert({ records: batch });
     }
 
     console.log(`[VectorStore] Stored ${vectors.length} chunks from: ${metadata.source || 'unknown'}`);
     return vectors.length;
+}
+
+/**
+ * Delete vectors by metadata filter.
+ *
+ * @param {object} filter
+ * @returns {boolean} Whether a delete was attempted
+ */
+async function clearVectorsByFilter(filter = {}) {
+    if (!pineconeIndex) {
+        console.warn('[VectorStore] Not initialized — skipping vector deletion.');
+        return false;
+    }
+
+    if (!filter || typeof filter !== 'object' || Object.keys(filter).length === 0) {
+        throw new Error('A non-empty filter object is required to delete vectors.');
+    }
+
+    await pineconeIndex.deleteMany({ filter });
+    console.log('[VectorStore] Deleted vectors for filter:', JSON.stringify(filter));
+    return true;
 }
 
 /**
@@ -196,6 +217,7 @@ module.exports = {
     initVectorStore,
     generateEmbedding,
     embedAndStore,
+    clearVectorsByFilter,
     semanticSearch,
     chunkText,
     isReady,

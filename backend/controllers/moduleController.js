@@ -5,6 +5,8 @@ const archive = require('archiver');
 const fs = require('fs');
 const path = require('path');
 
+const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
+
 const attachTaskCounts = async (modules) => {
     if (!modules.length) return modules;
 
@@ -32,6 +34,22 @@ const attachTaskCounts = async (modules) => {
         moduleObject.task_count = taskCountMap.get(module._id.toString()) || 0;
         return moduleObject;
     });
+};
+
+const getModuleTaskStats = (tasks = [], moduleTestQuestions = []) => {
+    const taskLanguages = [...new Set(tasks.map((task) => task.language).filter(Boolean))];
+    const moduleTestLanguages = [...new Set(moduleTestQuestions.map((question) => question.language).filter(Boolean))];
+
+    return {
+        taskCount: tasks.length,
+        moduleTestQuestionCount: moduleTestQuestions.length,
+        totalTaskPoints: tasks.reduce((sum, task) => sum + (task.points || 0), 0),
+        totalModuleTestPoints: moduleTestQuestions.reduce((sum, question) => sum + (question.points || 0), 0),
+        estimatedTaskTimeMinutes: tasks.reduce((sum, task) => sum + (task.time_limit || 0), 0),
+        estimatedModuleTestTimeMinutes: moduleTestQuestions.reduce((sum, question) => sum + (question.time_limit || 0), 0),
+        languages: [...new Set([...taskLanguages, ...moduleTestLanguages])],
+        resourceFileCount: 0,
+    };
 };
 
 // @desc    Create a new module
@@ -166,6 +184,48 @@ const getCourseModules = async (req, res) => {
         res.json(await attachTaskCounts(modules));
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Get a single module with granular details
+// @route   GET /api/modules/:id
+// @access  Private
+const getModuleById = async (req, res) => {
+    try {
+        const module = await Module.findById(req.params.id)
+            .populate('course_id', 'course_name course_code subject instructor is_active');
+
+        if (!module) {
+            return res.status(404).json({ message: 'Module not found' });
+        }
+
+        const courseInstructorId = module.course_id?.instructor?.toString?.();
+        const isOwner = module.createdBy?.toString() === req.user._id.toString();
+
+        if (!isOwner && !isAdminRole(req.user.role) && courseInstructorId !== req.user._id.toString()) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const [tasks, moduleTestQuestions] = await Promise.all([
+            Task.find({ module_id: module._id }).sort({ createdAt: 1 }),
+            CodingQuestion.find({ module_id: module._id, question_type: 'MODULE_TEST' }).sort({ createdAt: 1 }),
+        ]);
+
+        const moduleObject = module.toObject();
+        moduleObject.task_count = tasks.length;
+
+        const stats = getModuleTaskStats(tasks, moduleTestQuestions);
+        stats.resourceFileCount = module.files?.length || 0;
+
+        res.json({
+            ...moduleObject,
+            tasks,
+            module_test_questions_detail: moduleTestQuestions,
+            stats,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to fetch module details' });
     }
 };
 
@@ -346,6 +406,7 @@ module.exports = {
     updateModule,
     getTeacherModules,
     getCourseModules,
+    getModuleById,
     deleteModuleFile,
     deleteModule,
     exportModule

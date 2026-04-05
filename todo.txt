@@ -22,6 +22,16 @@ Recently Completed:
    - Added a landing page testimonials section before the FAQ.
    - Added a carousel with autoplay and manual previous/next navigation.
 
+5. Automated RAG Document Embeddings
+   - Added automatic PDF text extraction for uploaded course handouts.
+   - Added Pinecone cleanup and re-indexing when a handout is replaced or removed.
+   - Added indexing status fields so the course record tracks sync results.
+
+6. Single Module View API
+   - Added the backend endpoint to fetch detailed data for a single module.
+   - Included module tasks, module test questions, and summary statistics in the response.
+   - Replaced the placeholder `GET /api/modules/:id` route with a working implementation.
+
 Remaining Backlog:
 
 1. Code Execution & Automated Grading Engine
@@ -33,11 +43,5 @@ Remaining Backlog:
    - Implement real grading logic for the teacher dashboard instead of mocking `pendingGrading` and `avgPerformance`.
    - Add UI/API for teachers to manually grade submissions if automated grading is not sufficient or if tasks require manual review.
 
-3. Automated RAG Document Embeddings
-   - Add logic that triggers upon PDF handout upload to parse the PDF, generate text embeddings, and insert them into the Pinecone Vector Database. This will keep the AI chatbot aware of the newest course materials automatically instead of requiring manual admin syncs.
-
-4. Student Dashboard "History" View
+3. Student Dashboard "History" View
    - Create a "History" or "Completed" tab for students in the dashboard to review their past work and grades, since completed items currently just disappear from active views.
-
-5. Single Module View API
-   - Implement the backend endpoint to fetch granular details of a single module (noted as missing in `moduleRoutes.js`).

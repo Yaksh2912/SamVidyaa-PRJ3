@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { protect } = require('../middleware/authMiddleware');
-const { createModule, updateModule, getTeacherModules, getCourseModules, deleteModuleFile, deleteModule, exportModule } = require('../controllers/moduleController');
+const { createModule, updateModule, getTeacherModules, getCourseModules, getModuleById, deleteModuleFile, deleteModule, exportModule } = require('../controllers/moduleController');
 
 // Multer Config
 const storage = multer.diskStorage({
@@ -34,10 +34,7 @@ router.route('/:id/files')
     .delete(protect, deleteModuleFile);
 
 router.route('/:id')
-    .get(protect, (req, res) => {
-        // If we want to view a single module... not implemented yet broadly but the route should support it or we split export
-        // For general operations on ID:
-    })
+    .get(protect, getModuleById)
     .put(protect, upload.array('files'), updateModule)
     .delete(protect, deleteModule);
 

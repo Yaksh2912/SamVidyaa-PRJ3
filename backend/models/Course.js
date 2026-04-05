@@ -44,6 +44,26 @@ const courseSchema = mongoose.Schema(
             type: String,
             default: null,
         },
+        handout_embedding_status: {
+            type: String,
+            default: 'not_uploaded',
+        },
+        handout_last_indexed_at: {
+            type: Date,
+            default: null,
+        },
+        handout_chunks_stored: {
+            type: Number,
+            default: 0,
+        },
+        handout_pages: {
+            type: Number,
+            default: 0,
+        },
+        handout_index_error: {
+            type: String,
+            default: null,
+        },
     },
     {
         timestamps: true,
