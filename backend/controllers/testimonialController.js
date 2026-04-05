@@ -31,6 +31,7 @@ const testimonialImageUpload = multer({
 });
 
 const testimonialImageUploadMiddleware = testimonialImageUpload.single('image');
+const normalizeInlineText = (value = '') => value.replace(/\s+/g, ' ').trim();
 
 const removeFileIfPresent = (relativePath) => {
     if (!relativePath) return;
@@ -74,17 +75,19 @@ const createTestimonial = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized' });
         }
 
-        const { name, role, quote } = req.body;
+        const name = normalizeInlineText(req.body.name);
+        const role = normalizeInlineText(req.body.role);
+        const quote = normalizeInlineText(req.body.quote);
 
-        if (!name?.trim() || !role?.trim() || !quote?.trim()) {
+        if (!name || !role || !quote) {
             removeFileIfPresent(req.file ? path.join('uploads', 'testimonials', req.file.filename) : null);
             return res.status(400).json({ message: 'Name, role, and quote are required' });
         }
 
         const testimonial = await Testimonial.create({
-            name: name.trim(),
-            role: role.trim(),
-            quote: quote.trim(),
+            name,
+            role,
+            quote,
             image_filename: req.file?.originalname || null,
             image_path: req.file ? path.join('uploads', 'testimonials', req.file.filename) : null,
             created_by: req.user._id,
@@ -112,11 +115,13 @@ const updateTestimonial = async (req, res) => {
             return res.status(404).json({ message: 'Testimonial not found' });
         }
 
-        const { name, role, quote } = req.body;
+        const name = normalizeInlineText(req.body.name);
+        const role = normalizeInlineText(req.body.role);
+        const quote = normalizeInlineText(req.body.quote);
 
-        testimonial.name = name?.trim() || testimonial.name;
-        testimonial.role = role?.trim() || testimonial.role;
-        testimonial.quote = quote?.trim() || testimonial.quote;
+        testimonial.name = name || testimonial.name;
+        testimonial.role = role || testimonial.role;
+        testimonial.quote = quote || testimonial.quote;
 
         if (req.file) {
             removeFileIfPresent(testimonial.image_path);

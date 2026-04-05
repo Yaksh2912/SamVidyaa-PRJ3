@@ -49,6 +49,8 @@ function useCountUp(target, duration = 1200) {
   return count;
 }
 
+const normalizeInlineText = (value = '') => value.replace(/\s+/g, ' ').trim()
+
 function LandingPage() {
   const [activeIndex, setActiveIndex] = useState(null);
   const [desktopApp, setDesktopApp] = useState(undefined);
@@ -519,9 +521,9 @@ function LandingPage() {
                       </div>
                       <div className="testimonial-card__meta">
                         <strong>{testimonial.name}</strong>
-                        <span>{testimonial.role}</span>
+                        <span>{normalizeInlineText(testimonial.role)}</span>
                       </div>
-                      <p className="testimonial-card__quote">{testimonial.quote}</p>
+                      <p className="testimonial-card__quote">{normalizeInlineText(testimonial.quote)}</p>
                       <div className="testimonial-card__rating" aria-label="5 star testimonial">
                         {Array.from({ length: 5 }).map((_, starIndex) => (
                           <HiStar key={starIndex} />
