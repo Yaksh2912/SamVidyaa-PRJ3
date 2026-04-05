@@ -32,16 +32,17 @@ Recently Completed:
    - Included module tasks, module test questions, and summary statistics in the response.
    - Replaced the placeholder `GET /api/modules/:id` route with a working implementation.
 
+7. Student Dashboard "History" View
+   - Added a dedicated History tab so students can review completed tasks.
+   - Added persistent task completion records and a backend history endpoint for student completions.
+   - Completed tasks now move out of the active course task list after submission and appear in the history timeline.
+
 Remaining Backlog:
 
-1. Code Execution & Automated Grading Engine
-   - Create a mechanism to actually evaluate code.
-   - Update `completeTask` controller to utilize a sandbox or code execution API to compile, run, and verify student submissions against test cases instead of blindly awarding points.
-   - Create a Submission schema to store student code answers.
+1. Web App Backlog
+   - No remaining web-app backlog items are currently listed here.
 
-2. Manual Grading & Performance Statistics
-   - Implement real grading logic for the teacher dashboard instead of mocking `pendingGrading` and `avgPerformance`.
-   - Add UI/API for teachers to manually grade submissions if automated grading is not sufficient or if tasks require manual review.
+Out of Scope For This Repo:
 
-3. Student Dashboard "History" View
-   - Create a "History" or "Completed" tab for students in the dashboard to review their past work and grades, since completed items currently just disappear from active views.
+1. Desktop app execution, grading, and related secure evaluation workflows
+   - Managed separately by the desktop app owner and intentionally excluded from this web app backlog.

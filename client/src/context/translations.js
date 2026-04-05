@@ -342,6 +342,7 @@ export const translations = {
           dashboard: 'Dashboard',
           announcements: 'Announcements',
           myCourses: 'My Courses',
+          history: 'History',
           availableCourses: 'Available Courses',
           pointShop: 'Point Shop',
           rankings: 'Rankings'
@@ -387,6 +388,24 @@ export const translations = {
           active: 'Active',
           downloadHandout: 'Download Handout',
           openCourse: 'Open Course'
+        },
+        history: {
+          title: 'Completed Work',
+          subtitle: 'Review tasks you have already finished across all your courses.',
+          loading: 'Loading your completed work...',
+          empty: 'No completed tasks yet. Finish a task to start building your history.',
+          completedBadge: 'Completed',
+          completedOn: 'Completed on {date}',
+          completedWith: 'Worked with: {names}',
+          collaborators: '{count} collaborators',
+          timeLimit: '{minutes}m',
+          summary: {
+            completedTasks: 'Completed Tasks',
+            pointsEarned: 'Points Earned',
+            coursesTouched: 'Courses Touched',
+            lastCompleted: 'Last Completed',
+            noCompletions: 'No history yet'
+          }
         },
         availableCourses: {
           title: 'Course Catalog',
@@ -436,6 +455,7 @@ export const translations = {
           handout: 'Handout',
           resourcesTitle: 'Resources ({count})',
           openResource: 'Open File',
+          downloadResource: 'Download',
           close: 'Close',
           syllabusLoading: 'Loading syllabus...',
           empty: 'No modules available for this course yet.',
@@ -1258,6 +1278,7 @@ export const translations = {
           dashboard: 'डैशबोर्ड',
           announcements: 'घोषणाएँ',
           myCourses: 'मेरे कोर्स',
+          history: 'इतिहास',
           availableCourses: 'उपलब्ध कोर्स',
           pointShop: 'पॉइंट शॉप',
           rankings: 'रैंकिंग'
@@ -1303,6 +1324,24 @@ export const translations = {
           active: 'सक्रिय',
           downloadHandout: 'हैंडआउट डाउनलोड करें',
           openCourse: 'कोर्स खोलें'
+        },
+        history: {
+          title: 'पूर्ण कार्य',
+          subtitle: 'अपने सभी कोर्सों में पूरे किए गए कार्यों की समीक्षा करें।',
+          loading: 'आपका पूर्ण कार्य लोड हो रहा है...',
+          empty: 'अभी तक कोई पूर्ण कार्य नहीं है। इतिहास बनाने के लिए कोई कार्य पूरा करें।',
+          completedBadge: 'पूर्ण',
+          completedOn: '{date} को पूर्ण किया',
+          completedWith: 'साथ काम किया: {names}',
+          collaborators: '{count} सहयोगी',
+          timeLimit: '{minutes}मि',
+          summary: {
+            completedTasks: 'पूर्ण कार्य',
+            pointsEarned: 'अर्जित अंक',
+            coursesTouched: 'कोर्स शामिल',
+            lastCompleted: 'हाल ही में पूर्ण',
+            noCompletions: 'अभी कोई इतिहास नहीं'
+          }
         },
         availableCourses: {
           title: 'कोर्स कैटलॉग',
@@ -1352,6 +1391,7 @@ export const translations = {
           handout: 'हैंडआउट',
           resourcesTitle: 'संसाधन ({count})',
           openResource: 'फाइल खोलें',
+          downloadResource: 'डाउनलोड',
           close: 'बंद करें',
           syllabusLoading: 'सिलेबस लोड हो रहा है...',
           empty: 'इस कोर्स के लिए अभी कोई मॉड्यूल उपलब्ध नहीं है।',

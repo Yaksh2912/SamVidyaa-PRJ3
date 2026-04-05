@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import CompleteTaskModal from '../components/CompleteTaskModal'
 import AskCollaborationModal from '../components/AskCollaborationModal'
 import ChatBot from '../components/ChatBot'
-import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification, HiUserGroup, HiCheck, HiXMark, HiBellAlert } from 'react-icons/hi2'
+import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification, HiUserGroup, HiCheck, HiXMark, HiBellAlert, HiArrowTopRightOnSquare } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import './Dashboard.css'
 
@@ -66,6 +66,10 @@ function StudentDashboard() {
     dateStyle: 'medium',
     timeStyle: 'short'
   })
+  const historyDateFormatter = new Intl.DateTimeFormat(language === 'hi' ? 'hi-IN' : 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  })
 
   const formatTaskDeadline = (deadlineAt) => {
     if (!deadlineAt) return ''
@@ -111,6 +115,8 @@ function StudentDashboard() {
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
   const [showAnnouncementsPopup, setShowAnnouncementsPopup] = useState(false);
+  const [taskHistory, setTaskHistory] = useState([]);
+  const [loadingTaskHistory, setLoadingTaskHistory] = useState(false);
 
   // Mapping of icon names to actual components
   const MAP_ICONS = {
@@ -244,6 +250,31 @@ function StudentDashboard() {
     }
   };
 
+  const fetchTaskHistory = async () => {
+    try {
+      setLoadingTaskHistory(true)
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      if (!token) return;
+
+      const res = await fetch(`${API_BASE_URL}/api/tasks/history`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setTaskHistory(Array.isArray(data) ? data : []);
+      } else {
+        setTaskHistory([]);
+      }
+    } catch (error) {
+      console.error('Error fetching task history:', error);
+      setTaskHistory([]);
+    } finally {
+      setLoadingTaskHistory(false)
+    }
+  }
+
   const handleClaimReward = async (reward) => {
     setClaimingReward(reward._id);
     try {
@@ -272,8 +303,13 @@ function StudentDashboard() {
 
   const handleTaskCompleteSuccess = (taskId, newPointsTotal) => {
     setUserPoints(newPointsTotal);
-    // You can also mark the task as "done" locally in courseTasks if desired
-    // For now, simple visual alert is enough since there is no persistent 'completed' flag on tasks locally yet
+    setCourseTasks((prev) => Object.fromEntries(
+      Object.entries(prev).map(([moduleId, tasks]) => [
+        moduleId,
+        Array.isArray(tasks) ? tasks.filter((task) => task._id !== taskId) : tasks
+      ])
+    ))
+    fetchTaskHistory()
   };
 
   const fetchLeaderboard = async () => {
@@ -406,18 +442,19 @@ function StudentDashboard() {
     fetchRewards();
     fetchCollaborations();
     fetchAnnouncements();
+    fetchTaskHistory();
   }, []);
 
-  const handleHandoutDownload = async (handoutPath, filename) => {
+  const downloadUploadedFile = async (filePath, filename, fallbackName) => {
     try {
-      const url = `${API_BASE_URL}/${handoutPath.replace(/\\/g, '/')}`;
+      const url = `${API_BASE_URL}/${filePath.replace(/\\/g, '/')}`;
       const response = await fetch(url);
       if (!response.ok) throw new Error(translations.dashboard.student.courseModal.downloadFailed);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = filename || 'handout.pdf';
+      a.download = filename || fallbackName || 'download';
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -427,6 +464,14 @@ function StudentDashboard() {
       alert(translations.dashboard.student.courseModal.downloadFailed);
     }
   };
+
+  const handleHandoutDownload = async (handoutPath, filename) => {
+    await downloadUploadedFile(handoutPath, filename, 'handout.pdf')
+  }
+
+  const handleResourceDownload = async (filePath, filename) => {
+    await downloadUploadedFile(filePath, filename, 'resource-file')
+  }
 
   const handleEnroll = async (courseId) => {
 
@@ -468,6 +513,7 @@ function StudentDashboard() {
   const tabTitles = {
     dashboard: t.tabs.dashboard,
     myCourses: t.tabs.myCourses,
+    history: t.tabs.history,
     availableCourses: t.tabs.availableCourses,
     pointShop: t.tabs.pointShop,
     rankings: t.tabs.rankings
@@ -478,6 +524,9 @@ function StudentDashboard() {
     return t.courses.active
   }
   const getDifficultyLabel = (difficulty) => translations.forms.task.difficulties[difficulty] || difficulty
+  const historyCourseCount = new Set(taskHistory.map((entry) => entry.course_id?._id || entry.course_id || entry.course_name).filter(Boolean)).size
+  const historyPointsTotal = taskHistory.reduce((sum, entry) => sum + (entry.points_awarded || 0), 0)
+  const latestHistoryEntry = taskHistory[0] || null
 
   return (
     <div className="dashboard-layout" data-theme={theme}>
@@ -493,6 +542,9 @@ function StudentDashboard() {
           </button>
           <button className={`sidebar-link ${activeTab === 'myCourses' ? 'active' : ''}`} onClick={() => setActiveTab('myCourses')}>
             <HiBookOpen className="sidebar-icon" /> {t.tabs.myCourses}
+          </button>
+          <button className={`sidebar-link ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
+            <HiDocumentText className="sidebar-icon" /> {t.tabs.history}
           </button>
           <button className={`sidebar-link ${activeTab === 'availableCourses' ? 'active' : ''}`} onClick={() => setActiveTab('availableCourses')}>
             <HiPlusCircle className="sidebar-icon" /> {t.tabs.availableCourses}
@@ -714,6 +766,100 @@ function StudentDashboard() {
                         </div>
                       </div>
                     );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'history' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel student-history-panel">
+              <div className="workspace-panel-header student-history-panel__header">
+                <div>
+                  <h3>{t.history.title}</h3>
+                  <p className="student-history-panel__subtitle">{t.history.subtitle}</p>
+                </div>
+              </div>
+
+              <div className="student-history-summary-grid">
+                <div className="student-history-summary-card">
+                  <span>{t.history.summary.completedTasks}</span>
+                  <strong>{taskHistory.length}</strong>
+                </div>
+                <div className="student-history-summary-card">
+                  <span>{t.history.summary.pointsEarned}</span>
+                  <strong>{historyPointsTotal}</strong>
+                </div>
+                <div className="student-history-summary-card">
+                  <span>{t.history.summary.coursesTouched}</span>
+                  <strong>{historyCourseCount}</strong>
+                </div>
+                <div className="student-history-summary-card">
+                  <span>{t.history.summary.lastCompleted}</span>
+                  <strong>
+                    {latestHistoryEntry?.completed_at
+                      ? historyDateFormatter.format(new Date(latestHistoryEntry.completed_at))
+                      : t.history.summary.noCompletions}
+                  </strong>
+                </div>
+              </div>
+
+              {loadingTaskHistory ? (
+                <p className="loading-text">{t.history.loading}</p>
+              ) : taskHistory.length === 0 ? (
+                <p className="empty-state">{t.history.empty}</p>
+              ) : (
+                <div className="student-history-list">
+                  {taskHistory.map((entry) => {
+                    const courseName = entry.course_id?.course_name || entry.course_name || common.notAvailable
+                    const courseCode = entry.course_id?.course_code || ''
+                    const moduleName = entry.module_id?.module_name || entry.module_name || common.notAvailable
+                    const completedAt = entry.completed_at ? historyDateFormatter.format(new Date(entry.completed_at)) : common.notAvailable
+                    const collaborators = Array.isArray(entry.collaborator_ids) ? entry.collaborator_ids : []
+
+                    return (
+                      <article key={entry._id} className="student-history-item">
+                        <div className="student-history-item__top">
+                          <div>
+                            <h4 className="student-history-item__title">
+                              {entry.task_id?.task_name || entry.task_name}
+                            </h4>
+                            <p className="student-history-item__meta">
+                              {courseName}{courseCode ? ` • ${courseCode}` : ''} · {moduleName}
+                            </p>
+                          </div>
+                          <div className="student-history-item__points">
+                            <HiStar />
+                            <span>{translate('dashboard.student.pointShop.cost', { points: entry.points_awarded || 0 })}</span>
+                          </div>
+                        </div>
+
+                        <div className="student-history-chip-row">
+                          <span className="student-history-chip student-history-chip--success">{t.history.completedBadge}</span>
+                          <span className="student-history-chip">{getDifficultyLabel(entry.task_id?.difficulty || entry.task_difficulty || 'MEDIUM')}</span>
+                          <span className="student-history-chip">{entry.task_id?.language || entry.task_language || common.notAvailable}</span>
+                          <span className="student-history-chip">
+                            <HiClock /> {translate('dashboard.student.history.timeLimit', { minutes: entry.task_id?.time_limit || entry.task_time_limit || 0 })}
+                          </span>
+                          {collaborators.length > 0 && (
+                            <span className="student-history-chip">
+                              <HiUserGroup /> {translate('dashboard.student.history.collaborators', { count: collaborators.length })}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="student-history-item__footer">
+                          <span>{translate('dashboard.student.history.completedOn', { date: completedAt })}</span>
+                          {collaborators.length > 0 && (
+                            <span>
+                              {translate('dashboard.student.history.completedWith', {
+                                names: collaborators.map((peer) => peer.name).join(', ')
+                              })}
+                            </span>
+                          )}
+                        </div>
+                      </article>
+                    )
                   })}
                 </div>
               )}
@@ -1028,13 +1174,20 @@ function StudentDashboard() {
                                   </div>
                                   <div className="module-resource-item__actions">
                                     <a
-                                      className="btn btn-outline"
+                                      className="module-resource-action module-resource-action--secondary"
                                       href={getUploadFileUrl(file.path)}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
-                                      <HiArrowDownTray /> {t.courseModal.openResource}
+                                      <HiArrowTopRightOnSquare /> {t.courseModal.openResource}
                                     </a>
+                                    <button
+                                      type="button"
+                                      className="module-resource-action module-resource-action--primary"
+                                      onClick={() => handleResourceDownload(file.path, file.name)}
+                                    >
+                                      <HiArrowDownTray /> {t.courseModal.downloadResource}
+                                    </button>
                                   </div>
                                 </div>
                               ))}

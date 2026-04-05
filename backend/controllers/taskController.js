@@ -2,6 +2,8 @@ const Task = require('../models/Task');
 const Module = require('../models/Module');
 const User = require('../models/User');
 const PointTransaction = require('../models/PointTransaction');
+const StudentProgress = require('../models/StudentProgress');
+const TaskCompletion = require('../models/TaskCompletion');
 const { PDFParse } = require('pdf-parse');
 const xlsx = require('xlsx');
 const fs = require('fs');
@@ -12,6 +14,7 @@ const { promisify } = require('util');
 
 const execFileAsync = promisify(execFile);
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
+const isStudentRole = (role) => role === 'STUDENT' || role === 'student';
 
 const normalizeImportedText = (text) => text
     .replace(/\r/g, '')
@@ -460,11 +463,50 @@ const getTasks = async (req, res) => {
             return res.status(400).json({ message: 'Module ID is required' });
         }
 
-        const tasks = await Task.find({ module_id });
+        let excludedTaskIds = [];
+
+        if (isStudentRole(req.user.role)) {
+            const completions = await TaskCompletion.find({
+                student_id: req.user._id,
+                module_id,
+            }).select('task_id');
+
+            excludedTaskIds = completions.map((completion) => completion.task_id);
+        }
+
+        const taskQuery = { module_id };
+        if (excludedTaskIds.length) {
+            taskQuery._id = { $nin: excludedTaskIds };
+        }
+
+        const tasks = await Task.find(taskQuery);
         res.json(tasks);
     } catch (error) {
         console.error(error);
         res.status(400).json({ message: 'Failed to fetch tasks' });
+    }
+};
+
+// @desc    Get completed task history for the logged-in student
+// @route   GET /api/tasks/history
+// @access  Private (Student)
+const getTaskHistory = async (req, res) => {
+    try {
+        if (!isStudentRole(req.user.role)) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const completions = await TaskCompletion.find({ student_id: req.user._id })
+            .sort({ completed_at: -1, createdAt: -1 })
+            .populate('course_id', 'course_name course_code subject')
+            .populate('module_id', 'module_name module_order')
+            .populate('task_id', 'task_name difficulty language time_limit points')
+            .populate('collaborator_ids', 'name email');
+
+        res.json(completions);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to fetch task history' });
     }
 };
 
@@ -540,6 +582,22 @@ const completeTask = async (req, res) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
+        const module = await Module.findById(task.module_id)
+            .populate('course_id', 'course_name');
+
+        if (!module || !module.course_id) {
+            return res.status(404).json({ message: 'Module or course not found' });
+        }
+
+        const existingCompletion = await TaskCompletion.findOne({
+            student_id: req.user._id,
+            task_id: task._id,
+        });
+
+        if (existingCompletion) {
+            return res.status(400).json({ message: 'Task already completed' });
+        }
+
         if (task.has_deadline && task.deadline_at && new Date(task.deadline_at).getTime() < Date.now()) {
             return res.status(400).json({ message: 'This task deadline has already passed' });
         }
@@ -567,7 +625,8 @@ const completeTask = async (req, res) => {
             await PointTransaction.create({
                 user_id: currentUser._id,
                 amount: studentPoints,
-                reason: `Completed Task: ${task.task_name}`
+                reason: `Completed Task: ${task.task_name}`,
+                course_id: module.course_id._id,
             });
         }
 
@@ -582,16 +641,64 @@ const completeTask = async (req, res) => {
                     await PointTransaction.create({
                         user_id: peer._id,
                         amount: peerPointsEach,
-                        reason: 'Collaboration/Teamwork'
+                        reason: 'Collaboration/Teamwork',
+                        course_id: module.course_id._id,
                     });
                     collaboratorsAwarded++;
                 }
             }
         }
 
+        const totalModuleTasks = await Task.countDocuments({ module_id: task.module_id });
+        const progress = await StudentProgress.findOneAndUpdate(
+            {
+                student_id: req.user._id,
+                course_id: module.course_id._id,
+                module_id: task.module_id,
+            },
+            {
+                $setOnInsert: {
+                    student_id: req.user._id,
+                    course_id: module.course_id._id,
+                    module_id: task.module_id,
+                    completed_tasks: 0,
+                    module_status: 'NOT_STARTED',
+                    can_attempt_module_test: false,
+                }
+            },
+            {
+                new: true,
+                upsert: true,
+            }
+        );
+
+        progress.completed_tasks = (progress.completed_tasks || 0) + 1;
+        const allTasksCompleted = totalModuleTasks > 0 && progress.completed_tasks >= totalModuleTasks;
+        progress.module_status = allTasksCompleted ? 'TASKS_COMPLETED' : 'IN_PROGRESS';
+        progress.can_attempt_module_test = allTasksCompleted;
+        await progress.save();
+
+        const completionRecord = await TaskCompletion.create({
+            student_id: req.user._id,
+            course_id: module.course_id._id,
+            module_id: task.module_id,
+            task_id: task._id,
+            task_name: task.task_name,
+            course_name: module.course_id.course_name || '',
+            module_name: module.module_name || '',
+            task_language: task.language || '',
+            task_difficulty: task.difficulty || '',
+            task_time_limit: task.time_limit || 0,
+            task_points: task.points || 0,
+            points_awarded: studentPoints,
+            collaborator_ids: validPeers,
+            completed_at: new Date(),
+        });
+
         res.json({
             message: `Task completed! You earned ${studentPoints} pts.` + (collaboratorsAwarded > 0 ? ` (Shared ${peerPointsEach * collaboratorsAwarded} pts with ${collaboratorsAwarded} peers)` : ''),
-            points: currentUser.points
+            points: currentUser.points,
+            completion: completionRecord,
         });
     } catch (error) {
         console.error(error);
@@ -599,4 +706,4 @@ const completeTask = async (req, res) => {
     }
 };
 
-module.exports = { createTask, importTasksFromDocument, getTasks, deleteTask, updateTask, completeTask };
+module.exports = { createTask, importTasksFromDocument, getTasks, getTaskHistory, deleteTask, updateTask, completeTask };
