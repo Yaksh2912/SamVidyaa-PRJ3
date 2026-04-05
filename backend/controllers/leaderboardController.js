@@ -10,7 +10,8 @@ const getGlobalLeaderboard = async (req, res) => {
         const topUsers = await User.find({ role: 'STUDENT' })
             .select('name username points')
             .sort({ points: -1 })
-            .limit(50);
+            .limit(50)
+            .lean();
         res.json(topUsers);
     } catch (error) {
         console.error(error);
@@ -62,7 +63,9 @@ const getClassLeaderboard = async (req, res) => {
         const enrollments = await Enrollment.find({ 
             course_id: courseId, 
             status: { $in: ['ACTIVE', 'APPROVED', 'PENDING'] }
-        }).select('student_id');
+        })
+            .select('student_id')
+            .lean();
         
         const studentIds = enrollments.map(e => e.student_id);
 
@@ -71,7 +74,8 @@ const getClassLeaderboard = async (req, res) => {
         const classmates = await User.find({ _id: { $in: studentIds } })
             .select('name username points')
             .sort({ points: -1 })
-            .limit(50);
+            .limit(50)
+            .lean();
 
         res.json(classmates);
     } catch (error) {

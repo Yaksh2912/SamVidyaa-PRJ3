@@ -466,12 +466,10 @@ const getTasks = async (req, res) => {
         let excludedTaskIds = [];
 
         if (isStudentRole(req.user.role)) {
-            const completions = await TaskCompletion.find({
+            excludedTaskIds = await TaskCompletion.distinct('task_id', {
                 student_id: req.user._id,
                 module_id,
-            }).select('task_id');
-
-            excludedTaskIds = completions.map((completion) => completion.task_id);
+            });
         }
 
         const taskQuery = { module_id };
@@ -479,7 +477,7 @@ const getTasks = async (req, res) => {
             taskQuery._id = { $nin: excludedTaskIds };
         }
 
-        const tasks = await Task.find(taskQuery);
+        const tasks = await Task.find(taskQuery).lean();
         res.json(tasks);
     } catch (error) {
         console.error(error);
@@ -501,7 +499,8 @@ const getTaskHistory = async (req, res) => {
             .populate('course_id', 'course_name course_code subject')
             .populate('module_id', 'module_name module_order')
             .populate('task_id', 'task_name difficulty language time_limit points')
-            .populate('collaborator_ids', 'name email');
+            .populate('collaborator_ids', 'name email')
+            .lean();
 
         res.json(completions);
     } catch (error) {
@@ -577,22 +576,24 @@ const completeTask = async (req, res) => {
         const taskId = req.params.id;
         const { collaboratorIds } = req.body; // Array of peer user IDs
 
-        const task = await Task.findById(taskId);
+        const task = await Task.findById(taskId).lean();
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
         }
 
-        const module = await Module.findById(task.module_id)
-            .populate('course_id', 'course_name');
+        const [module, existingCompletion] = await Promise.all([
+            Module.findById(task.module_id)
+                .populate('course_id', 'course_name')
+                .lean(),
+            TaskCompletion.findOne({
+                student_id: req.user._id,
+                task_id: task._id,
+            }).select('_id').lean(),
+        ]);
 
         if (!module || !module.course_id) {
             return res.status(404).json({ message: 'Module or course not found' });
         }
-
-        const existingCompletion = await TaskCompletion.findOne({
-            student_id: req.user._id,
-            task_id: task._id,
-        });
 
         if (existingCompletion) {
             return res.status(400).json({ message: 'Task already completed' });
@@ -632,20 +633,26 @@ const completeTask = async (req, res) => {
 
         // 3. Award colab points to peers
         if (peerPointsEach > 0 && validPeers.length > 0) {
-            for (const collabId of validPeers) {
-                const peer = await User.findById(collabId);
-                if (peer) {
-                    peer.points = (peer.points || 0) + peerPointsEach;
-                    await peer.save();
+            const peers = await User.find({ _id: { $in: validPeers } }).select('_id').lean();
+            const peerIds = peers.map((peer) => peer._id);
 
-                    await PointTransaction.create({
-                        user_id: peer._id,
-                        amount: peerPointsEach,
-                        reason: 'Collaboration/Teamwork',
-                        course_id: module.course_id._id,
-                    });
-                    collaboratorsAwarded++;
-                }
+            if (peerIds.length) {
+                await Promise.all([
+                    User.updateMany(
+                        { _id: { $in: peerIds } },
+                        { $inc: { points: peerPointsEach } }
+                    ),
+                    PointTransaction.insertMany(
+                        peerIds.map((peerId) => ({
+                            user_id: peerId,
+                            amount: peerPointsEach,
+                            reason: 'Collaboration/Teamwork',
+                            course_id: module.course_id._id,
+                        }))
+                    ),
+                ]);
+
+                collaboratorsAwarded = peerIds.length;
             }
         }
 

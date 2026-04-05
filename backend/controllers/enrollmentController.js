@@ -56,13 +56,93 @@ const authorizeCourseEnrollmentAccess = async (courseId, user) => {
     return { course };
 };
 
+const applyBulkEnrollmentChanges = async (courseId, studentIds = []) => {
+    const normalizedIds = [...new Set(studentIds.map((studentId) => studentId?.toString()).filter(Boolean))];
+
+    if (!normalizedIds.length) {
+        return { enrolled: 0, skipped: 0 };
+    }
+
+    const existingEnrollments = await Enrollment.find({
+        course_id: courseId,
+        student_id: { $in: normalizedIds },
+    })
+        .select('_id student_id status')
+        .lean();
+
+    const existingByStudentId = new Map(
+        existingEnrollments.map((enrollment) => [enrollment.student_id.toString(), enrollment])
+    );
+
+    const enrollmentIdsToReactivate = [];
+    const studentsToCreate = [];
+    let skipped = 0;
+
+    for (const studentId of normalizedIds) {
+        const existing = existingByStudentId.get(studentId);
+
+        if (!existing) {
+            studentsToCreate.push(studentId);
+            continue;
+        }
+
+        if (existing.status === 'REJECTED' || existing.status === 'DROPPED') {
+            enrollmentIdsToReactivate.push(existing._id);
+        } else {
+            skipped++;
+        }
+    }
+
+    const [reactivationResult, createResult] = await Promise.all([
+        enrollmentIdsToReactivate.length
+            ? Enrollment.updateMany(
+                {
+                    _id: { $in: enrollmentIdsToReactivate },
+                    status: { $in: ['REJECTED', 'DROPPED'] },
+                },
+                { $set: { status: 'ACTIVE' } }
+            )
+            : { modifiedCount: 0 },
+        studentsToCreate.length
+            ? Enrollment.bulkWrite(
+                studentsToCreate.map((studentId) => ({
+                    updateOne: {
+                        filter: { course_id: courseId, student_id: studentId },
+                        update: {
+                            $setOnInsert: {
+                                course_id: courseId,
+                                student_id: studentId,
+                                status: 'ACTIVE',
+                            },
+                        },
+                        upsert: true,
+                    },
+                })),
+                { ordered: false }
+            )
+            : { upsertedCount: 0 },
+    ]);
+
+    const reactivatedCount = reactivationResult.modifiedCount || 0;
+    const createdCount = createResult.upsertedCount || 0;
+
+    skipped += (enrollmentIdsToReactivate.length - reactivatedCount);
+    skipped += (studentsToCreate.length - createdCount);
+
+    return {
+        enrolled: reactivatedCount + createdCount,
+        skipped,
+    };
+};
+
 // @desc    Get all students enrolled in a course
 // @route   GET /api/enrollments/course/:courseId
 // @access  Private
 const getEnrolledStudents = async (req, res) => {
     try {
         const enrollments = await Enrollment.find({ course_id: req.params.courseId })
-            .populate('student_id', 'name email enrollment_number');
+            .populate('student_id', 'name email enrollment_number')
+            .lean();
 
         // Transform to return just students with enrollment info
         const students = enrollments.map(e => ({
@@ -119,7 +199,8 @@ const getStudentEnrollments = async (req, res) => {
             .populate({
                 path: 'course_id',
                 populate: { path: 'instructor', select: 'name' }
-            });
+            })
+            .lean();
 
         res.json(enrollments);
     } catch (error) {
@@ -146,40 +227,16 @@ const bulkEnrollByRange = async (req, res) => {
                 $gte: start_enrollment,
                 $lte: end_enrollment
             }
-        });
+        }).select('_id');
 
         if (students.length === 0) {
             return res.status(404).json({ message: 'No students found in the given enrollment number range' });
         }
 
-        let enrolled = 0;
-        let skipped = 0;
-
-        for (const student of students) {
-            try {
-                const existing = await Enrollment.findOne({ course_id, student_id: student._id });
-                if (existing) {
-                    // If previously rejected/dropped, re-activate
-                    if (existing.status === 'REJECTED' || existing.status === 'DROPPED') {
-                        existing.status = 'ACTIVE';
-                        await existing.save();
-                        enrolled++;
-                    } else {
-                        skipped++;
-                    }
-                } else {
-                    await Enrollment.create({
-                        course_id,
-                        student_id: student._id,
-                        status: 'ACTIVE'
-                    });
-                    enrolled++;
-                }
-            } catch (err) {
-                // Duplicate key or other error — skip
-                skipped++;
-            }
-        }
+        const { enrolled, skipped } = await applyBulkEnrollmentChanges(
+            course_id,
+            students.map((student) => student._id)
+        );
 
         res.status(200).json({
             message: `Enrollment complete`,
@@ -233,15 +290,16 @@ const bulkEnrollByEmail = async (req, res) => {
         const students = await User.find({
             role: 'STUDENT',
             email: { $in: validEmails }
-        }).select('_id email');
+        })
+            .select('_id email')
+            .lean();
 
         const studentsByEmail = new Map(
             students.map((student) => [student.email.toLowerCase(), student])
         );
 
-        let enrolled = 0;
-        let skipped = 0;
         let not_found = 0;
+        const matchedStudentIds = [];
 
         for (const email of validEmails) {
             const student = studentsByEmail.get(email);
@@ -251,28 +309,10 @@ const bulkEnrollByEmail = async (req, res) => {
                 continue;
             }
 
-            try {
-                const existing = await Enrollment.findOne({ course_id, student_id: student._id });
-                if (existing) {
-                    if (existing.status === 'REJECTED' || existing.status === 'DROPPED') {
-                        existing.status = 'ACTIVE';
-                        await existing.save();
-                        enrolled++;
-                    } else {
-                        skipped++;
-                    }
-                } else {
-                    await Enrollment.create({
-                        course_id,
-                        student_id: student._id,
-                        status: 'ACTIVE'
-                    });
-                    enrolled++;
-                }
-            } catch (err) {
-                skipped++;
-            }
+            matchedStudentIds.push(student._id);
         }
+
+        const { enrolled, skipped } = await applyBulkEnrollmentChanges(course_id, matchedStudentIds);
 
         res.status(200).json({
             message: 'Email enrollment processed',

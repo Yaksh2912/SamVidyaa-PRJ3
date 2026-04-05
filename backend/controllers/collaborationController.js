@@ -59,15 +59,18 @@ const getMyRequests = async (req, res) => {
     try {
         const userId = req.user._id;
 
-        const incoming = await CollaborationRequest.find({ requested_peer: userId, status: 'PENDING' })
-            .populate('requester', 'name email')
-            .populate('task_id', 'task_name allow_collaboration')
-            .populate('course_id', 'course_name course_code');
-
-        const outgoing = await CollaborationRequest.find({ requester: userId })
-            .populate('requested_peer', 'name email')
-            .populate('task_id', 'task_name')
-            .populate('course_id', 'course_name course_code');
+        const [incoming, outgoing] = await Promise.all([
+            CollaborationRequest.find({ requested_peer: userId, status: 'PENDING' })
+                .populate('requester', 'name email')
+                .populate('task_id', 'task_name allow_collaboration')
+                .populate('course_id', 'course_name course_code')
+                .lean(),
+            CollaborationRequest.find({ requester: userId })
+                .populate('requested_peer', 'name email')
+                .populate('task_id', 'task_name')
+                .populate('course_id', 'course_name course_code')
+                .lean(),
+        ]);
 
         res.json({ incoming, outgoing });
     } catch (error) {

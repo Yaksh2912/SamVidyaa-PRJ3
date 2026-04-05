@@ -43,7 +43,9 @@ const createReward = async (req, res) => {
 // @access  Private 
 const getCourseRewards = async (req, res) => {
     try {
-        const rewards = await Reward.find({ course_id: req.params.courseId }).sort({ cost: 1 });
+        const rewards = await Reward.find({ course_id: req.params.courseId })
+            .sort({ cost: 1 })
+            .lean();
         res.json(rewards);
     } catch (error) {
         console.error(error);
@@ -56,27 +58,23 @@ const getCourseRewards = async (req, res) => {
 // @access  Private 
 const getStudentRewards = async (req, res) => {
     try {
-        // Find courses student is enrolled in directly using the internal logic
-        // Alternatively, use Enrollment model
-        let enrollments;
-        if (req.user.role === 'STUDENT' || req.user.role === 'student') {
-            enrollments = await Enrollment.find({ 
-                student_id: req.user._id, 
-                status: { $in: ['ACTIVE', 'APPROVED', 'PENDING'] } 
-            });
-        } else {
-            // For tests or if user model doesn't strictly type role
-            enrollments = await Enrollment.find({ 
-                student_id: req.user._id,
-                status: { $in: ['ACTIVE', 'APPROVED', 'PENDING'] }
-            });
+        const enrollments = await Enrollment.find({
+            student_id: req.user._id,
+            status: { $in: ['ACTIVE', 'APPROVED', 'PENDING'] }
+        })
+            .select('course_id')
+            .lean();
+
+        const courseIds = [...new Set(enrollments.map((enrollment) => enrollment.course_id?.toString()).filter(Boolean))];
+
+        if (!courseIds.length) {
+            return res.json([]);
         }
-        
-        const courseIds = enrollments.map(e => e.course_id);
 
         const rewards = await Reward.find({ course_id: { $in: courseIds } })
             .populate('course_id', 'course_name')
-            .sort({ cost: 1 });
+            .sort({ cost: 1 })
+            .lean();
             
         res.json(rewards);
     } catch (error) {

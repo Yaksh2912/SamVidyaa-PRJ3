@@ -28,8 +28,6 @@ const verifyManagedCourse = async (courseId, user) => {
     return { error: { status: 401, message: 'Not authorized for this course' } };
 };
 
-const formatAnnouncement = async (announcementId) => Announcement.findById(announcementId).populate(ANNOUNCEMENT_POPULATE);
-
 const normalizeAudience = (value) => {
     if (typeof value !== 'string') return 'COURSE';
     const normalized = value.trim().toUpperCase();
@@ -83,7 +81,7 @@ const createAnnouncement = async (req, res) => {
             created_by: req.user._id,
         });
 
-        const populatedAnnouncement = await formatAnnouncement(announcement._id);
+        const populatedAnnouncement = await announcement.populate(ANNOUNCEMENT_POPULATE);
         return res.status(201).json(populatedAnnouncement);
     } catch (error) {
         console.error('Create announcement failed', error);
@@ -106,7 +104,8 @@ const getManageAnnouncements = async (req, res) => {
 
         const announcements = await Announcement.find(query)
             .sort({ createdAt: -1 })
-            .populate(ANNOUNCEMENT_POPULATE);
+            .populate(ANNOUNCEMENT_POPULATE)
+            .lean();
 
         return res.json(announcements);
     } catch (error) {
@@ -127,7 +126,9 @@ const getStudentAnnouncements = async (req, res) => {
         const enrollments = await Enrollment.find({
             student_id: req.user._id,
             status: { $in: ['ACTIVE', 'APPROVED', 'COMPLETED'] },
-        }).select('course_id');
+        })
+            .select('course_id')
+            .lean();
 
         const enrolledCourseIds = enrollments
             .map((enrollment) => enrollment.course_id)
@@ -140,7 +141,8 @@ const getStudentAnnouncements = async (req, res) => {
             ],
         })
             .sort({ createdAt: -1 })
-            .populate(ANNOUNCEMENT_POPULATE);
+            .populate(ANNOUNCEMENT_POPULATE)
+            .lean();
 
         return res.json(announcements);
     } catch (error) {
