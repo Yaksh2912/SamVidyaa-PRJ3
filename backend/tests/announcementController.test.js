@@ -29,12 +29,13 @@ test('getStudentAnnouncements fetches global and enrolled-course announcements',
         { course_id: 'course-1' },
         { course_id: 'course-2' },
     ]));
+    stubMethod(t, Announcement, 'countDocuments', async () => 1);
 
     stubMethod(t, Announcement, 'find', (query) => {
         capturedQuery = query;
         return createQueryChain([
             { _id: 'announcement-1', title: 'Update' },
-        ], ['sort', 'populate']);
+        ], ['sort', 'populate', 'skip', 'limit']);
     });
 
     const req = { user: { _id: 'student-1', role: 'STUDENT' } };
@@ -44,6 +45,7 @@ test('getStudentAnnouncements fetches global and enrolled-course announcements',
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.body, [{ _id: 'announcement-1', title: 'Update' }]);
+    assert.equal(res.getHeader('x-total-count'), '1');
     assert.deepEqual(capturedQuery, {
         $or: [
             { audience_type: 'GLOBAL' },
@@ -55,9 +57,10 @@ test('getStudentAnnouncements fetches global and enrolled-course announcements',
 test('getManageAnnouncements scopes instructors to their own announcements', async (t) => {
     let capturedQuery = null;
 
+    stubMethod(t, Announcement, 'countDocuments', async () => 0);
     stubMethod(t, Announcement, 'find', (query) => {
         capturedQuery = query;
-        return createQueryChain([], ['sort', 'populate']);
+        return createQueryChain([], ['sort', 'populate', 'skip', 'limit']);
     });
 
     const req = { user: { _id: 'teacher-1', role: 'INSTRUCTOR' } };
@@ -66,5 +69,6 @@ test('getManageAnnouncements scopes instructors to their own announcements', asy
     await announcementController.getManageAnnouncements(req, res);
 
     assert.equal(res.statusCode, 200);
+    assert.equal(res.getHeader('x-total-count'), '0');
     assert.deepEqual(capturedQuery, { created_by: 'teacher-1' });
 });

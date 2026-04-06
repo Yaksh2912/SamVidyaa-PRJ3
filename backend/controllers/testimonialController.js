@@ -1,15 +1,17 @@
 const Testimonial = require('../models/Testimonial');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const { ensureDir, removeFileIfPresent } = require('../utils/fileSystem');
+const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
 
 const testimonialImageStorage = multer.diskStorage({
     destination: (_req, _file, cb) => {
         const dir = path.join(__dirname, '..', 'uploads', 'testimonials');
-        fs.mkdirSync(dir, { recursive: true });
-        cb(null, dir);
+        ensureDir(dir)
+            .then(() => cb(null, dir))
+            .catch(cb);
     },
     filename: (_req, file, cb) => {
         const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
@@ -33,15 +35,6 @@ const testimonialImageUpload = multer({
 const testimonialImageUploadMiddleware = testimonialImageUpload.single('image');
 const normalizeInlineText = (value = '') => value.replace(/\s+/g, ' ').trim();
 
-const removeFileIfPresent = (relativePath) => {
-    if (!relativePath) return;
-
-    const absolutePath = path.join(__dirname, '..', relativePath);
-    if (fs.existsSync(absolutePath)) {
-        fs.unlinkSync(absolutePath);
-    }
-};
-
 const serializeTestimonial = (testimonial) => ({
     _id: testimonial._id,
     name: testimonial.name,
@@ -56,9 +49,18 @@ const serializeTestimonial = (testimonial) => ({
 // @desc    Get public testimonials
 // @route   GET /api/testimonials
 // @access  Public
-const getTestimonials = async (_req, res) => {
+const getTestimonials = async (req, res) => {
     try {
-        const testimonials = await Testimonial.find().sort({ createdAt: -1 });
+        const pagination = parsePagination(req, { defaultLimit: 20, maxLimit: 50 });
+        const [total, testimonials] = await Promise.all([
+            Testimonial.countDocuments({}),
+            Testimonial.find({})
+                .sort({ createdAt: -1 })
+                .skip(pagination.skip)
+                .limit(pagination.limit),
+        ]);
+
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(testimonials.map(serializeTestimonial));
     } catch (error) {
         console.error('Get testimonials error:', error);
@@ -80,7 +82,7 @@ const createTestimonial = async (req, res) => {
         const quote = normalizeInlineText(req.body.quote);
 
         if (!name || !role || !quote) {
-            removeFileIfPresent(req.file ? path.join('uploads', 'testimonials', req.file.filename) : null);
+            await removeFileIfPresent(req.file ? path.join('uploads', 'testimonials', req.file.filename) : null, { bestEffort: true });
             return res.status(400).json({ message: 'Name, role, and quote are required' });
         }
 
@@ -111,7 +113,7 @@ const updateTestimonial = async (req, res) => {
 
         const testimonial = await Testimonial.findById(req.params.id);
         if (!testimonial) {
-            removeFileIfPresent(req.file ? path.join('uploads', 'testimonials', req.file.filename) : null);
+            await removeFileIfPresent(req.file ? path.join('uploads', 'testimonials', req.file.filename) : null, { bestEffort: true });
             return res.status(404).json({ message: 'Testimonial not found' });
         }
 
@@ -124,7 +126,7 @@ const updateTestimonial = async (req, res) => {
         testimonial.quote = quote || testimonial.quote;
 
         if (req.file) {
-            removeFileIfPresent(testimonial.image_path);
+            await removeFileIfPresent(testimonial.image_path, { bestEffort: true });
             testimonial.image_filename = req.file.originalname;
             testimonial.image_path = path.join('uploads', 'testimonials', req.file.filename);
         }
@@ -152,7 +154,7 @@ const deleteTestimonial = async (req, res) => {
             return res.status(404).json({ message: 'Testimonial not found' });
         }
 
-        removeFileIfPresent(testimonial.image_path);
+        await removeFileIfPresent(testimonial.image_path);
         await testimonial.deleteOne();
 
         res.json({ message: 'Testimonial deleted' });

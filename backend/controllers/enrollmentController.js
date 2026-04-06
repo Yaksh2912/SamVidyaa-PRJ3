@@ -2,6 +2,7 @@ const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
 const Course = require('../models/Course');
 const xlsx = require('xlsx');
+const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 
 // @desc    Enroll a student in a course
 // @route   POST /api/enrollments
@@ -140,9 +141,16 @@ const applyBulkEnrollmentChanges = async (courseId, studentIds = []) => {
 // @access  Private
 const getEnrolledStudents = async (req, res) => {
     try {
-        const enrollments = await Enrollment.find({ course_id: req.params.courseId })
-            .populate('student_id', 'name email enrollment_number')
-            .lean();
+        const query = { course_id: req.params.courseId };
+        const pagination = parsePagination(req, { defaultLimit: 100, maxLimit: 200 });
+        const [total, enrollments] = await Promise.all([
+            Enrollment.countDocuments(query),
+            Enrollment.find(query)
+                .skip(pagination.skip)
+                .limit(pagination.limit)
+                .populate('student_id', 'name email enrollment_number')
+                .lean(),
+        ]);
 
         // Transform to return just students with enrollment info
         const students = enrollments.map(e => ({
@@ -155,6 +163,7 @@ const getEnrolledStudents = async (req, res) => {
             enrolledAt: e.createdAt
         }));
 
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(students);
     } catch (error) {
         console.error(error);
@@ -195,13 +204,21 @@ const updateEnrollmentStatus = async (req, res) => {
 // @access  Private
 const getStudentEnrollments = async (req, res) => {
     try {
-        const enrollments = await Enrollment.find({ student_id: req.user._id })
-            .populate({
-                path: 'course_id',
-                populate: { path: 'instructor', select: 'name' }
-            })
-            .lean();
+        const query = { student_id: req.user._id };
+        const pagination = parsePagination(req, { defaultLimit: 100, maxLimit: 200 });
+        const [total, enrollments] = await Promise.all([
+            Enrollment.countDocuments(query),
+            Enrollment.find(query)
+                .skip(pagination.skip)
+                .limit(pagination.limit)
+                .populate({
+                    path: 'course_id',
+                    populate: { path: 'instructor', select: 'name' }
+                })
+                .lean(),
+        ]);
 
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(enrollments);
     } catch (error) {
         console.error(error);

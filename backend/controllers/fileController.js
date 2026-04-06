@@ -1,8 +1,8 @@
-const fs = require('fs');
 const path = require('path');
 const Course = require('../models/Course');
 const Module = require('../models/Module');
 const Enrollment = require('../models/Enrollment');
+const { pathExists } = require('../utils/fileSystem');
 
 const ALLOWED_STUDENT_FILE_STATUSES = ['ACTIVE', 'APPROVED'];
 
@@ -73,7 +73,7 @@ async function getProtectedFile(req, res, next) {
         const absolutePath = path.resolve(__dirname, '..', relativePath);
         const uploadsRoot = path.resolve(__dirname, '..', 'uploads');
 
-        if (!absolutePath.startsWith(uploadsRoot) || !fs.existsSync(absolutePath)) {
+        if (!absolutePath.startsWith(uploadsRoot) || !(await pathExists(absolutePath))) {
             return res.status(404).json({ message: 'File not found' });
         }
 

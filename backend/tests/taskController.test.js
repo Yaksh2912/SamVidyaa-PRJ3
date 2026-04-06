@@ -25,9 +25,10 @@ test('getTasks excludes completed tasks for students', async (t) => {
     let capturedQuery = null;
 
     stubMethod(t, TaskCompletion, 'distinct', async () => ['task-completed']);
+    stubMethod(t, Task, 'countDocuments', async () => 1);
     stubMethod(t, Task, 'find', (query) => {
         capturedQuery = query;
-        return createLeanQuery([{ _id: 'task-open' }]);
+        return createQueryChain([{ _id: 'task-open' }], ['skip', 'limit']);
     });
 
     const req = {
@@ -49,9 +50,10 @@ test('getTasks excludes completed tasks for students', async (t) => {
 test('getTasks does not exclude tasks for non-student roles', async (t) => {
     let capturedQuery = null;
 
+    stubMethod(t, Task, 'countDocuments', async () => 2);
     stubMethod(t, Task, 'find', (query) => {
         capturedQuery = query;
-        return createLeanQuery([{ _id: 'task-1' }, { _id: 'task-2' }]);
+        return createQueryChain([{ _id: 'task-1' }, { _id: 'task-2' }], ['skip', 'limit']);
     });
 
     const req = {
@@ -64,6 +66,7 @@ test('getTasks does not exclude tasks for non-student roles', async (t) => {
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.body, [{ _id: 'task-1' }, { _id: 'task-2' }]);
+    assert.equal(res.getHeader('x-total-count'), '2');
     assert.deepEqual(capturedQuery, { module_id: 'module-2' });
 });
 

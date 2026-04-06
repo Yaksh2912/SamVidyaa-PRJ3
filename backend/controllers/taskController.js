@@ -14,6 +14,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
+const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 
 const execFileAsync = promisify(execFile);
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
@@ -548,8 +549,17 @@ const getTasks = async (req, res) => {
         if (excludedTaskIds.length) {
             taskQuery._id = { $nin: excludedTaskIds };
         }
+        const pagination = parsePagination(req, { defaultLimit: 100, maxLimit: 200 });
 
-        const tasks = await Task.find(taskQuery).lean();
+        const [total, tasks] = await Promise.all([
+            Task.countDocuments(taskQuery),
+            Task.find(taskQuery)
+                .skip(pagination.skip)
+                .limit(pagination.limit)
+                .lean(),
+        ]);
+
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(tasks);
     } catch (error) {
         console.error(error);
@@ -565,15 +575,23 @@ const getTaskHistory = async (req, res) => {
         if (!isStudentRole(req.user.role)) {
             return res.status(401).json({ message: 'Not authorized' });
         }
+        const query = { student_id: req.user._id };
+        const pagination = parsePagination(req, { defaultLimit: 50, maxLimit: 100 });
 
-        const completions = await TaskCompletion.find({ student_id: req.user._id })
-            .sort({ completed_at: -1, createdAt: -1 })
-            .populate('course_id', 'course_name course_code subject')
-            .populate('module_id', 'module_name module_order')
-            .populate('task_id', 'task_name difficulty language time_limit points')
-            .populate('collaborator_ids', 'name email')
-            .lean();
+        const [total, completions] = await Promise.all([
+            TaskCompletion.countDocuments(query),
+            TaskCompletion.find(query)
+                .sort({ completed_at: -1, createdAt: -1 })
+                .skip(pagination.skip)
+                .limit(pagination.limit)
+                .populate('course_id', 'course_name course_code subject')
+                .populate('module_id', 'module_name module_order')
+                .populate('task_id', 'task_name difficulty language time_limit points')
+                .populate('collaborator_ids', 'name email')
+                .lean(),
+        ]);
 
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(completions);
     } catch (error) {
         console.error(error);

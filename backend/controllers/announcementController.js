@@ -1,6 +1,7 @@
 const Announcement = require('../models/Announcement');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
+const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
 const isInstructorRole = (role) => role === 'INSTRUCTOR' || role === 'instructor' || role === 'TEACHER' || role === 'teacher';
@@ -101,11 +102,19 @@ const getManageAnnouncements = async (req, res) => {
         const query = isAdminRole(req.user.role)
             ? {}
             : { created_by: req.user._id };
+        const pagination = parsePagination(req, { defaultLimit: 50, maxLimit: 100 });
 
-        const announcements = await Announcement.find(query)
-            .sort({ createdAt: -1 })
-            .populate(ANNOUNCEMENT_POPULATE)
-            .lean();
+        const [total, announcements] = await Promise.all([
+            Announcement.countDocuments(query),
+            Announcement.find(query)
+                .sort({ createdAt: -1 })
+                .skip(pagination.skip)
+                .limit(pagination.limit)
+                .populate(ANNOUNCEMENT_POPULATE)
+                .lean(),
+        ]);
+
+        applyPaginationHeaders(res, { ...pagination, total });
 
         return res.json(announcements);
     } catch (error) {
@@ -133,16 +142,25 @@ const getStudentAnnouncements = async (req, res) => {
         const enrolledCourseIds = enrollments
             .map((enrollment) => enrollment.course_id)
             .filter(Boolean);
-
-        const announcements = await Announcement.find({
+        const query = {
             $or: [
                 { audience_type: 'GLOBAL' },
                 { audience_type: 'COURSE', course_id: { $in: enrolledCourseIds } },
             ],
-        })
-            .sort({ createdAt: -1 })
-            .populate(ANNOUNCEMENT_POPULATE)
-            .lean();
+        };
+        const pagination = parsePagination(req, { defaultLimit: 50, maxLimit: 100 });
+
+        const [total, announcements] = await Promise.all([
+            Announcement.countDocuments(query),
+            Announcement.find(query)
+                .sort({ createdAt: -1 })
+                .skip(pagination.skip)
+                .limit(pagination.limit)
+                .populate(ANNOUNCEMENT_POPULATE)
+                .lean(),
+        ]);
+
+        applyPaginationHeaders(res, { ...pagination, total });
 
         return res.json(announcements);
     } catch (error) {

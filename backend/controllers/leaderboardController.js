@@ -1,17 +1,26 @@
 const User = require('../models/User');
 const PointTransaction = require('../models/PointTransaction');
 const Enrollment = require('../models/Enrollment');
+const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 
 // @desc    Get Global Leaderboard
 // @route   GET /api/leaderboard/global
 // @access  Private
 const getGlobalLeaderboard = async (req, res) => {
     try {
-        const topUsers = await User.find({ role: 'STUDENT' })
-            .select('name username points')
-            .sort({ points: -1 })
-            .limit(50)
-            .lean();
+        const query = { role: 'STUDENT' };
+        const pagination = parsePagination(req, { defaultLimit: 50, maxLimit: 100 });
+        const [total, topUsers] = await Promise.all([
+            User.countDocuments(query),
+            User.find(query)
+                .select('name username points')
+                .sort({ points: -1 })
+                .skip(pagination.skip)
+                .limit(pagination.limit)
+                .lean(),
+        ]);
+
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(topUsers);
     } catch (error) {
         console.error(error);
@@ -26,13 +35,25 @@ const getWeeklyLeaderboard = async (req, res) => {
     try {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-        const pointAggregation = await PointTransaction.aggregate([
+        const pagination = parsePagination(req, { defaultLimit: 50, maxLimit: 100 });
+        const basePipeline = [
             { $match: { createdAt: { $gte: sevenDaysAgo }, amount: { $gt: 0 } } },
-            { $group: { _id: "$user_id", weeklyPoints: { $sum: "$amount" } } },
+            { $group: { _id: '$user_id', weeklyPoints: { $sum: '$amount' } } },
             { $sort: { weeklyPoints: -1 } },
-            { $limit: 50 }
+        ];
+
+        const [countAggregation, pointAggregation] = await Promise.all([
+            PointTransaction.aggregate([
+                ...basePipeline,
+                { $count: 'total' },
+            ]),
+            PointTransaction.aggregate([
+                ...basePipeline,
+                { $skip: pagination.skip },
+                { $limit: pagination.limit },
+            ]),
         ]);
+        const total = countAggregation[0]?.total || 0;
 
         await User.populate(pointAggregation, { path: '_id', select: 'name username points' });
 
@@ -45,6 +66,7 @@ const getWeeklyLeaderboard = async (req, res) => {
             };
         }).filter(item => item._id);
 
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(mappedResult);
     } catch (error) {
         console.error(error);
@@ -58,6 +80,7 @@ const getWeeklyLeaderboard = async (req, res) => {
 const getClassLeaderboard = async (req, res) => {
     try {
         const { courseId } = req.params;
+        const pagination = parsePagination(req, { defaultLimit: 50, maxLimit: 100 });
 
         // 1. Get all students enrolled in this course
         const enrollments = await Enrollment.find({ 
@@ -68,15 +91,18 @@ const getClassLeaderboard = async (req, res) => {
             .lean();
         
         const studentIds = enrollments.map(e => e.student_id);
+        const total = studentIds.length;
 
         // 2. We can aggregate points specifically earned AT this course IF we tracked course_id in transactions.
         // For MVP, we'll follow a common pattern: ranking classmates by their global points.
         const classmates = await User.find({ _id: { $in: studentIds } })
             .select('name username points')
             .sort({ points: -1 })
-            .limit(50)
+            .skip(pagination.skip)
+            .limit(pagination.limit)
             .lean();
 
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(classmates);
     } catch (error) {
         console.error(error);
@@ -89,12 +115,25 @@ const getClassLeaderboard = async (req, res) => {
 // @access  Private
 const getPeerLeaderboard = async (req, res) => {
     try {
-        const pointAggregation = await PointTransaction.aggregate([
-            { $match: { reason: "Collaboration/Teamwork", amount: { $gt: 0 } } },
-            { $group: { _id: "$user_id", colabPoints: { $sum: "$amount" } } },
+        const pagination = parsePagination(req, { defaultLimit: 50, maxLimit: 100 });
+        const basePipeline = [
+            { $match: { reason: 'Collaboration/Teamwork', amount: { $gt: 0 } } },
+            { $group: { _id: '$user_id', colabPoints: { $sum: '$amount' } } },
             { $sort: { colabPoints: -1 } },
-            { $limit: 50 }
+        ];
+
+        const [countAggregation, pointAggregation] = await Promise.all([
+            PointTransaction.aggregate([
+                ...basePipeline,
+                { $count: 'total' },
+            ]),
+            PointTransaction.aggregate([
+                ...basePipeline,
+                { $skip: pagination.skip },
+                { $limit: pagination.limit },
+            ]),
         ]);
+        const total = countAggregation[0]?.total || 0;
 
         await User.populate(pointAggregation, { path: '_id', select: 'name username points' });
 
@@ -108,6 +147,7 @@ const getPeerLeaderboard = async (req, res) => {
             };
         }).filter(item => item._id);
 
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(mappedResult);
     } catch (error) {
         console.error(error);

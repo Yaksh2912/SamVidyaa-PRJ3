@@ -1,15 +1,16 @@
 const DesktopAppAsset = require('../models/DesktopAppAsset');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const { ensureDir, pathExists, removeFileIfPresent } = require('../utils/fileSystem');
 
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
 
 const installerStorage = multer.diskStorage({
     destination: (_req, _file, cb) => {
         const dir = path.join(__dirname, '..', 'uploads', 'desktop-apps');
-        fs.mkdirSync(dir, { recursive: true });
-        cb(null, dir);
+        ensureDir(dir)
+            .then(() => cb(null, dir))
+            .catch(cb);
     },
     filename: (_req, file, cb) => {
         const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
@@ -34,15 +35,6 @@ const installerUpload = multer({
 });
 
 const desktopAppUploadMiddleware = installerUpload.single('installer');
-
-const removeFileIfPresent = (relativePath) => {
-    if (!relativePath) return;
-
-    const absolutePath = path.join(__dirname, '..', relativePath);
-    if (fs.existsSync(absolutePath)) {
-        fs.unlinkSync(absolutePath);
-    }
-};
 
 const serializeDesktopApp = (asset) => ({
     available: true,
@@ -91,7 +83,7 @@ const downloadDesktopApp = async (_req, res) => {
 
         const absolutePath = path.join(__dirname, '..', asset.file_path);
 
-        if (!fs.existsSync(absolutePath)) {
+        if (!(await pathExists(absolutePath))) {
             return res.status(404).json({ message: 'Installer file not found' });
         }
 
@@ -119,7 +111,7 @@ const uploadDesktopApp = async (req, res) => {
         }
 
         const existingAsset = await DesktopAppAsset.findOne({ platform: 'windows' });
-        removeFileIfPresent(existingAsset?.file_path);
+        await removeFileIfPresent(existingAsset?.file_path, { bestEffort: true });
 
         const relativePath = path.join('uploads', 'desktop-apps', req.file.filename);
         const asset = existingAsset || new DesktopAppAsset({ platform: 'windows' });
@@ -159,7 +151,7 @@ const deleteDesktopApp = async (req, res) => {
             return res.status(404).json({ message: 'Desktop app not found' });
         }
 
-        removeFileIfPresent(asset.file_path);
+        await removeFileIfPresent(asset.file_path);
         await asset.deleteOne();
 
         res.json({ message: 'Desktop app removed' });

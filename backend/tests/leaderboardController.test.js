@@ -15,9 +15,10 @@ const {
 test('getGlobalLeaderboard fetches top student users', async (t) => {
     let capturedQuery = null;
 
+    stubMethod(t, User, 'countDocuments', async () => 1);
     stubMethod(t, User, 'find', (query) => {
         capturedQuery = query;
-        return createQueryChain([{ _id: 'student-1', points: 200 }], ['select', 'sort', 'limit']);
+        return createQueryChain([{ _id: 'student-1', points: 200 }], ['select', 'sort', 'limit', 'skip']);
     });
 
     const res = createMockResponse();
@@ -26,6 +27,7 @@ test('getGlobalLeaderboard fetches top student users', async (t) => {
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.body, [{ _id: 'student-1', points: 200 }]);
+    assert.equal(res.getHeader('x-total-count'), '1');
     assert.deepEqual(capturedQuery, { role: 'STUDENT' });
 });
 
@@ -39,7 +41,7 @@ test('getClassLeaderboard fetches classmates from enrolled student ids', async (
 
     stubMethod(t, User, 'find', (query) => {
         capturedUserQuery = query;
-        return createQueryChain([{ _id: 'student-1' }, { _id: 'student-2' }], ['select', 'sort', 'limit']);
+        return createQueryChain([{ _id: 'student-1' }, { _id: 'student-2' }], ['select', 'sort', 'limit', 'skip']);
     });
 
     const req = { params: { courseId: 'course-1' } };
@@ -49,6 +51,7 @@ test('getClassLeaderboard fetches classmates from enrolled student ids', async (
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.body, [{ _id: 'student-1' }, { _id: 'student-2' }]);
+    assert.equal(res.getHeader('x-total-count'), '2');
     assert.deepEqual(capturedUserQuery, {
         _id: { $in: ['student-1', 'student-2'] },
     });

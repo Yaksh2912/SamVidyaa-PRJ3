@@ -1,7 +1,8 @@
-const fs = require('fs');
+const fs = require('fs/promises');
 const path = require('path');
 const { PDFParse } = require('pdf-parse');
 const { embedAndStore, clearVectorsByFilter, isReady } = require('./vectorStore');
+const { pathExists } = require('../utils/fileSystem');
 
 const HANDOUT_VECTOR_TYPE = 'course-handout';
 
@@ -28,11 +29,11 @@ const clearCourseHandoutVectors = async (courseId) => {
 };
 
 const extractPdfTextFromFile = async (absolutePath) => {
-    if (!absolutePath || !fs.existsSync(absolutePath)) {
+    if (!absolutePath || !(await pathExists(absolutePath))) {
         throw new Error('Handout PDF file not found.');
     }
 
-    const dataBuffer = await fs.promises.readFile(absolutePath);
+    const dataBuffer = await fs.readFile(absolutePath);
     const parser = new PDFParse({ data: dataBuffer });
 
     try {

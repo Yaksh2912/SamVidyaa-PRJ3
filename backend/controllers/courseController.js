@@ -6,9 +6,10 @@ const Task = require('../models/Task');
 const CodingQuestion = require('../models/CodingQuestion');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const archive = require('archiver');
 const { clearCourseHandoutVectors, resolveUploadPath, syncCourseHandout } = require('../services/courseHandoutIngestionService');
+const { ensureDir, removeFileIfPresent } = require('../utils/fileSystem');
+const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
 const isInstructorRole = (role) => role === 'INSTRUCTOR' || role === 'instructor' || role === 'TEACHER' || role === 'teacher';
@@ -40,8 +41,9 @@ const verifyCourseAccess = async (courseId, user, options = {}) => {
 const handoutStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         const dir = path.join(__dirname, '..', 'uploads', 'handouts');
-        fs.mkdirSync(dir, { recursive: true });
-        cb(null, dir);
+        ensureDir(dir)
+            .then(() => cb(null, dir))
+            .catch(cb);
     },
     filename: (req, file, cb) => {
         const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
@@ -180,6 +182,7 @@ const deriveProgressBand = ({ enrollmentCompleted = false, recordCount = 0, comp
 const getCourses = async (req, res) => {
     try {
         let query = {};
+        const pagination = parsePagination(req, { defaultLimit: 100, maxLimit: 200 });
 
         // If user is an instructor, only show their courses? 
         // Or if they are student show enrolled? 
@@ -190,7 +193,13 @@ const getCourses = async (req, res) => {
             query = { is_active: true };
         }
 
-        const courses = await Course.find(query).populate('instructor', 'name email');
+        const [total, courses] = await Promise.all([
+            Course.countDocuments(query),
+            Course.find(query)
+                .skip(pagination.skip)
+                .limit(pagination.limit)
+                .populate('instructor', 'name email'),
+        ]);
         const courseIds = courses.map((course) => course._id);
 
         let moduleCountsByCourse = new Map();
@@ -221,6 +230,7 @@ const getCourses = async (req, res) => {
             return courseObject;
         });
 
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(coursesWithModuleCounts);
     } catch (error) {
         console.error(error);
@@ -844,7 +854,7 @@ const uploadHandout = async (req, res) => {
         // Remove old handout file if one exists
         if (course.handout_path) {
             const oldFile = resolveUploadPath(course.handout_path);
-            if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+            await removeFileIfPresent(oldFile, { bestEffort: true });
         }
 
         // Save relative path (e.g. uploads/handouts/xyz.pdf)
@@ -911,7 +921,7 @@ const deleteHandout = async (req, res) => {
 
         if (course.handout_path) {
             const filePath = resolveUploadPath(course.handout_path);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            await removeFileIfPresent(filePath);
         }
 
         resetHandoutState(course);

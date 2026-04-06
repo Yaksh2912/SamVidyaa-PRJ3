@@ -2,7 +2,7 @@ const { handleChatMessage, getChatHistory, clearChatHistory } = require('../serv
 const { embedAndStore } = require('../services/vectorStore');
 const { ingestHandoutPdf } = require('../services/courseHandoutIngestionService');
 const path = require('path');
-const fs = require('fs');
+const { pathExists } = require('../utils/fileSystem');
 
 /**
  * POST /api/chat
@@ -113,7 +113,7 @@ const ingestPdf = async (req, res) => {
 
         const absolutePath = path.resolve(__dirname, '..', filePath);
 
-        if (!fs.existsSync(absolutePath)) {
+        if (!(await pathExists(absolutePath))) {
             return res.status(404).json({ message: 'File not found.' });
         }
 

@@ -1,3 +1,6 @@
+const { emitMonitoringEvent } = require('../services/monitoringService');
+const { logger } = require('../utils/logger');
+
 function createRateLimiter({
     windowMs = 60 * 1000,
     max = 100,
@@ -12,7 +15,26 @@ function createRateLimiter({
         const existing = requestLog.get(key) || [];
         const recent = existing.filter((timestamp) => timestamp > windowStart);
 
+        res.setHeader('X-RateLimit-Limit', String(max));
+        res.setHeader('X-RateLimit-Remaining', String(Math.max(0, max - recent.length)));
+
         if (recent.length >= max) {
+            logger.warn('rate_limit.exceeded', {
+                requestId: req.requestId,
+                key,
+                method: req.method,
+                path: req.originalUrl || req.url,
+                max,
+                windowMs,
+            });
+            emitMonitoringEvent('rate_limit.exceeded', {
+                requestId: req.requestId,
+                key,
+                method: req.method,
+                path: req.originalUrl || req.url,
+                max,
+                windowMs,
+            });
             return res.status(429).json({ message });
         }
 

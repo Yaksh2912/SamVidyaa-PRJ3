@@ -1,7 +1,7 @@
 Production Readiness Gaps
 
 Current assessment:
-The project is materially safer than before and the highest-risk security gaps called out earlier have now been addressed. Public role escalation is closed, direct point-grant abuse is removed, module/task write authorization is tighter, task completion is database-validated and transactional, and request validation is now standardized across major write paths. The remaining work is mostly operational hardening, integration confidence, and scale maturity.
+The project is materially safer and more production-ready than before. Public role escalation is closed, direct point-grant abuse is removed, module/task write authorization is tighter, task completion is database-validated and transactional, request validation is standardized across major write paths, request-path filesystem work is async, integration coverage is stronger, and the backend now has structured request/error logging with pagination guards on major list endpoints. The remaining work is mostly deployment verification and external observability.
 
 Recently addressed
 
@@ -96,6 +96,58 @@ Recently addressed
   - backend/routes/desktopAppRoutes.js
   - backend/tests/requestValidation.test.js
 
+7. Integration coverage now includes critical security-sensitive flows
+- Real route-level integration coverage now exercises:
+  - registration role restrictions
+  - module write authorization
+  - protected file access
+  - desktop-result plus task completion flow
+  - request-correlation header behavior
+- A real transactional Mongo rollback smoke test is present and gated by TEST_MONGO_URI.
+- Files:
+  - backend/app.js
+  - backend/tests/securityIntegration.test.js
+  - backend/tests/testUtils.js
+
+8. Request-path filesystem work is now async
+- Blocking fs.existsSync, fs.unlinkSync, and fs.mkdirSync usage in the main request paths was replaced with async helpers.
+- Upload destination creation and stale-file cleanup now run asynchronously.
+- Explicit delete/download flows still preserve current auth and failure semantics.
+- Files:
+  - backend/utils/fileSystem.js
+  - backend/controllers/courseController.js
+  - backend/controllers/moduleController.js
+  - backend/controllers/testimonialController.js
+  - backend/controllers/desktopAppController.js
+  - backend/controllers/fileController.js
+  - backend/controllers/chatController.js
+  - backend/services/courseHandoutIngestionService.js
+
+9. Operational maturity is improved
+- Console logging is now bridged into structured JSON logging.
+- Each request now gets a correlation id and request-completion log entry.
+- Central error handling captures correlated 5xx errors for monitoring hooks.
+- Rate limiting now emits rate-limit monitoring events.
+- Major list endpoints now enforce bounded pagination and return pagination metadata in response headers.
+- Files:
+  - backend/utils/logger.js
+  - backend/utils/requestContext.js
+  - backend/utils/pagination.js
+  - backend/services/monitoringService.js
+  - backend/middleware/requestLoggingMiddleware.js
+  - backend/middleware/errorMiddleware.js
+  - backend/middleware/rateLimitMiddleware.js
+  - backend/app.js
+  - backend/server.js
+  - backend/controllers/announcementController.js
+  - backend/controllers/rewardController.js
+  - backend/controllers/leaderboardController.js
+  - backend/controllers/enrollmentController.js
+  - backend/controllers/testimonialController.js
+  - backend/controllers/courseController.js
+  - backend/controllers/moduleController.js
+  - backend/controllers/taskController.js
+
 Remaining blockers
 
 1. MongoDB transaction support must exist in deployment
@@ -105,58 +157,33 @@ Remaining blockers
 - Files:
   - backend/controllers/taskController.js
 
-2. Sync filesystem calls remain in request paths
-- Some upload/delete flows still use fs.existsSync, fs.unlinkSync, and fs.mkdirSync.
-- These block the event loop and are not ideal under production traffic.
-- Files:
-  - backend/controllers/courseController.js
-  - backend/controllers/moduleController.js
-  - backend/controllers/testimonialController.js
-  - backend/controllers/desktopAppController.js
-  - backend/controllers/fileController.js
+2. External monitoring and alert delivery are still not wired
+- Internal monitoring hooks exist, but there is no configured sink such as Sentry, Datadog, New Relic, or alert webhook delivery.
+- That means correlated events are available in-process, but not yet shipped to an operational platform.
 
-3. Logging/monitoring is not production-grade
-- Logging is still mostly console.log / console.error.
-- There is no structured logger, request logging, alerting, or tracing.
-- No evidence of external monitoring or observability hooks.
+3. Replica-set-backed transactional testing should run in CI or staging
+- The real rollback smoke test exists, but it is gated by TEST_MONGO_URI.
+- It still needs a replica-set-backed Mongo target in CI, staging, or a dedicated test environment to prove transaction behavior continuously.
 
-4. Test coverage is improved but still not production-level
-- Current backend tests are useful regression coverage, but still mostly controller/middleware-level.
-- Missing higher-confidence coverage:
-  - auth and authorization integration tests
-  - upload/file-access flow tests
-  - task completion end-to-end tests against a real Mongo replica set
-  - transaction failure-recovery tests
-  - route protection tests
-- File:
-  - backend/package.json
-
-5. Pagination and scale controls are still limited
-- Several list endpoints still do not enforce pagination/limits.
-- This is acceptable at small scale but will become a performance and reliability issue as data grows.
+4. Some endpoints still need pagination review as scale grows
+- The high-growth list endpoints now have bounded pagination, but other endpoints should still be reviewed periodically as product usage expands.
+- This is no longer a top-severity blocker, but it remains an operational maturity watch item.
 
 Recommended order of work
 
 1. Ensure MongoDB is running with replica set support everywhere
 - Confirm local, staging, and production all support transactions before relying on task completion in real traffic.
 
-2. Add integration tests for critical security-sensitive flows
-- Registration role restrictions
-- Route authorization
-- Protected file access
-- Desktop-result plus completion flow
-- Task completion transaction behavior against a real transactional database setup
+2. Wire monitoring hooks to a real external sink
+- Send structured errors, slow-request events, and rate-limit events to your actual monitoring/alerting platform.
 
-3. Replace sync filesystem operations in request paths
-- Move to async fs/promises APIs where possible.
-- Revisit upload/delete paths for backpressure and failure handling.
+3. Run the transactional integration test against a real replica-set Mongo target
+- Configure TEST_MONGO_URI in CI or a staging validation job.
 
-4. Improve operational maturity
-- Replace console logging with structured logging.
-- Add request logging, error correlation, and monitoring hooks.
-- Add pagination/limits where list sizes can grow.
+4. Keep pagination review aligned with new product surfaces
+- Add limits/metadata to any future list endpoints before they become user-facing scale risks.
 
 Production target
 
-After the replica set requirement is verified and the remaining integration and operational items are addressed, the app should be much closer to staging-ready.
-After that, remaining work would be observability, scale controls, and deployment hardening.
+After replica set support is verified everywhere and monitoring is wired to a real external platform, the app should be close to staging-ready.
+After that, remaining work would mainly be deployment hardening, CI environment maturity, and ongoing scale review.

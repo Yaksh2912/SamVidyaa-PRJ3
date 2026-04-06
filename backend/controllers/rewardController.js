@@ -1,6 +1,7 @@
 const Reward = require('../models/Reward');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
+const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 
 // @desc    Create a new reward
 // @route   POST /api/rewards
@@ -43,9 +44,18 @@ const createReward = async (req, res) => {
 // @access  Private 
 const getCourseRewards = async (req, res) => {
     try {
-        const rewards = await Reward.find({ course_id: req.params.courseId })
-            .sort({ cost: 1 })
-            .lean();
+        const query = { course_id: req.params.courseId };
+        const pagination = parsePagination(req, { defaultLimit: 100, maxLimit: 200 });
+        const [total, rewards] = await Promise.all([
+            Reward.countDocuments(query),
+            Reward.find(query)
+                .sort({ cost: 1 })
+                .skip(pagination.skip)
+                .limit(pagination.limit)
+                .lean(),
+        ]);
+
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(rewards);
     } catch (error) {
         console.error(error);
@@ -58,6 +68,7 @@ const getCourseRewards = async (req, res) => {
 // @access  Private 
 const getStudentRewards = async (req, res) => {
     try {
+        const pagination = parsePagination(req, { defaultLimit: 100, maxLimit: 200 });
         const enrollments = await Enrollment.find({
             student_id: req.user._id,
             status: { $in: ['ACTIVE', 'APPROVED', 'PENDING'] }
@@ -68,13 +79,22 @@ const getStudentRewards = async (req, res) => {
         const courseIds = [...new Set(enrollments.map((enrollment) => enrollment.course_id?.toString()).filter(Boolean))];
 
         if (!courseIds.length) {
+            applyPaginationHeaders(res, { ...pagination, total: 0 });
             return res.json([]);
         }
 
-        const rewards = await Reward.find({ course_id: { $in: courseIds } })
-            .populate('course_id', 'course_name')
-            .sort({ cost: 1 })
-            .lean();
+        const query = { course_id: { $in: courseIds } };
+        const [total, rewards] = await Promise.all([
+            Reward.countDocuments(query),
+            Reward.find(query)
+                .populate('course_id', 'course_name')
+                .sort({ cost: 1 })
+                .skip(pagination.skip)
+                .limit(pagination.limit)
+                .lean(),
+        ]);
+
+        applyPaginationHeaders(res, { ...pagination, total });
             
         res.json(rewards);
     } catch (error) {

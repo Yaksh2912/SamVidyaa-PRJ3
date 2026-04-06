@@ -28,6 +28,7 @@ test('getStudentRewards returns empty list when student has no qualifying enroll
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.body, []);
+    assert.equal(res.getHeader('x-total-count'), '0');
     assert.equal(rewardFindCalled, false);
 });
 
@@ -39,10 +40,11 @@ test('getStudentRewards deduplicates course ids before fetching rewards', async 
         { course_id: 'course-1' },
         { course_id: 'course-2' },
     ]));
+    stubMethod(t, Reward, 'countDocuments', async () => 1);
 
     stubMethod(t, Reward, 'find', (query) => {
         capturedQuery = query;
-        return createQueryChain([{ _id: 'reward-1' }], ['populate', 'sort']);
+        return createQueryChain([{ _id: 'reward-1' }], ['populate', 'sort', 'skip', 'limit']);
     });
 
     const req = { user: { _id: 'student-1', role: 'STUDENT' } };
@@ -52,6 +54,7 @@ test('getStudentRewards deduplicates course ids before fetching rewards', async 
 
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.body, [{ _id: 'reward-1' }]);
+    assert.equal(res.getHeader('x-total-count'), '1');
     assert.deepEqual(capturedQuery, {
         course_id: { $in: ['course-1', 'course-2'] },
     });

@@ -3,8 +3,9 @@ const Task = require('../models/Task');
 const CodingQuestion = require('../models/CodingQuestion');
 const Course = require('../models/Course');
 const archive = require('archiver');
-const fs = require('fs');
 const path = require('path');
+const { removeFileIfPresent } = require('../utils/fileSystem');
+const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
 const isInstructorOrAdminRole = (role) => {
@@ -203,15 +204,22 @@ const getTeacherModules = async (req, res) => {
     try {
         const { course_id } = req.query;
         let query = { createdBy: req.user._id };
+        const pagination = parsePagination(req, { defaultLimit: 100, maxLimit: 200 });
 
         if (course_id) {
             query.course_id = course_id;
         }
 
-        const modules = await Module.find(query)
-            .sort({ module_order: 1, createdAt: -1 })
-            .populate('course_id', 'course_name course_code');
+        const [total, modules] = await Promise.all([
+            Module.countDocuments(query),
+            Module.find(query)
+                .sort({ module_order: 1, createdAt: -1 })
+                .skip(pagination.skip)
+                .limit(pagination.limit)
+                .populate('course_id', 'course_name course_code'),
+        ]);
 
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(await attachTaskCounts(modules));
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -223,8 +231,16 @@ const getTeacherModules = async (req, res) => {
 // @access  Private
 const getCourseModules = async (req, res) => {
     try {
-        const modules = await Module.find({ course_id: req.params.courseId })
-            .sort({ module_order: 1 });
+        const query = { course_id: req.params.courseId };
+        const pagination = parsePagination(req, { defaultLimit: 100, maxLimit: 200 });
+        const [total, modules] = await Promise.all([
+            Module.countDocuments(query),
+            Module.find(query)
+                .sort({ module_order: 1 })
+                .skip(pagination.skip)
+                .limit(pagination.limit),
+        ]);
+        applyPaginationHeaders(res, { ...pagination, total });
         res.json(await attachTaskCounts(modules));
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -296,9 +312,7 @@ const deleteModuleFile = async (req, res) => {
         }
 
         const absoluteFilePath = path.join(__dirname, '..', existingFile.path);
-        if (fs.existsSync(absoluteFilePath)) {
-            fs.unlinkSync(absoluteFilePath);
-        }
+        await removeFileIfPresent(absoluteFilePath);
 
         module.files = (module.files || []).filter((file) => file.path !== filePath);
         const updatedModule = await module.save();
