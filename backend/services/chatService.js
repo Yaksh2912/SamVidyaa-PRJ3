@@ -1,15 +1,15 @@
-const OpenAI = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const ChatMessage = require('../models/ChatMessage');
 const { getStudentContext, getStudentSummary } = require('./personalDataRetriever');
 const { SYSTEM_PROMPT } = require('./promptTemplates');
 const { semanticSearch } = require('./vectorStore');
 const chatCache = require('./chatCache');
 
-let client = null;
+let model = null;
 
-// Groq config — read inside init, NOT at module level,
+// Gemini config — read inside init, NOT at module level,
 // because this file is require()'d before dotenv.config() in server.js
-let LLM_BASE_URL, LLM_MODEL, LLM_API_KEY;
+let LLM_MODEL, LLM_API_KEY;
 
 // Per-student rate limiting
 const rateLimitMap = new Map();
@@ -18,26 +18,24 @@ const GLOBAL_RATE_LIMIT_MS = 2500;
 let lastGlobalRequest = 0;
 
 /**
- * Initialize the LLM client (Groq via OpenAI-compatible SDK).
+ * Initialize the LLM client (Gemini).
  */
 function initChatService() {
-    // Read env vars HERE (after dotenv.config() has run)
-    LLM_BASE_URL = process.env.LLM_BASE_URL || 'https://api.groq.com/openai/v1';
-    LLM_MODEL = process.env.LLM_MODEL || 'llama-3.3-70b-versatile';
-    LLM_API_KEY = process.env.GROQ_API_KEY || process.env.LLM_API_KEY;
+    LLM_MODEL = process.env.LLM_MODEL || 'gemini-2.5-flash-lite';
+    LLM_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.LLM_API_KEY;
 
     if (!LLM_API_KEY) {
-        console.warn('[ChatService] GROQ_API_KEY not set — chatbot will not be functional.');
-        console.warn('[ChatService] Get a free key at: https://console.groq.com/keys');
+        console.warn('[ChatService] GEMINI_API_KEY/GOOGLE_API_KEY not set — chatbot will not be functional.');
         return false;
     }
 
-    client = new OpenAI({
-        apiKey: LLM_API_KEY,
-        baseURL: LLM_BASE_URL,
+    const genAI = new GoogleGenerativeAI(LLM_API_KEY);
+    model = genAI.getGenerativeModel({
+        model: LLM_MODEL,
+        systemInstruction: SYSTEM_PROMPT,
     });
 
-    console.log(`[ChatService] LLM initialized: ${LLM_MODEL} via ${LLM_BASE_URL}`);
+    console.log(`[ChatService] LLM initialized: ${LLM_MODEL} via Google Gemini`);
     return true;
 }
 
@@ -75,49 +73,76 @@ function checkRateLimit(studentId) {
     return null;
 }
 
-/**
- * Build the messages array in OpenAI chat format.
- */
-function buildMessages(personalContext, generalContext, conversationHistory, userQuery) {
-    // Build context to inject into system prompt
+function buildContextBlock(personalContext, generalContext) {
     let contextBlock = '';
 
     if (personalContext && !personalContext.error && !personalContext.summary) {
-        contextBlock += `\n\n## PERSONAL DATA FOR THIS STUDENT\n\`\`\`json\n${JSON.stringify(personalContext, null, 2)}\n\`\`\``;
+        contextBlock += `## PERSONAL DATA FOR THIS STUDENT\n\`\`\`json\n${JSON.stringify(personalContext, null, 2)}\n\`\`\``;
     } else if (personalContext?.summary) {
-        contextBlock += `\n\n## STUDENT SUMMARY\n${personalContext.summary}`;
+        contextBlock += `## STUDENT SUMMARY\n${personalContext.summary}`;
     }
 
     if (generalContext && generalContext.trim().length > 0) {
-        contextBlock += `\n\n## RELEVANT COURSE/CAMPUS KNOWLEDGE\n${generalContext}`;
+        contextBlock += `${contextBlock ? '\n\n' : ''}## RELEVANT COURSE/CAMPUS KNOWLEDGE\n${generalContext}`;
     }
 
-    const messages = [
-        { role: 'system', content: SYSTEM_PROMPT + contextBlock },
-    ];
+    return contextBlock;
+}
 
-    // Add conversation history (last few messages)
+/**
+ * Build the contents array in Gemini format.
+ */
+function buildContents(personalContext, generalContext, conversationHistory, userQuery) {
+    const contents = [];
+    const contextBlock = buildContextBlock(personalContext, generalContext);
+
+    if (contextBlock) {
+        contents.push({
+            role: 'user',
+            parts: [{ text: `Use this context for the conversation.\n\n${contextBlock}` }],
+        });
+        contents.push({
+            role: 'model',
+            parts: [{ text: 'Understood. I will use the supplied context and follow the instructions exactly.' }],
+        });
+    }
+
     if (conversationHistory && conversationHistory.length > 0) {
         for (const msg of conversationHistory) {
-            messages.push({
-                role: msg.role === 'user' ? 'user' : 'assistant',
-                content: msg.content,
+            contents.push({
+                role: msg.role === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.content }],
             });
         }
     }
 
-    // Add the current user query
-    messages.push({ role: 'user', content: userQuery });
+    contents.push({
+        role: 'user',
+        parts: [{ text: userQuery }],
+    });
 
-    return messages;
+    return contents;
+}
+
+function extractSources(generalContext) {
+    const sources = [];
+
+    if (generalContext && generalContext.trim().length > 0) {
+        const sourceMatches = generalContext.match(/\[([^\]]+)\]/g);
+        if (sourceMatches) {
+            sources.push(...new Set(sourceMatches.map((source) => source.replace(/[\[\]]/g, ''))));
+        }
+    }
+
+    return sources;
 }
 
 /**
  * Main chat handler.
  */
 async function handleChatMessage(studentId, message) {
-    if (!client) {
-        throw new Error('Chat service not initialized. Set GROQ_API_KEY in your .env file.');
+    if (!model) {
+        throw new Error('Chat service not initialized. Set GEMINI_API_KEY or GOOGLE_API_KEY in your .env file.');
     }
 
     // 1. Check rate limit
@@ -144,7 +169,7 @@ async function handleChatMessage(studentId, message) {
         .limit(6)
         .lean();
 
-    const conversationHistory = recentHistory.reverse().map(msg => ({
+    const conversationHistory = recentHistory.reverse().map((msg) => ({
         role: msg.role,
         content: msg.content,
     }));
@@ -164,43 +189,38 @@ async function handleChatMessage(studentId, message) {
         generalContext = await semanticSearch(message, 2);
     }
 
-    // 6. Build messages and call LLM
-    const messages = buildMessages(personalContext, generalContext, conversationHistory, message);
-
+    // 6. Build contents and call Gemini
+    const contents = buildContents(personalContext, generalContext, conversationHistory, message);
+    const sources = extractSources(generalContext);
     let reply = '';
-    const sources = [];
     const MAX_RETRIES = 2;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-            const completion = await client.chat.completions.create({
-                model: LLM_MODEL,
-                messages,
-                temperature: 0.7,
-                max_tokens: 800,
+            const result = await model.generateContent({
+                contents,
+                generationConfig: {
+                    temperature: 0.3,
+                    topP: 0.9,
+                    maxOutputTokens: 800,
+                },
             });
 
-            reply = completion.choices[0]?.message?.content || 'I couldn\'t generate a response. Please try again.';
-
-            // Extract source references
-            if (generalContext && generalContext.trim().length > 0) {
-                const sourceMatches = generalContext.match(/\[([^\]]+)\]/g);
-                if (sourceMatches) {
-                    sources.push(...new Set(sourceMatches.map(s => s.replace(/[\[\]]/g, ''))));
-                }
-            }
-
-            break; // Success
-
+            reply = result.response?.text?.() || 'I couldn\'t generate a response. Please try again.';
+            break;
         } catch (error) {
-            console.error(`[ChatService] LLM error (attempt ${attempt + 1}):`, error.message?.substring(0, 200));
+            const errorMessage = error.message?.substring(0, 200) || 'Unknown Gemini error';
+            console.error(`[ChatService] LLM error (attempt ${attempt + 1}):`, errorMessage);
 
-            const is429 = error.status === 429 || error.message?.includes('429') || error.message?.includes('rate');
+            const is429 = error.status === 429
+                || errorMessage.includes('429')
+                || errorMessage.toLowerCase().includes('rate')
+                || errorMessage.toLowerCase().includes('quota');
 
             if (is429 && attempt < MAX_RETRIES) {
                 const waitMs = Math.pow(2, attempt + 1) * 1000;
                 console.log(`[ChatService] Rate limited. Retrying in ${waitMs / 1000}s...`);
-                await new Promise(resolve => setTimeout(resolve, waitMs));
+                await new Promise((resolve) => setTimeout(resolve, waitMs));
                 continue;
             }
 

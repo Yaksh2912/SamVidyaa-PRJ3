@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Course = require('../models/Course');
 const Reward = require('../models/Reward');
 const PointTransaction = require('../models/PointTransaction');
+const { createUserAccount, normalizeRole } = require('../services/userAccountService');
 
 // @desc    Get public platform stats for landing page
 // @route   GET /api/users/public-stats
@@ -122,4 +123,40 @@ const addPoints = async (req, res) => {
     }
 };
 
-module.exports = { getUserPoints, claimReward, addPoints, getPublicPlatformStats };
+// @desc    Create an instructor/admin account
+// @route   POST /api/users/staff
+// @access  Private/Admin
+const createPrivilegedUser = async (req, res) => {
+    try {
+        const { name, email, password, role, username, institution } = req.body;
+        const assignedRole = normalizeRole(role, '');
+
+        if (!['INSTRUCTOR', 'ADMIN'].includes(assignedRole)) {
+            return res.status(400).json({ message: 'Only instructor or admin accounts can be created here' });
+        }
+
+        const user = await createUserAccount({
+            name,
+            email,
+            password,
+            role: assignedRole,
+            username,
+            institution,
+        });
+
+        res.status(201).json({
+            _id: user._id,
+            name: user.name,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            institution: user.institution,
+            createdAt: user.createdAt,
+        });
+    } catch (error) {
+        console.error('Privileged user creation error:', error);
+        res.status(error.statusCode || 400).json({ message: error.message || 'Failed to create user' });
+    }
+};
+
+module.exports = { getUserPoints, claimReward, addPoints, getPublicPlatformStats, createPrivilegedUser };

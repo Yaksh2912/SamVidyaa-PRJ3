@@ -20,6 +20,13 @@ function ChatBot() {
     const inputRef = useRef(null);
     const cooldownRef = useRef(null);
 
+    const resizeInput = () => {
+        if (!inputRef.current) return;
+
+        inputRef.current.style.height = 'auto';
+        inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 140)}px`;
+    };
+
     // Auto-scroll to the latest message
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -35,6 +42,10 @@ function ChatBot() {
             setTimeout(() => inputRef.current?.focus(), 300);
         }
     }, [isOpen]);
+
+    useEffect(() => {
+        resizeInput();
+    }, [input, isOpen]);
 
     // Load chat history when panel opens for the first time
     useEffect(() => {
@@ -304,7 +315,10 @@ function ChatBot() {
                             ref={inputRef}
                             className="chatbot-input"
                             value={input}
-                            onChange={(e) => setInput(e.target.value)}
+                            onChange={(e) => {
+                                setInput(e.target.value);
+                                resizeInput();
+                            }}
                             onKeyDown={handleKeyDown}
                             placeholder={cooldown > 0 ? `Wait ${cooldown}s...` : "Ask me anything about your courses..."}
                             rows={1}

@@ -14,7 +14,6 @@ function Signup() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student',
   })
   const [error, setError] = useState('')
   const { register } = useAuth()
@@ -51,8 +50,7 @@ function Signup() {
       const data = await register(
         formData.name,
         formData.email,
-        formData.password,
-        formData.role
+        formData.password
       )
 
       if (data.role === 'ADMIN') {
@@ -136,18 +134,13 @@ function Signup() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="role">{translations.auth.signup.role}</label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="role-select"
-            >
-              <option value="student">{translations.auth.roles.student}</option>
-              <option value="teacher">{translations.auth.roles.teacher}</option>
-              <option value="admin">{translations.auth.roles.admin}</option>
-            </select>
+            <label htmlFor="accountType">{translations.auth.signup.role}</label>
+            <input
+              type="text"
+              id="accountType"
+              value={translations.auth.roles.student}
+              readOnly
+            />
           </div>
 
           <button type="submit" className="btn btn-primary btn-full">
