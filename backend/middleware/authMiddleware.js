@@ -1,6 +1,13 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const normalizeRole = (role) => String(role || '').toUpperCase();
+const isAdminRole = (role) => normalizeRole(role) === 'ADMIN';
+const isInstructorOrAdminRole = (role) => {
+    const normalizedRole = normalizeRole(role);
+    return normalizedRole === 'ADMIN' || normalizedRole === 'INSTRUCTOR' || normalizedRole === 'TEACHER';
+};
+
 const protect = async (req, res, next) => {
     let token;
 
@@ -28,11 +35,19 @@ const protect = async (req, res, next) => {
 };
 
 const admin = (req, res, next) => {
-    if (req.user && (req.user.role === 'admin' || req.user.role === 'ADMIN')) {
+    if (req.user && isAdminRole(req.user.role)) {
         next();
     } else {
         res.status(401).json({ message: 'Not authorized as an admin' });
     }
-}
+};
 
-module.exports = { protect, admin };
+const instructorOrAdmin = (req, res, next) => {
+    if (req.user && isInstructorOrAdminRole(req.user.role)) {
+        next();
+    } else {
+        res.status(401).json({ message: 'Not authorized as an instructor or admin' });
+    }
+};
+
+module.exports = { protect, admin, instructorOrAdmin };

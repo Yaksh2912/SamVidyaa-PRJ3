@@ -2,8 +2,15 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, instructorOrAdmin } = require('../middleware/authMiddleware');
 const { createRateLimiter } = require('../middleware/rateLimitMiddleware');
+const {
+    handleUploadMiddleware,
+    validateModuleCreateRequest,
+    validateModuleUpdateRequest,
+    validateModuleFileDeleteRequest,
+    validateCourseIdParam,
+} = require('../middleware/requestValidation');
 const { createModule, updateModule, getTeacherModules, getCourseModules, getModuleById, deleteModuleFile, deleteModule, exportModule } = require('../controllers/moduleController');
 
 // Multer Config
@@ -27,7 +34,7 @@ const moduleUploadRateLimiter = createRateLimiter({
 });
 
 router.route('/')
-    .post(protect, moduleUploadRateLimiter, upload.array('files'), createModule)
+    .post(protect, instructorOrAdmin, moduleUploadRateLimiter, handleUploadMiddleware(upload.array('files')), validateModuleCreateRequest, createModule)
     .get(protect, getTeacherModules);
 
 router.route('/course/:courseId')
@@ -37,12 +44,12 @@ router.route('/:id/export')
     .get(protect, exportModule);
 
 router.route('/:id/files')
-    .delete(protect, deleteModuleFile);
+    .delete(protect, instructorOrAdmin, validateModuleFileDeleteRequest, deleteModuleFile);
 
 router.route('/:id')
     .get(protect, getModuleById)
-    .put(protect, moduleUploadRateLimiter, upload.array('files'), updateModule)
-    .delete(protect, deleteModule);
+    .put(protect, instructorOrAdmin, moduleUploadRateLimiter, handleUploadMiddleware(upload.array('files')), validateModuleUpdateRequest, updateModule)
+    .delete(protect, instructorOrAdmin, validateCourseIdParam, deleteModule);
 
 
 

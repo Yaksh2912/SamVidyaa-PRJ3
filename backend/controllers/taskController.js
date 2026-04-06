@@ -11,6 +11,7 @@ const xlsx = require('xlsx');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const mongoose = require('mongoose');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 
@@ -18,6 +19,29 @@ const execFileAsync = promisify(execFile);
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
 const isStudentRole = (role) => role === 'STUDENT' || role === 'student';
 const ALLOWED_TASK_COMPLETION_STATUSES = ['ACTIVE', 'APPROVED'];
+
+const createRequestError = (statusCode, message) => {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
+};
+
+const applySessionToQuery = (query, session) => {
+    if (session && query && typeof query.session === 'function') {
+        return query.session(session);
+    }
+
+    return query;
+};
+
+const createOneWithSession = async (Model, payload, session) => {
+    if (!session) {
+        return Model.create(payload);
+    }
+
+    const [createdDocument] = await Model.create([payload], { session });
+    return createdDocument;
+};
 
 const normalizeImportedText = (text) => text
     .replace(/\r/g, '')
@@ -166,29 +190,34 @@ const buildTaskDraft = (section) => {
     };
 };
 
-const getStudentTaskAccess = async (studentId, role, taskId) => {
+const getStudentTaskAccess = async (studentId, role, taskId, session = null) => {
     if (!isStudentRole(role)) {
         return { error: { status: 401, message: 'Only students can complete tasks' } };
     }
 
-    const task = await Task.findById(taskId).lean();
+    const task = await applySessionToQuery(Task.findById(taskId), session).lean();
     if (!task) {
         return { error: { status: 404, message: 'Task not found' } };
     }
 
-    const module = await Module.findById(task.module_id)
-        .populate('course_id', 'course_name')
+    const module = await applySessionToQuery(
+        Module.findById(task.module_id).populate('course_id', 'course_name'),
+        session
+    )
         .lean();
 
     if (!module || !module.course_id) {
         return { error: { status: 404, message: 'Module or course not found' } };
     }
 
-    const enrollment = await Enrollment.findOne({
-        course_id: module.course_id._id,
-        student_id: studentId,
-        status: { $in: ALLOWED_TASK_COMPLETION_STATUSES },
-    }).select('_id status').lean();
+    const enrollment = await applySessionToQuery(
+        Enrollment.findOne({
+            course_id: module.course_id._id,
+            student_id: studentId,
+            status: { $in: ALLOWED_TASK_COMPLETION_STATUSES },
+        }).select('_id status'),
+        session
+    ).lean();
 
     if (!enrollment) {
         return { error: { status: 403, message: 'You are not allowed to complete tasks for this course' } };
@@ -197,11 +226,14 @@ const getStudentTaskAccess = async (studentId, role, taskId) => {
     return { task, module, enrollment };
 };
 
-const getLatestPassingDesktopResult = async (studentId, taskId) => DesktopTaskResult.findOne({
-    student_id: studentId,
-    task_id: taskId,
-    status: 'PASSED',
-}).sort({ createdAt: -1 }).lean();
+const getLatestPassingDesktopResult = async (studentId, taskId, session = null) => applySessionToQuery(
+    DesktopTaskResult.findOne({
+        student_id: studentId,
+        task_id: taskId,
+        status: 'PASSED',
+    }).sort({ createdAt: -1 }),
+    session
+).lean();
 
 const getSpreadsheetValue = (row, aliases) => {
     const normalizedRow = Object.entries(row).reduce((acc, [key, value]) => {
@@ -671,6 +703,8 @@ const recordDesktopTaskResult = async (req, res) => {
 // @route   POST /api/tasks/:id/complete
 // @access  Private (Student)
 const completeTask = async (req, res) => {
+    let session = null;
+
     try {
         const taskId = req.params.id;
         const { collaboratorIds } = req.body; // Array of peer user IDs
@@ -701,126 +735,181 @@ const completeTask = async (req, res) => {
             return res.status(400).json({ message: 'This task deadline has already passed' });
         }
 
-        // 1. Calculate the split
-        let studentPoints = task.points || 0;
-        let peerPointsEach = 0;
-        let collaboratorsAwarded = 0;
-        const collaboratorPool = Array.isArray(collaboratorIds) ? collaboratorIds : [];
-        const uniquePeerIds = [...new Set(collaboratorPool.map((id) => id?.toString()).filter(Boolean))]
-            .filter((id) => id !== req.user._id.toString());
-        let validPeers = [];
+        session = await mongoose.startSession();
+        let responsePayload = null;
 
-        if (task.allow_collaboration && uniquePeerIds.length > 0) {
-            const activePeers = await Enrollment.find({
-                course_id: module.course_id._id,
-                student_id: { $in: uniquePeerIds },
-                status: { $in: ALLOWED_TASK_COMPLETION_STATUSES },
-            }).select('student_id').lean();
-
-            validPeers = activePeers.map((peer) => peer.student_id.toString());
-        }
-
-        if (task.allow_collaboration && task.collab_percentage > 0 && validPeers.length > 0) {
-            const peerPool = Math.round((task.points * task.collab_percentage) / 100);
-            studentPoints = task.points - peerPool;
-            peerPointsEach = Math.round(peerPool / validPeers.length);
-        }
-
-        // 2. Award points to the student completing the task
-        const currentUser = await User.findById(req.user._id);
-        if (!currentUser) return res.status(404).json({ message: 'User not found' });
-
-        currentUser.points = (currentUser.points || 0) + studentPoints;
-        await currentUser.save();
-
-        if (studentPoints > 0) {
-            await PointTransaction.create({
-                user_id: currentUser._id,
-                amount: studentPoints,
-                reason: `Completed Task: ${task.task_name}`,
-                course_id: module.course_id._id,
-            });
-        }
-
-        // 3. Award colab points to peers
-        if (peerPointsEach > 0 && validPeers.length > 0) {
-            const peers = await User.find({ _id: { $in: validPeers } }).select('_id').lean();
-            const peerIds = peers.map((peer) => peer._id);
-
-            if (peerIds.length) {
-                await Promise.all([
-                    User.updateMany(
-                        { _id: { $in: peerIds } },
-                        { $inc: { points: peerPointsEach } }
-                    ),
-                    PointTransaction.insertMany(
-                        peerIds.map((peerId) => ({
-                            user_id: peerId,
-                            amount: peerPointsEach,
-                            reason: 'Collaboration/Teamwork',
-                            course_id: module.course_id._id,
-                        }))
-                    ),
-                ]);
-
-                collaboratorsAwarded = peerIds.length;
+        await session.withTransaction(async () => {
+            const transactionalAccess = await getStudentTaskAccess(req.user._id, req.user.role, taskId, session);
+            if (transactionalAccess.error) {
+                throw createRequestError(transactionalAccess.error.status, transactionalAccess.error.message);
             }
-        }
 
-        const totalModuleTasks = await Task.countDocuments({ module_id: task.module_id });
-        const progress = await StudentProgress.findOneAndUpdate(
-            {
-                student_id: req.user._id,
-                course_id: module.course_id._id,
-                module_id: task.module_id,
-            },
-            {
-                $setOnInsert: {
-                    student_id: req.user._id,
-                    course_id: module.course_id._id,
-                    module_id: task.module_id,
-                    completed_tasks: 0,
-                    module_status: 'NOT_STARTED',
-                    can_attempt_module_test: false,
+            const { task: transactionalTask, module: transactionalModule } = transactionalAccess;
+            const [transactionalCompletion, transactionalPassedDesktopResult] = await Promise.all([
+                applySessionToQuery(
+                    TaskCompletion.findOne({
+                        student_id: req.user._id,
+                        task_id: transactionalTask._id,
+                    }).select('_id'),
+                    session
+                ).lean(),
+                getLatestPassingDesktopResult(req.user._id, transactionalTask._id, session),
+            ]);
+
+            if (transactionalCompletion) {
+                throw createRequestError(400, 'Task already completed');
+            }
+
+            if (!transactionalPassedDesktopResult) {
+                throw createRequestError(400, 'Task must be completed in the desktop application before validation');
+            }
+
+            if (transactionalTask.has_deadline && transactionalTask.deadline_at && new Date(transactionalTask.deadline_at).getTime() < Date.now()) {
+                throw createRequestError(400, 'This task deadline has already passed');
+            }
+
+            let studentPoints = transactionalTask.points || 0;
+            let peerPointsEach = 0;
+            let collaboratorsAwarded = 0;
+            const collaboratorPool = Array.isArray(collaboratorIds) ? collaboratorIds : [];
+            const uniquePeerIds = [...new Set(collaboratorPool.map((id) => id?.toString()).filter(Boolean))]
+                .filter((id) => id !== req.user._id.toString());
+            let validPeers = [];
+
+            if (transactionalTask.allow_collaboration && uniquePeerIds.length > 0) {
+                const activePeers = await applySessionToQuery(
+                    Enrollment.find({
+                        course_id: transactionalModule.course_id._id,
+                        student_id: { $in: uniquePeerIds },
+                        status: { $in: ALLOWED_TASK_COMPLETION_STATUSES },
+                    }).select('student_id'),
+                    session
+                ).lean();
+
+                validPeers = activePeers.map((peer) => peer.student_id.toString());
+            }
+
+            if (transactionalTask.allow_collaboration && transactionalTask.collab_percentage > 0 && validPeers.length > 0) {
+                const peerPool = Math.round((transactionalTask.points * transactionalTask.collab_percentage) / 100);
+                studentPoints = transactionalTask.points - peerPool;
+                peerPointsEach = Math.round(peerPool / validPeers.length);
+            }
+
+            const currentUser = await applySessionToQuery(User.findById(req.user._id), session);
+            if (!currentUser) {
+                throw createRequestError(404, 'User not found');
+            }
+
+            currentUser.points = (currentUser.points || 0) + studentPoints;
+            await currentUser.save({ session });
+
+            if (studentPoints > 0) {
+                await createOneWithSession(PointTransaction, {
+                    user_id: currentUser._id,
+                    amount: studentPoints,
+                    reason: `Completed Task: ${transactionalTask.task_name}`,
+                    course_id: transactionalModule.course_id._id,
+                }, session);
+            }
+
+            if (peerPointsEach > 0 && validPeers.length > 0) {
+                const peers = await applySessionToQuery(
+                    User.find({ _id: { $in: validPeers } }).select('_id'),
+                    session
+                ).lean();
+                const peerIds = peers.map((peer) => peer._id);
+
+                if (peerIds.length) {
+                    await Promise.all([
+                        User.updateMany(
+                            { _id: { $in: peerIds } },
+                            { $inc: { points: peerPointsEach } },
+                            { session }
+                        ),
+                        PointTransaction.insertMany(
+                            peerIds.map((peerId) => ({
+                                user_id: peerId,
+                                amount: peerPointsEach,
+                                reason: 'Collaboration/Teamwork',
+                                course_id: transactionalModule.course_id._id,
+                            })),
+                            { session }
+                        ),
+                    ]);
+
+                    collaboratorsAwarded = peerIds.length;
                 }
-            },
-            {
-                new: true,
-                upsert: true,
             }
-        );
 
-        progress.completed_tasks = (progress.completed_tasks || 0) + 1;
-        const allTasksCompleted = totalModuleTasks > 0 && progress.completed_tasks >= totalModuleTasks;
-        progress.module_status = allTasksCompleted ? 'TASKS_COMPLETED' : 'IN_PROGRESS';
-        progress.can_attempt_module_test = allTasksCompleted;
-        await progress.save();
+            const totalModuleTasks = await applySessionToQuery(
+                Task.countDocuments({ module_id: transactionalTask.module_id }),
+                session
+            );
+            const progress = await StudentProgress.findOneAndUpdate(
+                {
+                    student_id: req.user._id,
+                    course_id: transactionalModule.course_id._id,
+                    module_id: transactionalTask.module_id,
+                },
+                {
+                    $setOnInsert: {
+                        student_id: req.user._id,
+                        course_id: transactionalModule.course_id._id,
+                        module_id: transactionalTask.module_id,
+                        completed_tasks: 0,
+                        module_status: 'NOT_STARTED',
+                        can_attempt_module_test: false,
+                    }
+                },
+                {
+                    new: true,
+                    upsert: true,
+                    session,
+                }
+            );
 
-        const completionRecord = await TaskCompletion.create({
-            student_id: req.user._id,
-            course_id: module.course_id._id,
-            module_id: task.module_id,
-            task_id: task._id,
-            task_name: task.task_name,
-            course_name: module.course_id.course_name || '',
-            module_name: module.module_name || '',
-            task_language: task.language || '',
-            task_difficulty: task.difficulty || '',
-            task_time_limit: task.time_limit || 0,
-            task_points: task.points || 0,
-            points_awarded: studentPoints,
-            collaborator_ids: validPeers,
-            completed_at: passedDesktopResult.submitted_at || new Date(),
+            progress.completed_tasks = (progress.completed_tasks || 0) + 1;
+            const allTasksCompleted = totalModuleTasks > 0 && progress.completed_tasks >= totalModuleTasks;
+            progress.module_status = allTasksCompleted ? 'TASKS_COMPLETED' : 'IN_PROGRESS';
+            progress.can_attempt_module_test = allTasksCompleted;
+            await progress.save({ session });
+
+            const completionRecord = await createOneWithSession(TaskCompletion, {
+                student_id: req.user._id,
+                course_id: transactionalModule.course_id._id,
+                module_id: transactionalTask.module_id,
+                task_id: transactionalTask._id,
+                task_name: transactionalTask.task_name,
+                course_name: transactionalModule.course_id.course_name || '',
+                module_name: transactionalModule.module_name || '',
+                task_language: transactionalTask.language || '',
+                task_difficulty: transactionalTask.difficulty || '',
+                task_time_limit: transactionalTask.time_limit || 0,
+                task_points: transactionalTask.points || 0,
+                points_awarded: studentPoints,
+                collaborator_ids: validPeers,
+                completed_at: transactionalPassedDesktopResult.submitted_at || new Date(),
+            }, session);
+
+            responsePayload = {
+                message: `Task completed! You earned ${studentPoints} pts.` + (collaboratorsAwarded > 0 ? ` (Shared ${peerPointsEach * collaboratorsAwarded} pts with ${collaboratorsAwarded} peers)` : ''),
+                points: currentUser.points,
+                completion: completionRecord,
+            };
         });
 
-        res.json({
-            message: `Task completed! You earned ${studentPoints} pts.` + (collaboratorsAwarded > 0 ? ` (Shared ${peerPointsEach * collaboratorsAwarded} pts with ${collaboratorsAwarded} peers)` : ''),
-            points: currentUser.points,
-            completion: completionRecord,
-        });
+        res.json(responsePayload);
     } catch (error) {
+        if (error?.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
+
         console.error(error);
         res.status(500).json({ message: 'Failed to complete task' });
+    } finally {
+        if (session) {
+            await session.endSession();
+        }
     }
 };
 

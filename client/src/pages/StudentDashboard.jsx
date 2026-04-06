@@ -403,24 +403,6 @@ function StudentDashboard() {
     }));
   }, [activeTab, leaderboardType, selectedCourseForRanking, selectedCourse?._id, expandedModule]);
 
-  const handleAddPoints = async (amount = 50) => {
-    try {
-      const userStr = localStorage.getItem('user');
-      const token = userStr ? JSON.parse(userStr).token : null;
-      const res = await fetch(`${API_BASE_URL}/api/users/add-points`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ amount })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setUserPoints(data.points);
-      }
-    } catch (error) {
-      console.error('Add points error:', error);
-    }
-  };
-
   const handleRespondCollab = async (collabId, status) => {
     try {
       const userStr = localStorage.getItem('user');
@@ -1037,9 +1019,6 @@ function StudentDashboard() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel point-shop-panel">
               <div className="workspace-panel-header">
                 <h3>{t.pointShop.title}</h3>
-                <button className="btn btn-earn-points" onClick={() => handleAddPoints(50)}>
-                  <HiBolt /> {t.pointShop.earnTestPoints}
-                </button>
               </div>
               {loadingRewards ? (
                 <RewardGridSkeleton count={3} visible={showRewardsSkeletons} />

@@ -88,41 +88,6 @@ const claimReward = async (req, res) => {
     }
 };
 
-// @desc    Add points to user (for testing / mock)
-// @route   POST /api/users/add-points
-// @access  Private
-const addPoints = async (req, res) => {
-    try {
-        const { amount } = req.body;
-
-        if (!amount || amount <= 0) {
-            return res.status(400).json({ message: 'Invalid amount' });
-        }
-
-        const user = await User.findById(req.user._id);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        user.points = (user.points || 0) + amount;
-        await user.save();
-
-        await PointTransaction.create({
-            user_id: user._id,
-            amount: amount,
-            reason: 'Earned points'
-        });
-
-        res.json({
-            message: `Added ${amount} points!`,
-            points: user.points,
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to add points' });
-    }
-};
-
 // @desc    Create an instructor/admin account
 // @route   POST /api/users/staff
 // @access  Private/Admin
@@ -159,4 +124,4 @@ const createPrivilegedUser = async (req, res) => {
     }
 };
 
-module.exports = { getUserPoints, claimReward, addPoints, getPublicPlatformStats, createPrivilegedUser };
+module.exports = { getUserPoints, claimReward, getPublicPlatformStats, createPrivilegedUser };

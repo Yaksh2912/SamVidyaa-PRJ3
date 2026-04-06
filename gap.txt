@@ -1,7 +1,7 @@
 Production Readiness Gaps
 
 Current assessment:
-The project is materially safer than before, but it is still not production-ready. The highest-risk role escalation and task-completion bypasses have been addressed, and the server surface is harder by default. The remaining work is now concentrated in authorization tightening, transactional integrity, validation, and operational maturity.
+The project is materially safer than before and the highest-risk security gaps called out earlier have now been addressed. Public role escalation is closed, direct point-grant abuse is removed, module/task write authorization is tighter, task completion is database-validated and transactional, and request validation is now standardized across major write paths. The remaining work is mostly operational hardening, integration confidence, and scale maturity.
 
 Recently addressed
 
@@ -17,11 +17,17 @@ Recently addressed
   - client/src/context/AuthContext.jsx
   - client/src/pages/AdminDashboard.jsx
 
-2. Task completion is now gated by role, enrollment, and desktop validation
-- Task completion now explicitly enforces student-only access.
-- The backend now verifies active enrollment before allowing completion.
-- Completion now requires a stored PASSED desktop execution result.
+2. Task completion is now gated by role, enrollment, desktop validation, and transaction safety
+- Task completion explicitly enforces student-only access.
+- The backend verifies active enrollment before allowing completion.
+- Completion requires a stored PASSED desktop execution result.
 - Desktop execution results are stored separately from final completion history.
+- Completion writes now run in a MongoDB session/transaction for:
+  - user points
+  - point transactions
+  - collaborator point awards
+  - student progress
+  - task completion history
 - Files:
   - backend/controllers/taskController.js
   - backend/routes/taskRoutes.js
@@ -49,48 +55,57 @@ Recently addressed
   - client/src/pages/StudentDashboard.jsx
   - client/src/pages/TeacherDashboard.jsx
 
-Critical blockers
-
-1. Test-only points endpoint exposed in production code
-- /api/users/add-points is still available to any authenticated user.
-- A user can add points to their own account directly.
-- This is labeled as testing/mock functionality and should not exist in production.
+4. Direct point-grant abuse was removed
+- /api/users/add-points no longer exists in production code.
+- The student dashboard test button that called it was removed.
 - Files:
   - backend/routes/userRoutes.js
-  - backend/controllers/userController.js
+  - client/src/pages/StudentDashboard.jsx
+  - client/src/context/translations.js
 
-2. Module creation authorization is still too weak
-- Module creation still only requires authentication.
-- The controller still does not explicitly enforce instructor/admin role before creating a module.
-- It also does not verify ownership/access to the target course before creating a module.
-- A student may still be able to create modules against arbitrary courses.
+5. Module/task write authorization is now tighter
+- Module/task create, import, update, and delete routes now enforce instructor/admin role at the route layer.
+- Module writes now verify parent course ownership instead of trusting module.createdBy.
 - Files:
+  - backend/middleware/authMiddleware.js
   - backend/routes/moduleRoutes.js
+  - backend/routes/taskRoutes.js
   - backend/controllers/moduleController.js
+  - backend/tests/authMiddleware.test.js
+  - backend/tests/moduleController.test.js
 
-3. Task completion writes are not transactional
-- Completing a task still updates multiple collections:
-  - user points
-  - point transactions
-  - student progress
-  - task completion history
-- These writes still happen without a MongoDB transaction/session.
-- If one step fails, the system can become partially updated and inconsistent.
+6. Request validation is now standardized across major write paths
+- Shared request validation middleware now covers:
+  - auth
+  - courses
+  - modules
+  - tasks
+  - rewards
+  - announcements
+  - uploads
+  - desktop-result submission
+- Upload middleware failures now return the same validation response shape as body/param validation failures.
+- Files:
+  - backend/middleware/requestValidation.js
+  - backend/routes/authRoutes.js
+  - backend/routes/courseRoutes.js
+  - backend/routes/moduleRoutes.js
+  - backend/routes/taskRoutes.js
+  - backend/routes/rewardRoutes.js
+  - backend/routes/announcementRoutes.js
+  - backend/routes/desktopAppRoutes.js
+  - backend/tests/requestValidation.test.js
+
+Remaining blockers
+
+1. MongoDB transaction support must exist in deployment
+- Task completion now depends on MongoDB sessions/transactions.
+- That requires a replica set configuration, including in staging/dev environments.
+- If the deployment runs as a standalone Mongo instance, task completion can fail at runtime.
 - Files:
   - backend/controllers/taskController.js
 
-Operational gaps
-
-4. Request validation is still weak
-- There is no consistent request-schema validation layer.
-- Most endpoints still validate fields manually and inconsistently.
-- This increases the risk of malformed input, missed checks, and behavior drift.
-- Suggested libraries:
-  - zod
-  - joi
-  - express-validator
-
-5. Sync filesystem calls remain in request paths
+2. Sync filesystem calls remain in request paths
 - Some upload/delete flows still use fs.existsSync, fs.unlinkSync, and fs.mkdirSync.
 - These block the event loop and are not ideal under production traffic.
 - Files:
@@ -100,55 +115,48 @@ Operational gaps
   - backend/controllers/desktopAppController.js
   - backend/controllers/fileController.js
 
-6. Logging/monitoring is not production-grade
+3. Logging/monitoring is not production-grade
 - Logging is still mostly console.log / console.error.
 - There is no structured logger, request logging, alerting, or tracing.
 - No evidence of external monitoring or observability hooks.
 
-7. Test coverage is still not production-level
-- Current backend tests are useful but still mostly controller-level regression tests.
+4. Test coverage is improved but still not production-level
+- Current backend tests are useful regression coverage, but still mostly controller/middleware-level.
 - Missing higher-confidence coverage:
   - auth and authorization integration tests
   - upload/file-access flow tests
-  - task completion end-to-end tests
-  - transaction/failure-recovery tests
+  - task completion end-to-end tests against a real Mongo replica set
+  - transaction failure-recovery tests
   - route protection tests
 - File:
   - backend/package.json
 
-8. Pagination and scale controls are still limited
+5. Pagination and scale controls are still limited
 - Several list endpoints still do not enforce pagination/limits.
 - This is acceptable at small scale but will become a performance and reliability issue as data grows.
 
 Recommended order of work
 
-1. Remove or lock down /api/users/add-points
-- Delete it from production code, or restrict it behind admin-only controls and non-production environment checks.
+1. Ensure MongoDB is running with replica set support everywhere
+- Confirm local, staging, and production all support transactions before relying on task completion in real traffic.
 
-2. Tighten authorization on module/task write paths
-- Enforce instructor/admin role on create/update/delete routes.
-- Verify course/module ownership before allowing writes.
-
-3. Make task completion atomic
-- Use a MongoDB session/transaction for points, progress, and completion history writes.
-
-4. Add request validation
-- Standardize request validation for auth, tasks, modules, courses, rewards, announcements, uploads, and desktop-result submission.
-
-5. Add integration tests for critical security-sensitive flows
+2. Add integration tests for critical security-sensitive flows
 - Registration role restrictions
 - Route authorization
-- Points protection
-- Enrollment-required task completion
 - Protected file access
-- Task completion transaction behavior
+- Desktop-result plus completion flow
+- Task completion transaction behavior against a real transactional database setup
 
-6. Improve operational maturity
+3. Replace sync filesystem operations in request paths
+- Move to async fs/promises APIs where possible.
+- Revisit upload/delete paths for backpressure and failure handling.
+
+4. Improve operational maturity
 - Replace console logging with structured logging.
 - Add request logging, error correlation, and monitoring hooks.
 - Add pagination/limits where list sizes can grow.
 
 Production target
 
-After items 1 through 5 are addressed, the app should be much closer to staging-ready.
-After that, remaining work would be reliability, observability, pagination, and deployment hardening.
+After the replica set requirement is verified and the remaining integration and operational items are addressed, the app should be much closer to staging-ready.
+After that, remaining work would be observability, scale controls, and deployment hardening.

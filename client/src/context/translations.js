@@ -483,7 +483,6 @@ export const translations = {
         },
         pointShop: {
           title: 'Fun Zone Rewards',
-          earnTestPoints: 'Earn 50 Points (Test)',
           loading: 'Loading fresh rewards...',
           empty: 'No custom rewards available. Keep an eye out for updates from your teachers!',
           course: 'Course: {course}',
@@ -1483,7 +1482,6 @@ export const translations = {
         },
         pointShop: {
           title: 'फन ज़ोन रिवॉर्ड्स',
-          earnTestPoints: '50 अंक कमाएँ (टेस्ट)',
           loading: 'नए रिवॉर्ड्स लोड हो रहे हैं...',
           empty: 'इस समय कोई कस्टम रिवॉर्ड उपलब्ध नहीं है। अपने शिक्षकों की अपडेट्स पर नज़र रखें!',
           course: 'कोर्स: {course}',

@@ -1,11 +1,54 @@
 const Module = require('../models/Module');
 const Task = require('../models/Task');
 const CodingQuestion = require('../models/CodingQuestion');
+const Course = require('../models/Course');
 const archive = require('archiver');
 const fs = require('fs');
 const path = require('path');
 
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
+const isInstructorOrAdminRole = (role) => {
+    const normalizedRole = String(role || '').toUpperCase();
+    return normalizedRole === 'ADMIN' || normalizedRole === 'INSTRUCTOR' || normalizedRole === 'TEACHER';
+};
+
+const verifyCourseWriteAccess = async (courseId, user) => {
+    if (!isInstructorOrAdminRole(user?.role)) {
+        return { error: { status: 401, message: 'Not authorized' } };
+    }
+
+    const course = await Course.findById(courseId).select('instructor');
+
+    if (!course) {
+        return { error: { status: 404, message: 'Course not found' } };
+    }
+
+    if (!isAdminRole(user.role) && course.instructor?.toString() !== user._id.toString()) {
+        return { error: { status: 401, message: 'Not authorized' } };
+    }
+
+    return { course };
+};
+
+const verifyModuleWriteAccess = async (moduleId, user) => {
+    if (!isInstructorOrAdminRole(user?.role)) {
+        return { error: { status: 401, message: 'Not authorized' } };
+    }
+
+    const module = await Module.findById(moduleId).populate('course_id', 'instructor');
+
+    if (!module) {
+        return { error: { status: 404, message: 'Module not found' } };
+    }
+
+    const courseInstructorId = module.course_id?.instructor?.toString?.();
+
+    if (!isAdminRole(user.role) && courseInstructorId !== user._id.toString()) {
+        return { error: { status: 401, message: 'Not authorized' } };
+    }
+
+    return { module };
+};
 
 const attachTaskCounts = async (modules) => {
     if (!modules.length) return modules;
@@ -63,6 +106,11 @@ const createModule = async (req, res) => {
             return res.status(400).json({ message: 'Missing required fields' });
         }
 
+        const access = await verifyCourseWriteAccess(course_id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
+        }
+
         const lastModule = await Module.findOne({ course_id })
             .sort({ module_order: -1, createdAt: -1 })
             .select('module_order');
@@ -102,15 +150,11 @@ const createModule = async (req, res) => {
 // @access  Private (Teacher/Admin)
 const updateModule = async (req, res) => {
     try {
-        const module = await Module.findById(req.params.id);
-
-        if (!module) {
-            return res.status(404).json({ message: 'Module not found' });
+        const access = await verifyModuleWriteAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
-
-        if (module.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin' && req.user.role !== 'ADMIN') {
-            return res.status(401).json({ message: 'Not authorized' });
-        }
+        const { module } = access;
 
         const {
             module_name,
@@ -235,15 +279,11 @@ const getModuleById = async (req, res) => {
 const deleteModuleFile = async (req, res) => {
     try {
         const { filePath } = req.body;
-        const module = await Module.findById(req.params.id);
-
-        if (!module) {
-            return res.status(404).json({ message: 'Module not found' });
+        const access = await verifyModuleWriteAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
-
-        if (module.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin' && req.user.role !== 'ADMIN') {
-            return res.status(401).json({ message: 'Not authorized' });
-        }
+        const { module } = access;
 
         if (!filePath) {
             return res.status(400).json({ message: 'File path is required' });
@@ -277,16 +317,11 @@ const deleteModuleFile = async (req, res) => {
 // @access  Private (Teacher/Admin)
 const deleteModule = async (req, res) => {
     try {
-        const module = await Module.findById(req.params.id);
-
-        if (!module) {
-            return res.status(404).json({ message: 'Module not found' });
+        const access = await verifyModuleWriteAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
-
-        // Check ownership
-        if (module.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-            return res.status(401).json({ message: 'Not authorized' });
-        }
+        const { module } = access;
 
         // Optional: Delete associated files from filesystem
         // if (module.files && module.files.length > 0) {
@@ -309,16 +344,11 @@ const deleteModule = async (req, res) => {
 // @access  Private (Teacher/Admin)
 const exportModule = async (req, res) => {
     try {
-        const module = await Module.findById(req.params.id);
-
-        if (!module) {
-            return res.status(404).json({ message: 'Module not found' });
+        const access = await verifyModuleWriteAccess(req.params.id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
-
-        // Check ownership
-        if (module.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin' && req.user.role !== 'ADMIN') {
-            return res.status(401).json({ message: 'Not authorized' });
-        }
+        const { module } = access;
 
         console.log(`Exporting module JSON: ${module.module_name}`);
 
