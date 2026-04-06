@@ -396,7 +396,7 @@ export const translations = {
         }
       },
       student: {
-        title: 'Student Dashboard',
+        title: 'Student',
         welcome: 'Welcome',
         header: 'My Lab Work',
         subtitle: 'View assignments, submit work, and track your progress',
@@ -412,7 +412,7 @@ export const translations = {
           rankings: 'Rankings'
         },
         topbar: {
-          welcomeBack: 'Welcome Back, {name}',
+          welcomeBack: 'Welcome, {name}',
           openAnnouncements: 'Open announcements',
           openPointShop: 'Open Point Shop',
           totalPoints: 'Total Points'
@@ -1409,7 +1409,7 @@ export const translations = {
         }
       },
       student: {
-        title: 'छात्र डैशबोर्ड',
+        title: 'छात्र',
         welcome: 'स्वागत है',
         header: 'मेरा लैब कार्य',
         subtitle: 'असाइनमेंट देखें, कार्य जमा करें और अपनी प्रगति को ट्रैक करें',
@@ -1555,7 +1555,7 @@ export const translations = {
         }
       },
       teacher: {
-        title: 'शिक्षक डैशबोर्ड',
+        title: 'शिक्षक',
         welcome: 'स्वागत है',
         header: 'कक्षा प्रबंधन',
         subtitle: 'कक्षाओं को प्रबंधित करें, असाइनमेंट ग्रेड करें और छात्र प्रगति की निगरानी करें',
