@@ -9,6 +9,14 @@ import { useNavigate } from 'react-router-dom'
 import CompleteTaskModal from '../components/CompleteTaskModal'
 import AskCollaborationModal from '../components/AskCollaborationModal'
 import ChatBot from '../components/ChatBot'
+import {
+  AnnouncementFeedSkeleton,
+  CourseGridSkeleton,
+  LeaderboardSkeleton,
+  RewardGridSkeleton,
+  StudentHistorySkeleton,
+  useDelayedLoading
+} from '../components/ui/Skeleton'
 import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification, HiUserGroup, HiCheck, HiXMark, HiBellAlert, HiArrowTopRightOnSquare } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import './Dashboard.css'
@@ -117,6 +125,11 @@ function StudentDashboard() {
   const [showAnnouncementsPopup, setShowAnnouncementsPopup] = useState(false);
   const [taskHistory, setTaskHistory] = useState([]);
   const [loadingTaskHistory, setLoadingTaskHistory] = useState(false);
+  const showCourseSkeletons = useDelayedLoading(loading);
+  const showHistorySkeletons = useDelayedLoading(loadingTaskHistory);
+  const showRewardsSkeletons = useDelayedLoading(loadingRewards);
+  const showLeaderboardSkeletons = useDelayedLoading(loadingLeaderboard);
+  const showAnnouncementSkeletons = useDelayedLoading(loadingAnnouncements);
 
   // Mapping of icon names to actual components
   const MAP_ICONS = {
@@ -708,7 +721,7 @@ function StudentDashboard() {
               <div className="workspace-panel-header">
                 <h3>{t.courses.title}</h3>
               </div>
-              {loading ? <p>{t.courses.loading}</p> : enrolledCourses.length === 0 ? (
+              {loading ? <CourseGridSkeleton count={3} visible={showCourseSkeletons} /> : enrolledCourses.length === 0 ? (
                 <p className="empty-state">{t.courses.empty}</p>
               ) : (
                 <div className="gc-course-grid">
@@ -805,7 +818,7 @@ function StudentDashboard() {
               </div>
 
               {loadingTaskHistory ? (
-                <p className="loading-text">{t.history.loading}</p>
+                <StudentHistorySkeleton count={3} visible={showHistorySkeletons} />
               ) : taskHistory.length === 0 ? (
                 <p className="empty-state">{t.history.empty}</p>
               ) : (
@@ -871,7 +884,7 @@ function StudentDashboard() {
               <div className="workspace-panel-header">
                 <h3>{t.availableCourses.title}</h3>
               </div>
-              {loading ? <p>{t.availableCourses.loading}</p> : availableCourses.length === 0 ? (
+              {loading ? <CourseGridSkeleton count={3} visible={showCourseSkeletons} /> : availableCourses.length === 0 ? (
                 <p className="empty-state">{t.availableCourses.empty}</p>
               ) : (
                 <div className="gc-course-grid">
@@ -921,41 +934,43 @@ function StudentDashboard() {
                   <HiBolt /> {t.pointShop.earnTestPoints}
                 </button>
               </div>
-              <div className="rewards-grid">
-                {loadingRewards ? (
-                  <p style={{ color: 'var(--text-secondary)' }}>{t.pointShop.loading}</p>
-                ) : rewards.length === 0 ? (
-                  <p className="empty-state">{t.pointShop.empty}</p>
-                ) : rewards.map((reward) => (
-                  <motion.div
-                    key={reward._id}
-                    className={`reward-card ${userPoints < reward.cost ? 'locked' : 'unlocked'}`}
-                    whileHover={{ scale: 1.02, y: -4 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="reward-card-icon">{MAP_ICONS[reward.icon_name] || <HiGift />}</div>
-                    <div className="reward-card-body">
-                      <h4 className="reward-card-name" style={{ marginBottom: '0.15rem' }}>{reward.name}</h4>
-                      {reward.course_id && (
-                        <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
-                          {translate('dashboard.student.pointShop.course', { course: reward.course_id.course_name })}
-                        </span>
-                      )}
-                      <p className="reward-card-desc">{reward.description}</p>
-                    </div>
-                    <div className="reward-card-footer">
-                      <span className="reward-cost"><HiStar /> {translate('dashboard.student.pointShop.cost', { points: reward.cost })}</span>
-                      <button
-                        className="btn btn-claim"
-                        disabled={userPoints < reward.cost || claimingReward === reward._id}
-                        onClick={() => handleClaimReward(reward)}
-                      >
-                        {claimingReward === reward._id ? t.pointShop.claiming : userPoints < reward.cost ? t.pointShop.locked : t.pointShop.claim}
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+              {loadingRewards ? (
+                <RewardGridSkeleton count={3} visible={showRewardsSkeletons} />
+              ) : (
+                <div className="rewards-grid">
+                  {rewards.length === 0 ? (
+                    <p className="empty-state">{t.pointShop.empty}</p>
+                  ) : rewards.map((reward) => (
+                    <motion.div
+                      key={reward._id}
+                      className={`reward-card ${userPoints < reward.cost ? 'locked' : 'unlocked'}`}
+                      whileHover={{ scale: 1.02, y: -4 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div className="reward-card-icon">{MAP_ICONS[reward.icon_name] || <HiGift />}</div>
+                      <div className="reward-card-body">
+                        <h4 className="reward-card-name" style={{ marginBottom: '0.15rem' }}>{reward.name}</h4>
+                        {reward.course_id && (
+                          <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>
+                            {translate('dashboard.student.pointShop.course', { course: reward.course_id.course_name })}
+                          </span>
+                        )}
+                        <p className="reward-card-desc">{reward.description}</p>
+                      </div>
+                      <div className="reward-card-footer">
+                        <span className="reward-cost"><HiStar /> {translate('dashboard.student.pointShop.cost', { points: reward.cost })}</span>
+                        <button
+                          className="btn btn-claim"
+                          disabled={userPoints < reward.cost || claimingReward === reward._id}
+                          onClick={() => handleClaimReward(reward)}
+                        >
+                          {claimingReward === reward._id ? t.pointShop.claiming : userPoints < reward.cost ? t.pointShop.locked : t.pointShop.claim}
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -995,39 +1010,41 @@ function StudentDashboard() {
                 )}
               </div>
 
-              <div className="ranking-list">
-                {loadingLeaderboard ? (
-                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{t.leaderboard.loading}</p>
-                ) : leaderboardType === 'class' && !selectedCourseForRanking ? (
-                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{t.leaderboard.selectClassPrompt}</p>
-                ) : leaderboardData.length === 0 ? (
-                  <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{t.leaderboard.empty}</p>
-                ) : (
-                  leaderboardData.map((student, index) => {
-                    const isCurrentUser = student._id === user?._id || student.isCurrentUser;
-                    // If it's a peer leaderboard, the exact rank number might be tricky without full data, 
-                    // so we just show listing rank, OR pass the absolute rank from backend.
-                    const displayRank = index + 1;
-                    return (
-                      <div
-                        key={student._id || index}
-                        className={`ranking-item ${isCurrentUser ? 'current-user' : ''} ${displayRank <= 3 && leaderboardType !== 'peers' ? 'top-3' : ''}`}
-                      >
-                        <div className="rank-badge">{displayRank}</div>
-                        <div className="rank-avatar">{(student.name || 'S').charAt(0).toUpperCase()}</div>
-                        <div className="rank-info">
-                          <span className="rank-name">
-                            {isCurrentUser ? `${student.name} (${t.leaderboard.yourRank})` : student.name}
-                          </span>
+              {loadingLeaderboard ? (
+                <LeaderboardSkeleton count={5} visible={showLeaderboardSkeletons} />
+              ) : (
+                <div className="ranking-list">
+                  {leaderboardType === 'class' && !selectedCourseForRanking ? (
+                    <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{t.leaderboard.selectClassPrompt}</p>
+                  ) : leaderboardData.length === 0 ? (
+                    <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{t.leaderboard.empty}</p>
+                  ) : (
+                    leaderboardData.map((student, index) => {
+                      const isCurrentUser = student._id === user?._id || student.isCurrentUser;
+                      // If it's a peer leaderboard, the exact rank number might be tricky without full data, 
+                      // so we just show listing rank, OR pass the absolute rank from backend.
+                      const displayRank = index + 1;
+                      return (
+                        <div
+                          key={student._id || index}
+                          className={`ranking-item ${isCurrentUser ? 'current-user' : ''} ${displayRank <= 3 && leaderboardType !== 'peers' ? 'top-3' : ''}`}
+                        >
+                          <div className="rank-badge">{displayRank}</div>
+                          <div className="rank-avatar">{(student.name || 'S').charAt(0).toUpperCase()}</div>
+                          <div className="rank-info">
+                            <span className="rank-name">
+                              {isCurrentUser ? `${student.name} (${t.leaderboard.yourRank})` : student.name}
+                            </span>
+                          </div>
+                          <div className="rank-score">
+                            {student.points || 0} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{t.leaderboard.points}</span>
+                          </div>
                         </div>
-                        <div className="rank-score">
-                          {student.points || 0} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{t.leaderboard.points}</span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
         </div>
@@ -1057,7 +1074,7 @@ function StudentDashboard() {
 
             <div className="announcement-popup-modal__body">
               {loadingAnnouncements ? (
-                <p className="admin-installer-panel__status">{common.loading}</p>
+                <AnnouncementFeedSkeleton count={3} visible={showAnnouncementSkeletons} className="student-announcements-list" />
               ) : announcements.length === 0 ? (
                 <p className="empty-state">{t.announcements.empty}</p>
               ) : (

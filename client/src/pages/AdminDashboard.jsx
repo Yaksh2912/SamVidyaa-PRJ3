@@ -7,6 +7,11 @@ import { useNavigate } from 'react-router-dom'
 import { HiUsers, HiAcademicCap, HiUserGroup, HiBookOpen } from 'react-icons/hi2'
 import { FiUpload, FiDownload, FiTrash2 } from 'react-icons/fi'
 import API_BASE_URL from '../config'
+import {
+  AnnouncementFeedSkeleton,
+  PanelStatusSkeleton,
+  useDelayedLoading
+} from '../components/ui/Skeleton'
 import './Dashboard.css'
 
 function AdminDashboard() {
@@ -48,6 +53,8 @@ function AdminDashboard() {
     title: '',
     message: '',
   })
+  const showDesktopAppSkeleton = useDelayedLoading(desktopAppLoading)
+  const showAnnouncementSkeletons = useDelayedLoading(announcementsLoading)
 
   const handleLogout = () => {
     logout()
@@ -710,7 +717,7 @@ function AdminDashboard() {
                 </p>
               ) : null}
               {desktopAppLoading ? (
-                <p className="admin-installer-panel__status">{translations.common.loading}</p>
+                <PanelStatusSkeleton visible={showDesktopAppSkeleton} />
               ) : desktopApp ? (
                 <div className="admin-installer-panel__status admin-installer-panel__status--stacked">
                   <span>{translate('dashboard.admin.desktopApp.currentFile', { name: desktopApp.filename })}</span>
@@ -810,7 +817,7 @@ function AdminDashboard() {
 
             <div className="admin-testimonials-list">
               {announcementsLoading ? (
-                <p className="admin-installer-panel__status">{translations.common.loading}</p>
+                <AnnouncementFeedSkeleton count={3} visible={showAnnouncementSkeletons} />
               ) : announcements.length ? announcements.map((announcement) => (
                 <article key={announcement._id} className="dashboard-announcement-item">
                   <div className="dashboard-announcement-item__meta">

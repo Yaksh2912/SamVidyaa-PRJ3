@@ -1,0 +1,330 @@
+SAMVIDYAA PROJECT REPORT
+========================
+
+1. PROJECT OVERVIEW
+SamVidyaa is a full-stack academic management platform designed for higher-education and laboratory-oriented learning workflows. The system supports three principal actors: Student, Instructor, and Administrator. From a software engineering perspective, the application can be characterized as a role-aware, data-driven, modular monolith deployed as a client-server web application.
+
+The platform goes beyond CRUD-style academic administration. It integrates course orchestration, module and task lifecycle management, enrollment processing, collaboration requests, point-based gamification, leaderboard analytics, announcements, testimonial management, desktop app distribution, and an AI-assisted academic advisor built on a Retrieval-Augmented Generation (RAG) pipeline.
+
+In architectural terms, SamVidyaa exhibits a layered architecture with clear separation between:
+Presentation Layer
+React single-page application (SPA)
+
+Application Layer
+Express.js REST API and controller/service orchestration
+
+Domain and Persistence Layer
+MongoDB collections modeled through Mongoose schemas
+
+Intelligence Layer
+LLM-backed chatbot with hybrid retrieval from personal student context plus Pinecone vector search
+
+
+2. ARCHITECTURAL STYLE
+The project follows a monorepo structure containing two major bounded contexts:
+
+client/
+Frontend application built with React 18 and Vite
+
+backend/
+Backend service built with Node.js, Express.js, and MongoDB
+
+The architecture is best described as a modular monolith rather than a microservices system. All business capabilities are packaged into one backend runtime, but the internal codebase is decomposed into controllers, routes, middleware, models, and services. This gives the project strong cohesion within modules and acceptable separation of concerns without the distributed-systems overhead of service decomposition.
+
+This is also a three-tier logical architecture:
+Tier 1: Presentation
+Browser-based SPA with route protection, UI state management, theme and i18n context, and dashboard rendering
+
+Tier 2: Business Logic
+REST endpoints, authorization checks, validation, analytics generation, ingestion pipelines, reward logic, and chat orchestration
+
+Tier 3: Data and Knowledge
+MongoDB for operational data, local file storage for uploads, and Pinecone for vectorized knowledge retrieval
+
+
+3. FRONTEND ARCHITECTURE
+The frontend is implemented as a React SPA with React Router managing client-side navigation. The top-level routing resides in App.jsx and uses a ProtectedRoute abstraction to enforce role-based access control at the UI level.
+
+Frontend route topology:
+- /           Landing page
+- /login      Authentication entry point
+- /signup     Registration flow
+- /admin      Admin dashboard
+- /student    Student dashboard
+- /teacher    Teacher dashboard
+
+The frontend architecture uses a context-oriented composition model:
+- AuthContext maintains the authenticated user object, token persistence, login/register/logout flows, and localStorage-backed session hydration.
+- ThemeContext implements light/dark theme state through a document-level data-theme attribute.
+- I18nContext provides runtime language switching and translation lookup with interpolation support.
+
+This design reflects a cross-cutting concern injection strategy where authentication, theming, and internationalization are globally accessible without prop drilling. That improves maintainability and supports horizontal reuse across page components.
+
+From a UI engineering standpoint, the frontend is built primarily with conventional CSS, split across page-level and component-level stylesheets. The project uses Framer Motion for animation, React Icons for iconography, and shader/graphics utilities for visual polish on the landing experience. The styling approach is not utility-first Tailwind in practice; it is a custom CSS architecture with React component composition.
+
+The frontend communicates with the backend through fetch-based REST calls, using a configurable API base URL from client/src/config.js. Authentication state is persisted in localStorage, and JWT tokens are attached to protected API requests using the Authorization: Bearer <token> header pattern.
+
+
+4. BACKEND ARCHITECTURE
+The backend is an Express.js application bootstrapped from server.js. It initializes environment configuration, establishes the MongoDB connection, mounts middleware, exposes static upload directories, registers route modules, and starts the HTTP listener.
+
+Core backend design characteristics:
+- REST-oriented API surface
+- JWT-based stateless authentication
+- Mongoose ODM for schema modeling and document persistence
+- Controller-service split for business logic and infrastructure logic
+- File upload support using Multer
+- Optional RAG subsystem initialization during server startup
+
+Registered API domains include:
+- /api/auth
+- /api/modules
+- /api/courses
+- /api/tasks
+- /api/rewards
+- /api/chat
+- /api/enrollments
+- /api/users
+- /api/leaderboard
+- /api/collaborations
+- /api/desktop-app
+- /api/testimonials
+- /api/announcements
+
+This routing topology demonstrates feature-based modularization. Each route module delegates request handling to controller functions, which encapsulate use-case logic such as course creation, analytics aggregation, enrollment updates, task completion, reward redemption, or chatbot interaction.
+
+
+5. AUTHENTICATION AND AUTHORIZATION MODEL
+SamVidyaa implements token-based authentication using JSON Web Tokens (JWT). During registration or login, the backend returns a signed token. The frontend stores the serialized user payload in localStorage and rehydrates it during application boot.
+
+Authentication workflow:
+1. User submits credentials to /api/auth/login or registration details to /api/auth/register
+2. Backend validates credentials and issues a JWT
+3. Frontend stores user metadata and token locally
+4. Protected requests attach the token in the Authorization header
+5. authMiddleware verifies the token and injects req.user
+
+Authorization is implemented using RBAC, or Role-Based Access Control. The principal roles are:
+- STUDENT
+- INSTRUCTOR
+- ADMIN
+
+The frontend applies route-level gating through ProtectedRoute, while the backend performs authoritative access control through middleware and role checks inside controllers. This is important because UI gating alone is insufficient for security; the backend remains the trust boundary.
+
+Examples of authorization semantics:
+- Students can access student-specific dashboards and chat endpoints
+- Instructors and admins can create courses, upload handouts, and ingest documents into the vector store
+- Admin users can manage testimonials and other administrative functions
+
+
+6. DOMAIN MODEL AND DATA ARCHITECTURE
+The persistence layer is modeled in MongoDB through Mongoose schemas. The domain model is relational in concept, even though it is stored in a document database.
+
+Major entities and responsibilities:
+
+User
+Stores identity, email, hashed password, role, institution metadata, and accumulated points.
+
+Course
+Represents an academic unit with code, name, subject, instructor reference, point budget, activation state, and handout indexing metadata.
+
+Module
+Represents a subdivision of a course. Contains ordering, content metadata, attached files, and task distribution settings.
+
+Task
+Represents a problem statement or assignment within a module. Includes difficulty, time limit, sample input/output, test cases, collaboration settings, deadline metadata, and language context.
+
+Enrollment
+Defines the many-to-many association between students and courses with lifecycle states such as ACTIVE, PENDING, COMPLETED, or REJECTED.
+
+StudentProgress
+Tracks student progression at the course/module granularity, including completed tasks, scores, test completion, and progression status.
+
+TaskCompletion
+Captures immutable task completion events with awarded points, task metadata denormalization, and collaborator references.
+
+Reward
+Models the point redemption catalog for course-scoped gamification.
+
+PointTransaction
+Acts as a financial-style ledger for points, enabling auditability and leaderboard computation.
+
+CollaborationRequest
+Tracks peer-to-peer collaboration proposals tied to a task and course.
+
+ChatMessage
+Persists user and assistant dialogue turns for contextual continuity in the AI subsystem.
+
+Testimonial, Announcement, DesktopAppAsset
+Support presentation, communication, and distribution features outside the core course/task lifecycle.
+
+The schema design uses references extensively, which gives the system a normalized logical model over a NoSQL substrate. Several collections also define compound indexes to enforce uniqueness and improve query performance, for example:
+- Enrollment unique index on course_id + student_id
+- StudentProgress unique index on student_id + course_id + module_id
+- TaskCompletion unique index on student_id + task_id
+- CollaborationRequest unique index on task_id + requester + requested_peer
+
+This reflects conscious data-integrity design within a document-oriented database.
+
+
+7. APPLICATION MODULES AND BUSINESS CAPABILITIES
+
+7.1 Course Management
+Instructors and admins can create, update, delete, export, and inspect courses. Courses support PDF handout upload and indexing metadata. The controller also computes teacher-facing performance analytics and class-level intelligence from enrollments, tasks, modules, and student progress records.
+
+7.2 Module Management
+Modules are subordinate to courses and carry instructional material, ordering semantics, and file attachments. This gives the platform a hierarchical learning-content model:
+Course -> Module -> Task
+
+7.3 Task Lifecycle Management
+Tasks are not simple text prompts; they contain rich execution metadata such as difficulty, time limits, deadlines, programming language, test cases, and collaboration flags. The task subsystem also supports document-based task import from PDF, Word, text, and spreadsheet formats, making it an ingestion-capable authoring pipeline rather than a manual-entry-only module.
+
+7.4 Enrollment and Student Tracking
+The enrollment subsystem handles course admission, bulk enrollment, Excel-driven import, and status transitions. The progress subsystem stores student advancement, which then feeds dashboard analytics, AI summaries, and leaderboard computation.
+
+7.5 Gamification Engine
+The platform includes a point economy. Students receive points for academic events, and point transactions are persisted as a ledger. Rewards can be created per course, claimed by students, and surfaced in student dashboards. Leaderboards derive ranking views such as global, weekly, course-specific, and peer-based standings.
+
+7.6 Collaboration Workflow
+Students can raise collaboration requests for tasks and receive acceptance/rejection decisions. This introduces social-learning functionality into the academic workflow and creates a lightweight peer-interaction subsystem.
+
+7.7 Announcements and Testimonials
+Announcements enable controlled communication between the platform and its users. Testimonials enrich the public-facing landing page, functioning as a CMS-like content module with image upload support.
+
+7.8 Desktop App Distribution
+The backend includes a delivery channel for a desktop application artifact. Public endpoints expose the latest asset and download path, while protected endpoints support upload and deletion.
+
+
+8. AI AND RAG SUBSYSTEM
+One of the most technically significant parts of SamVidyaa is the chatbot subsystem. This is not a naive prompt wrapper. It combines:
+- Personal data retrieval from MongoDB
+- Semantic retrieval from a vector database
+- Prompt injection with strict privacy constraints
+- Conversational memory from stored chat history
+- Rate limiting and caching
+
+Architecturally, this is a hybrid retrieval pipeline.
+
+8.1 Chat Request Flow
+1. The student sends a query from the floating chatbot UI on the student dashboard.
+2. The frontend calls POST /api/chat with the JWT token.
+3. chatController forwards the request to chatService.
+4. chatService applies rate limiting and checks an in-memory LRU cache.
+5. Recent chat history is fetched from ChatMessage for context continuity.
+6. If the query appears personal, personalDataRetriever fetches student-scoped data from User, Enrollment, StudentProgress, PointTransaction, Module, and Task.
+7. If the query is sufficiently long, semanticSearch retrieves relevant chunks from Pinecone.
+8. A system prompt plus contextual data is assembled into an LLM-compatible message array.
+9. The request is sent through an OpenAI-compatible SDK configured for a Groq-hosted model by default.
+10. The final response and sources are cached and persisted to MongoDB.
+
+8.2 Hybrid Context Strategy
+The chatbot uses two separate knowledge channels:
+
+Personal Context Channel
+Deterministic retrieval of user-specific academic data from MongoDB. This enables personalized academic advising while preserving tenant isolation.
+
+General Knowledge Channel
+Vector similarity search over embedded course handouts and uploaded documents stored in Pinecone. This enables semantic recall over unstructured learning materials.
+
+This dual-context approach is a practical implementation of hybrid personalization plus semantic retrieval.
+
+8.3 Privacy Boundary
+The personal data retriever explicitly filters all data by the student identifier derived from the JWT. The user cannot supply arbitrary student IDs. This is a critical privacy safeguard and establishes the chatbot as a scoped assistant rather than a generic data oracle.
+
+8.4 Ingestion Pipeline
+Course handouts can be uploaded as PDFs. The backend extracts text, normalizes it, chunks it, generates embeddings using Google's text-embedding-004 model, and upserts vectors into Pinecone. Metadata such as courseId, courseName, source, page/chunk counts, and indexing status is persisted back into the course record. This creates an observable ingestion lifecycle with statuses such as processing, indexed, skipped, failed, or not_uploaded.
+
+8.5 Operational Resilience
+The chatbot subsystem includes:
+- Per-student and global rate limiting
+- Exponential backoff for LLM rate-limit errors
+- In-memory LRU caching with TTL
+- Graceful degradation when vector search or embeddings are unavailable
+- Persistence of chat history for context recovery
+
+These are meaningful production-oriented concerns, not just prototype-level conveniences.
+
+
+9. REQUEST-PROCESSING PIPELINE
+At runtime, most requests follow a consistent pipeline:
+
+Client event
+User performs an action in the SPA
+
+HTTP dispatch
+Frontend issues fetch request to REST endpoint
+
+Authentication gate
+JWT is validated by middleware for protected routes
+
+Controller orchestration
+Controller validates input and enforces role-based access
+
+Domain service execution
+Business rules, analytics, retrieval, or ingestion logic are performed
+
+Persistence
+Mongoose writes or reads from MongoDB; uploaded files are read from disk; vector operations may interact with Pinecone
+
+Response serialization
+Backend returns JSON to the client
+
+UI reconciliation
+React updates local state and rerenders the corresponding dashboard/view
+
+This end-to-end flow shows a standard but well-organized web application transaction boundary.
+
+
+10. NON-FUNCTIONAL CHARACTERISTICS
+
+Scalability
+The system is suitable for small-to-medium deployment scenarios. MongoDB and Pinecone can scale independently, but the backend remains a single deployable unit.
+
+Maintainability
+The controller/model/service decomposition improves maintainability. The monorepo structure also helps by keeping client and server contracts in one repository.
+
+Extensibility
+New role capabilities, route modules, and AI retrieval sources can be added without rewriting the entire stack.
+
+Performance
+Indexes, aggregation, caching, and scoped queries contribute to acceptable operational efficiency. However, frontend bundle size and backend synchronous work on some flows may require optimization under heavier scale.
+
+Security
+Security is based on JWT verification, role checks, password hashing with bcryptjs, and server-side access control. Since tokens are stored in localStorage, the frontend must be treated as susceptible to XSS if sanitization practices regress; therefore, backend authorization remains the definitive enforcement point.
+
+Observability
+The codebase includes logging and status tracking, especially in AI and handout ingestion paths, but a full observability stack such as centralized logging, tracing, or metrics dashboards is not yet present.
+
+
+11. DEPLOYMENT INTERPRETATION
+The platform is deployable as:
+- A static frontend artifact generated by Vite
+- A Node.js backend service
+- A MongoDB database
+- Optional Pinecone vector index
+- Optional third-party LLM/embedding providers
+
+This is a polyglot integration topology:
+- React/Vite for presentation
+- Express/Node for application logic
+- MongoDB for transactional and operational persistence
+- Pinecone for vector persistence
+- Groq/OpenAI-compatible API for response generation
+- Google embeddings for semantic indexing
+
+The deployment model is therefore cloud-friendly and service-integrated, even though the codebase itself remains a single logical application.
+
+
+12. TECHNICAL CONCLUSION
+SamVidyaa is a strong example of a modern educational platform implemented as a layered modular monolith with role-based workflows, RESTful backend services, document-oriented persistence, and an embedded AI subsystem. Its architecture demonstrates several industry-relevant concepts:
+- SPA plus REST architecture
+- JWT-based stateless authentication
+- RBAC authorization
+- ODM-driven schema modeling
+- Hierarchical domain modeling
+- Gamification via transactional ledger patterns
+- Hybrid retrieval with RAG
+- File ingestion and semantic indexing
+- Cross-cutting concerns via React Context
+
+From a report-writing or viva perspective, the key message is that SamVidyaa is not merely a dashboard. It is a composite academic workflow platform that combines operational transaction processing, analytical views, content ingestion, and AI-assisted guidance in a unified architecture.

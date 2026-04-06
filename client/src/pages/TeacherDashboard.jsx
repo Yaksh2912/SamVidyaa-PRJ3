@@ -14,6 +14,13 @@ import AddStudentsModal from '../components/AddStudentsModal'
 import ManageRewardsModal from '../components/ManageRewardsModal'
 import CourseAnalyticsModal from '../components/CourseAnalyticsModal'
 import { AnalyticsColumnChart, AnalyticsDonutChart } from '../components/AnalyticsGraphs'
+import {
+  AnnouncementFeedSkeleton,
+  StudentListSkeleton,
+  TeacherModuleGridSkeleton,
+  TeacherTaskGridSkeleton,
+  useDelayedLoading
+} from '../components/ui/Skeleton'
 import './Dashboard.css'
 
 const COURSE_GRADIENTS = [
@@ -169,6 +176,10 @@ function TeacherDashboard() {
     title: '',
     message: ''
   })
+  const showModuleSkeletons = useDelayedLoading(loadingModules)
+  const showTaskSkeletons = useDelayedLoading(loadingTasks)
+  const showStudentSkeletons = useDelayedLoading(loadingStudents)
+  const showAnnouncementSkeletons = useDelayedLoading(loadingAnnouncements)
 
   const [stats, setStats] = React.useState({
     activeClasses: 0,
@@ -1399,7 +1410,7 @@ function TeacherDashboard() {
                         <p>{t.modules.description}</p>
                       </div>
                     </div>
-                    {loadingModules ? <p>{t.modules.loading}</p> : (
+                    {loadingModules ? <TeacherModuleGridSkeleton count={3} visible={showModuleSkeletons} /> : (
                       <div className="teacher-module-grid">
                         {orderedModules.length === 0 ? <p className="no-modules">{t.modules.empty}</p> : orderedModules.map((module, index) => (
                           <div key={module._id} className="teacher-module-card">
@@ -1577,7 +1588,7 @@ function TeacherDashboard() {
                         <p>{t.taskView.description}</p>
                       </div>
                     </div>
-                    {loadingTasks ? <p>{t.taskView.loading}</p> : (
+                    {loadingTasks ? <TeacherTaskGridSkeleton count={3} visible={showTaskSkeletons} /> : (
                       <div className="teacher-task-grid">
                         {tasks.length === 0 ? <p className="no-modules">{t.taskView.empty}</p> : tasks.map(task => (
                           <div key={task._id} className="teacher-task-card">
@@ -1712,7 +1723,7 @@ function TeacherDashboard() {
 
                 <div className="dashboard-announcements-feed">
                   {loadingAnnouncements ? (
-                    <p className="admin-installer-panel__status">{common.loading}</p>
+                    <AnnouncementFeedSkeleton count={3} visible={showAnnouncementSkeletons} />
                   ) : announcements.length ? announcements.map((announcement) => (
                     <article key={announcement._id} className="dashboard-announcement-item">
                       <div className="dashboard-announcement-item__meta">
@@ -1810,7 +1821,7 @@ function TeacherDashboard() {
             </div>
 
             <div className="students-modal-body">
-              {loadingStudents ? <p className="students-modal-loading">{t.studentsModal.loading}</p> : (
+              {loadingStudents ? <StudentListSkeleton count={5} visible={showStudentSkeletons} /> : (
                 students.length === 0 ? (
                   <p className="no-modules">{t.studentsModal.empty}</p>
                 ) : (

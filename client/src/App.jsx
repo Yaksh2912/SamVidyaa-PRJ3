@@ -9,13 +9,15 @@ import TeacherDashboard from './pages/TeacherDashboard'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { I18nProvider, useI18n } from './context/I18nContext'
+import { AppShellSkeleton, useDelayedLoading } from './components/ui/Skeleton'
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user, isAuthenticated, loading } = useAuth()
   const { t } = useI18n()
+  const showAuthSkeleton = useDelayedLoading(loading)
 
   if (loading) {
-    return <div className="loading-screen">{t('app.loading')}</div>
+    return <AppShellSkeleton label={t('app.loading')} visible={showAuthSkeleton} />
   }
 
   if (!isAuthenticated) {
