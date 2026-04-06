@@ -862,65 +862,40 @@ function AdminDashboard() {
         <div className="dashboard-workspace">
           {activeTab === 'overview' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
-              <section className="admin-overview-hero">
-                <div className="admin-overview-hero__content">
-                  <span className="admin-overview-hero__eyebrow">{t.overview.eyebrow}</span>
+              <div className="workspace-panel-header workspace-panel-header--stacked admin-overview-header">
+                <div className="workspace-panel-header__copy">
+                  <span className="workspace-panel-header__eyebrow">{t.overview.eyebrow}</span>
                   <h3>{t.header}</h3>
-                  <p>{t.subtitle}</p>
-
-                  <div className="admin-overview-hero__actions">
-                    <button type="button" className="btn btn-primary" onClick={() => setActiveTab('announcements')}>
-                      <HiBellAlert /> {t.overview.primaryAction}
-                    </button>
-                    <button type="button" className="btn btn-secondary" onClick={() => setActiveTab('desktop')}>
-                      <FiUpload /> {t.overview.secondaryAction}
-                    </button>
-                    <button type="button" className="btn btn-secondary" onClick={() => setActiveTab('users')}>
-                      <HiUsers /> {t.userManagement.primaryAction}
-                    </button>
-                  </div>
+                  <p className="workspace-panel-subtitle">{t.subtitle}</p>
                 </div>
 
-                <div className="admin-overview-hero__panel">
-                  <div className="admin-section-heading admin-section-heading--tight">
-                    <div>
-                      <span className="admin-copy-badge">{t.overview.operationsTitle}</span>
-                    </div>
-                  </div>
-
-                  <div className="admin-overview-status-list">
-                    <article className="admin-overview-status-item">
-                      <span>{t.desktopApp.title}</span>
-                      <strong>{desktopApp ? t.overview.releaseReady : t.overview.releaseMissing}</strong>
-                      <p>
-                        {desktopApp
-                          ? translate('dashboard.admin.desktopApp.currentFile', { name: desktopApp.filename })
-                          : t.desktopApp.noFile}
-                      </p>
-                    </article>
-
-                    <article className="admin-overview-status-item">
-                      <span>{t.announcements.title}</span>
-                      <strong>
-                        {announcements.length
-                          ? translate('dashboard.admin.overview.updatesReady', { count: announcements.length })
-                          : t.overview.updatesMissing}
-                      </strong>
-                      <p>{`${t.announcements.generalAudience}: ${globalAnnouncementCount} • ${t.announcements.courseAudience}: ${courseAnnouncementCount}`}</p>
-                    </article>
-
-                    <article className="admin-overview-status-item">
-                      <span>{t.testimonials.title}</span>
-                      <strong>
-                        {testimonials.length
-                          ? translate('dashboard.admin.overview.proofReady', { count: testimonials.length })
-                          : t.overview.proofMissing}
-                      </strong>
-                      <p>{latestTestimonial?.role || t.testimonials.noTestimonials}</p>
-                    </article>
-                  </div>
+                <div className="dashboard-inline-metrics">
+                  <article className="dashboard-inline-metric">
+                    <span>{translate('dashboard.admin.topbar.pendingActions', { count: pendingActions })}</span>
+                    <strong>{pendingActions}</strong>
+                  </article>
+                  <article className="dashboard-inline-metric">
+                    <span>{t.desktopApp.versionLabel}</span>
+                    <strong>{desktopApp?.version || common.notAvailable}</strong>
+                  </article>
+                  <article className="dashboard-inline-metric">
+                    <span>{common.active}</span>
+                    <strong>{announcements.length + testimonials.length}</strong>
+                  </article>
                 </div>
-              </section>
+              </div>
+
+              <div className="admin-overview-actions">
+                <button type="button" className="btn btn-primary" onClick={() => setActiveTab('announcements')}>
+                  <HiBellAlert /> {t.overview.primaryAction}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setActiveTab('desktop')}>
+                  <FiUpload /> {t.overview.secondaryAction}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setActiveTab('users')}>
+                  <HiUsers /> {t.userManagement.primaryAction}
+                </button>
+              </div>
 
               <div className="stats-grid">
                 {statsCards.map((card) => (
@@ -934,9 +909,92 @@ function AdminDashboard() {
                 ))}
               </div>
 
+              <section className="dashboard-performance-section">
+                <div className="workspace-panel-header dashboard-performance-section__header">
+                  <div>
+                    <h3>{t.overview.operationsTitle}</h3>
+                    <p>{t.overview.quickLinksDescription}</p>
+                  </div>
+                </div>
+
+                <div className="course-analytics-highlights analytics-highlights--dashboard">
+                  <div className="course-analytics-highlight course-analytics-highlight--hero">
+                    <span className="course-analytics-highlight__label">{t.desktopApp.title}</span>
+                    <strong>{desktopApp ? t.overview.releaseReady : t.overview.releaseMissing}</strong>
+                    <p>
+                      {desktopApp
+                        ? translate('dashboard.admin.desktopApp.currentFile', { name: desktopApp.filename })
+                        : t.desktopApp.noFile}
+                    </p>
+                  </div>
+
+                  <div className="course-analytics-highlight course-analytics-highlight--hero">
+                    <span className="course-analytics-highlight__label">{t.announcements.title}</span>
+                    <strong>
+                      {announcements.length
+                        ? translate('dashboard.admin.overview.updatesReady', { count: announcements.length })
+                        : t.overview.updatesMissing}
+                    </strong>
+                    <p>{`${t.announcements.generalAudience}: ${globalAnnouncementCount} • ${t.announcements.courseAudience}: ${courseAnnouncementCount}`}</p>
+                  </div>
+
+                  <div className="course-analytics-highlight course-analytics-highlight--hero course-analytics-highlight--warning">
+                    <span className="course-analytics-highlight__label">{t.testimonials.title}</span>
+                    <strong>
+                      {testimonials.length
+                        ? translate('dashboard.admin.overview.proofReady', { count: testimonials.length })
+                        : t.overview.proofMissing}
+                    </strong>
+                    <p>{latestTestimonial?.role || t.testimonials.noTestimonials}</p>
+                  </div>
+                </div>
+
+                <div className="course-analytics-overview">
+                  <div className="course-analytics-stat">
+                    <div className="course-analytics-stat__icon">
+                      <HiUsers />
+                    </div>
+                    <div>
+                      <span>{t.stats.totalUsers}</span>
+                      <strong>{platformStatsLoading ? '...' : platformStats.totalUsers}</strong>
+                    </div>
+                  </div>
+
+                  <div className="course-analytics-stat">
+                    <div className="course-analytics-stat__icon">
+                      <HiBookOpen />
+                    </div>
+                    <div>
+                      <span>{t.stats.liveCourses}</span>
+                      <strong>{platformStatsLoading ? '...' : platformStats.totalCourses}</strong>
+                    </div>
+                  </div>
+
+                  <div className="course-analytics-stat">
+                    <div className="course-analytics-stat__icon">
+                      <HiBellAlert />
+                    </div>
+                    <div>
+                      <span>{t.announcements.generalAudience}</span>
+                      <strong>{globalAnnouncementCount}</strong>
+                    </div>
+                  </div>
+
+                  <div className="course-analytics-stat">
+                    <div className="course-analytics-stat__icon">
+                      <HiStar />
+                    </div>
+                    <div>
+                      <span>{translate('landingDownload.downloadsLabel')}</span>
+                      <strong>{desktopApp?.download_count || 0}</strong>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
               <div className="admin-overview-grid">
                 <section className="admin-overview-card">
-                  <div className="admin-section-heading">
+                  <div className="workspace-panel-header admin-card-header">
                     <div>
                       <span className="admin-copy-badge">{t.desktopApp.title}</span>
                       <h3>{t.overview.releaseTitle}</h3>
@@ -974,7 +1032,7 @@ function AdminDashboard() {
                 </section>
 
                 <section className="admin-overview-card">
-                  <div className="admin-section-heading">
+                  <div className="workspace-panel-header admin-card-header">
                     <div>
                       <span className="admin-copy-badge">{t.announcements.title}</span>
                       <h3>{t.overview.commsTitle}</h3>
@@ -1006,7 +1064,7 @@ function AdminDashboard() {
                 </section>
 
                 <section className="admin-overview-card">
-                  <div className="admin-section-heading">
+                  <div className="workspace-panel-header admin-card-header">
                     <div>
                       <span className="admin-copy-badge">{t.overview.quickLinksTitle}</span>
                       <h3>{t.overview.quickLinksTitle}</h3>
@@ -1049,7 +1107,7 @@ function AdminDashboard() {
 
               <div className="admin-overview-grid admin-overview-grid--secondary">
                 <section className="admin-overview-card">
-                  <div className="admin-section-heading">
+                  <div className="workspace-panel-header admin-card-header">
                     <div>
                       <span className="admin-copy-badge">{t.announcements.title}</span>
                       <h3>{t.overview.latestAnnouncements}</h3>
@@ -1084,7 +1142,7 @@ function AdminDashboard() {
                 </section>
 
                 <section className="admin-overview-card">
-                  <div className="admin-section-heading">
+                  <div className="workspace-panel-header admin-card-header">
                     <div>
                       <span className="admin-copy-badge">{t.testimonials.title}</span>
                       <h3>{t.overview.latestTestimonials}</h3>
@@ -1140,27 +1198,28 @@ function AdminDashboard() {
 
           {activeTab === 'users' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
-              <section className="admin-tab-intro">
-                <div>
-                  <span className="admin-copy-badge">{t.tabs.users}</span>
+              <div className="workspace-panel-header workspace-panel-header--stacked">
+                <div className="workspace-panel-header__copy">
+                  <span className="workspace-panel-header__eyebrow">{t.tabs.users}</span>
                   <h3>{t.userManagement.title}</h3>
-                  <p>{t.userManagement.description}</p>
+                  <p className="workspace-panel-subtitle">{t.userManagement.description}</p>
                 </div>
 
-                <div className="admin-inline-stats">
-                  <article className="admin-inline-stat">
+                <div className="dashboard-inline-metrics">
+                  <article className="dashboard-inline-metric">
                     <span>{t.userManagement.publicSignupLabel}</span>
                     <strong>{translations.auth.roles.student}</strong>
                   </article>
-                  <article className="admin-inline-stat">
+                  <article className="dashboard-inline-metric">
                     <span>{t.userManagement.allowedRolesLabel}</span>
                     <strong>{t.userManagement.allowedRolesValue}</strong>
                   </article>
                 </div>
-              </section>
+              </div>
 
-              <div className="admin-testimonials-layout">
-                <div className="admin-testimonial-form">
+              <div className="admin-management-layout">
+                <section className="admin-form-card">
+                  <p className="admin-form-card__intro">{t.userManagement.description}</p>
                   <label className="admin-installer-panel__label">
                     {t.userManagement.nameLabel}
                     <input
@@ -1229,14 +1288,27 @@ function AdminDashboard() {
                   {privilegedUserMessage ? (
                     <p className="admin-installer-panel__status admin-installer-panel__status--message">{privilegedUserMessage}</p>
                   ) : null}
-                </div>
+                </section>
 
                 <section className="admin-overview-card">
-                  <div className="admin-section-heading">
+                  <div className="workspace-panel-header admin-card-header">
                     <div>
                       <span className="admin-copy-badge">{t.userManagement.securityBadge}</span>
                       <h3>{t.userManagement.securityTitle}</h3>
                       <p>{t.userManagement.securityDescription}</p>
+                    </div>
+                  </div>
+
+                  <div className="course-analytics-highlights">
+                    <div className="course-analytics-highlight">
+                      <span className="course-analytics-highlight__label">{t.userManagement.publicSignupLabel}</span>
+                      <strong>{translations.auth.roles.student}</strong>
+                      <p>{t.userManagement.publicSignupDescription}</p>
+                    </div>
+                    <div className="course-analytics-highlight">
+                      <span className="course-analytics-highlight__label">{t.userManagement.allowedRolesLabel}</span>
+                      <strong>{t.userManagement.allowedRolesValue}</strong>
+                      <p>{t.userManagement.allowedRolesDescription}</p>
                     </div>
                   </div>
 
@@ -1263,31 +1335,32 @@ function AdminDashboard() {
 
           {activeTab === 'announcements' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
-              <section className="admin-tab-intro">
-                <div>
-                  <span className="admin-copy-badge">{t.tabs.announcements}</span>
+              <div className="workspace-panel-header workspace-panel-header--stacked">
+                <div className="workspace-panel-header__copy">
+                  <span className="workspace-panel-header__eyebrow">{t.tabs.announcements}</span>
                   <h3>{t.announcements.title}</h3>
-                  <p>{t.announcements.description}</p>
+                  <p className="workspace-panel-subtitle">{t.announcements.description}</p>
                 </div>
 
-                <div className="admin-inline-stats">
-                  <article className="admin-inline-stat">
+                <div className="dashboard-inline-metrics">
+                  <article className="dashboard-inline-metric">
                     <span>{common.active}</span>
                     <strong>{announcements.length}</strong>
                   </article>
-                  <article className="admin-inline-stat">
+                  <article className="dashboard-inline-metric">
                     <span>{t.announcements.generalAudience}</span>
                     <strong>{globalAnnouncementCount}</strong>
                   </article>
-                  <article className="admin-inline-stat">
+                  <article className="dashboard-inline-metric">
                     <span>{t.announcements.courseAudience}</span>
                     <strong>{courseAnnouncementCount}</strong>
                   </article>
                 </div>
-              </section>
+              </div>
 
-              <div className="admin-testimonials-layout">
-                <div className="admin-testimonial-form">
+              <div className="dashboard-announcements-layout">
+                <section className="dashboard-announcement-form-card">
+                  <p className="dashboard-announcement-form-card__intro">{t.announcements.description}</p>
                   <label className="admin-installer-panel__label">
                     {t.announcements.audienceLabel}
                     <select
@@ -1351,9 +1424,9 @@ function AdminDashboard() {
                   {announcementMessage ? (
                     <p className="admin-installer-panel__status admin-installer-panel__status--message">{announcementMessage}</p>
                   ) : null}
-                </div>
+                </section>
 
-                <div className="admin-testimonials-list">
+                <div className="dashboard-announcements-feed">
                   {announcementsLoading ? (
                     <AnnouncementFeedSkeleton count={3} visible={showAnnouncementSkeletons} />
                   ) : announcements.length ? announcements.map((announcement) => (
@@ -1392,27 +1465,28 @@ function AdminDashboard() {
 
           {activeTab === 'testimonials' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
-              <section className="admin-tab-intro">
-                <div>
-                  <span className="admin-copy-badge">{t.tabs.testimonials}</span>
+              <div className="workspace-panel-header workspace-panel-header--stacked">
+                <div className="workspace-panel-header__copy">
+                  <span className="workspace-panel-header__eyebrow">{t.tabs.testimonials}</span>
                   <h3>{t.testimonials.title}</h3>
-                  <p>{t.testimonials.description}</p>
+                  <p className="workspace-panel-subtitle">{t.testimonials.description}</p>
                 </div>
 
-                <div className="admin-inline-stats">
-                  <article className="admin-inline-stat">
+                <div className="dashboard-inline-metrics">
+                  <article className="dashboard-inline-metric">
                     <span>{common.active}</span>
                     <strong>{testimonials.length}</strong>
                   </article>
-                  <article className="admin-inline-stat">
+                  <article className="dashboard-inline-metric">
                     <span>{testimonialForm.id ? common.update : common.create}</span>
                     <strong>{testimonialForm.id ? t.testimonials.edit : t.testimonials.add}</strong>
                   </article>
                 </div>
-              </section>
+              </div>
 
-              <div className="admin-testimonials-layout">
-                <div className="admin-testimonial-form">
+              <div className="admin-management-layout">
+                <section className="admin-form-card">
+                  <p className="admin-form-card__intro">{t.testimonials.description}</p>
                   <label className="admin-installer-panel__label">
                     {t.testimonials.nameLabel}
                     <input
@@ -1480,9 +1554,9 @@ function AdminDashboard() {
                   {testimonialMessage ? (
                     <p className="admin-installer-panel__status admin-installer-panel__status--message">{testimonialMessage}</p>
                   ) : null}
-                </div>
+                </section>
 
-                <div className="admin-testimonials-list">
+                <div className="admin-list-card admin-testimonials-list">
                   {testimonialsLoading ? (
                     <PanelStatusSkeleton visible={showTestimonialStatus} />
                   ) : testimonials.length ? testimonials.map((testimonial) => (
@@ -1529,28 +1603,32 @@ function AdminDashboard() {
 
           {activeTab === 'desktop' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
-              <section className="admin-tab-intro">
-                <div>
-                  <span className="admin-copy-badge">{t.tabs.desktop}</span>
+              <div className="workspace-panel-header workspace-panel-header--stacked">
+                <div className="workspace-panel-header__copy">
+                  <span className="workspace-panel-header__eyebrow">{t.tabs.desktop}</span>
                   <h3>{t.desktopApp.title}</h3>
-                  <p>{t.desktopApp.description}</p>
+                  <p className="workspace-panel-subtitle">{t.desktopApp.description}</p>
                 </div>
 
-                <div className="admin-inline-stats">
-                  <article className="admin-inline-stat">
+                <div className="dashboard-inline-metrics">
+                  <article className="dashboard-inline-metric">
                     <span>{t.desktopApp.versionLabel}</span>
                     <strong>{desktopApp?.version || common.notAvailable}</strong>
                   </article>
-                  <article className="admin-inline-stat">
+                  <article className="dashboard-inline-metric">
                     <span>{translate('landingDownload.downloadsLabel')}</span>
                     <strong>{desktopApp?.download_count || 0}</strong>
                   </article>
+                  <article className="dashboard-inline-metric">
+                    <span>{common.files}</span>
+                    <strong>{desktopApp ? formatFileSize(desktopApp.file_size) : common.notAvailable}</strong>
+                  </article>
                 </div>
-              </section>
+              </div>
 
-              <div className="admin-desktop-layout">
+              <div className="admin-management-layout admin-management-layout--desktop">
                 <section className="admin-overview-card">
-                  <div className="admin-section-heading">
+                  <div className="workspace-panel-header admin-card-header">
                     <div>
                       <span className="admin-copy-badge">{t.overview.releaseTitle}</span>
                       <h3>{t.desktopApp.title}</h3>
@@ -1600,7 +1678,8 @@ function AdminDashboard() {
                   ) : null}
                 </section>
 
-                <section className="admin-installer-panel admin-installer-panel--wide">
+                <section className="admin-form-card admin-installer-panel admin-installer-panel--wide">
+                  <p className="admin-form-card__intro">{t.overview.releaseDescription}</p>
                   <div className="admin-installer-panel__fields">
                     <label className="admin-installer-panel__label">
                       {t.desktopApp.versionLabel}
