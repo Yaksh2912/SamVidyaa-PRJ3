@@ -48,6 +48,8 @@ const getInitials = (name = '') => name
   .map((part) => part[0]?.toUpperCase() || '')
   .join('') || 'ST'
 
+const TEACHER_DASHBOARD_STATE_KEY = 'teacher_dashboard_state'
+
 const DEFAULT_PERFORMANCE_ANALYTICS = {
   activeLearners: 0,
   avgCompletionRate: 0,
@@ -86,7 +88,6 @@ const formatFileSize = (size) => {
   return `${formattedValue >= 10 || unitIndex === 0 ? Math.round(formattedValue) : formattedValue.toFixed(1)} ${units[unitIndex]}`
 }
 
-const getUploadFileUrl = (filePath = '') => `${API_BASE_URL.replace('/api', '')}/${filePath.replace(/\\/g, '/')}`
 const getModuleTaskCount = (module = {}) => Number(
   module.task_count
     ?? module.total_tasks
@@ -165,7 +166,16 @@ function TeacherDashboard() {
   // Handout state
   const [handoutUploading, setHandoutUploading] = React.useState(false)
   const handoutInputRef = React.useRef(null)
-  const [activeTab, setActiveTab] = React.useState('dashboard')
+  const [activeTab, setActiveTab] = React.useState(() => {
+    try {
+      const saved = sessionStorage.getItem(TEACHER_DASHBOARD_STATE_KEY)
+      if (!saved) return 'dashboard'
+      const parsed = JSON.parse(saved)
+      return parsed.activeTab || 'dashboard'
+    } catch (_error) {
+      return 'dashboard'
+    }
+  })
   const [announcements, setAnnouncements] = React.useState([])
   const [loadingAnnouncements, setLoadingAnnouncements] = React.useState(false)
   const [savingAnnouncement, setSavingAnnouncement] = React.useState(false)
@@ -188,6 +198,56 @@ function TeacherDashboard() {
     avgPerformance: '0%',
     performanceAnalytics: DEFAULT_PERFORMANCE_ANALYTICS
   })
+  const restoredTeacherStateRef = React.useRef(false)
+
+  const getAuthHeaders = () => {
+    const userStr = localStorage.getItem('user')
+    const token = userStr ? JSON.parse(userStr).token : null
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  }
+
+  const downloadProtectedFile = async (filePath, filename = 'download') => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/files?path=${encodeURIComponent(filePath)}&download=1`, {
+        headers: getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        throw new Error('file_download_failed')
+      }
+
+      const blob = await response.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = blobUrl
+      anchor.download = filename
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      window.URL.revokeObjectURL(blobUrl)
+    } catch (error) {
+      console.error('Failed to download file', error)
+    }
+  }
+
+  const openProtectedFile = async (filePath) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/files?path=${encodeURIComponent(filePath)}`, {
+        headers: getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        throw new Error('file_open_failed')
+      }
+
+      const blob = await response.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+      window.open(blobUrl, '_blank', 'noopener,noreferrer')
+      window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60 * 1000)
+    } catch (error) {
+      console.error('Failed to open file', error)
+    }
+  }
 
   const fetchStats = async () => {
     try {
@@ -220,6 +280,65 @@ function TeacherDashboard() {
       console.error('Failed to fetch courses', error)
     }
   }
+
+  React.useEffect(() => {
+    sessionStorage.setItem(TEACHER_DASHBOARD_STATE_KEY, JSON.stringify({
+      activeTab,
+      selectedCourseId: selectedCourse?._id || null,
+      selectedModuleId: selectedModule?._id || null,
+    }))
+  }, [activeTab, selectedCourse?._id, selectedModule?._id])
+
+  React.useEffect(() => {
+    if (restoredTeacherStateRef.current || courses.length === 0) return
+
+    try {
+      const saved = sessionStorage.getItem(TEACHER_DASHBOARD_STATE_KEY)
+      if (!saved) {
+        restoredTeacherStateRef.current = true
+        return
+      }
+
+      const parsed = JSON.parse(saved)
+      const savedCourseId = parsed.selectedCourseId
+      if (parsed.activeTab) {
+        setActiveTab(parsed.activeTab)
+      }
+
+      if (savedCourseId && parsed.activeTab === 'myCourses') {
+        const savedCourse = courses.find((course) => course._id === savedCourseId)
+        if (savedCourse) {
+          setSelectedCourse(savedCourse)
+          fetchModules(savedCourse._id)
+        }
+      }
+    } catch (_error) {
+      // Ignore invalid persisted state.
+    } finally {
+      restoredTeacherStateRef.current = true
+    }
+  }, [courses])
+
+  React.useEffect(() => {
+    if (!selectedCourse || modules.length === 0 || selectedModule) return
+
+    try {
+      const saved = sessionStorage.getItem(TEACHER_DASHBOARD_STATE_KEY)
+      if (!saved) return
+
+      const parsed = JSON.parse(saved)
+      const savedModuleId = parsed.selectedModuleId
+      if (!savedModuleId) return
+
+      const savedModule = modules.find((module) => module._id === savedModuleId)
+      if (savedModule) {
+        setSelectedModule(savedModule)
+        fetchTasks(savedModule._id)
+      }
+    } catch (_error) {
+      // Ignore invalid persisted state.
+    }
+  }, [selectedCourse?._id, modules, selectedModule])
 
   const fetchAnnouncements = async () => {
     setLoadingAnnouncements(true)
@@ -1383,14 +1502,13 @@ function TeacherDashboard() {
                         </span>
                         {selectedCourse.handout_path ? (
                           <div className="course-handout-content">
-                            <a
+                            <button
+                              type="button"
                               className="course-handout-link"
-                              href={`${API_BASE_URL.replace('/api', '')}/${selectedCourse.handout_path.replace(/\\/g, '/')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              onClick={() => openProtectedFile(selectedCourse.handout_path)}
                             >
                               {selectedCourse.handout_filename}
-                            </a>
+                            </button>
                             <p className="course-handout-caption">{t.handout.upload}</p>
                           </div>
                         ) : (
@@ -1553,14 +1671,20 @@ function TeacherDashboard() {
                                 </div>
                               </div>
                               <div className="module-resource-item__actions">
-                                <a
+                                <button
+                                  type="button"
                                   className="btn btn-outline"
-                                  href={getUploadFileUrl(file.path)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                  onClick={() => openProtectedFile(file.path)}
                                 >
                                   <HiArrowDownTray /> {t.modules.resources.open}
-                                </a>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-outline"
+                                  onClick={() => downloadProtectedFile(file.path, file.name)}
+                                >
+                                  <HiArrowDownTray /> {common.download}
+                                </button>
                                 <button
                                   type="button"
                                   className="btn btn-danger"

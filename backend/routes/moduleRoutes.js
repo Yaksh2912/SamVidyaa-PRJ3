@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { protect } = require('../middleware/authMiddleware');
+const { createRateLimiter } = require('../middleware/rateLimitMiddleware');
 const { createModule, updateModule, getTeacherModules, getCourseModules, getModuleById, deleteModuleFile, deleteModule, exportModule } = require('../controllers/moduleController');
 
 // Multer Config
@@ -19,9 +20,14 @@ const upload = multer({
     storage,
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit per file
 });
+const moduleUploadRateLimiter = createRateLimiter({
+    windowMs: 10 * 60 * 1000,
+    max: 20,
+    message: 'Too many module upload requests. Please wait before trying again.',
+});
 
 router.route('/')
-    .post(protect, upload.array('files'), createModule)
+    .post(protect, moduleUploadRateLimiter, upload.array('files'), createModule)
     .get(protect, getTeacherModules);
 
 router.route('/course/:courseId')
@@ -35,7 +41,7 @@ router.route('/:id/files')
 
 router.route('/:id')
     .get(protect, getModuleById)
-    .put(protect, upload.array('files'), updateModule)
+    .put(protect, moduleUploadRateLimiter, upload.array('files'), updateModule)
     .delete(protect, deleteModule);
 
 

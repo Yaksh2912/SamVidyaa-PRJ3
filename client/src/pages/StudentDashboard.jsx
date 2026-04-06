@@ -58,7 +58,7 @@ const formatFileSize = (size) => {
   return `${formattedValue >= 10 || unitIndex === 0 ? Math.round(formattedValue) : formattedValue.toFixed(1)} ${units[unitIndex]}`;
 };
 
-const getUploadFileUrl = (filePath = '') => `${API_BASE_URL}/${filePath.replace(/\\/g, '/')}`;
+const STUDENT_DASHBOARD_STATE_KEY = 'student_dashboard_state';
 
 function StudentDashboard() {
   const { theme } = useTheme()
@@ -99,12 +99,39 @@ function StudentDashboard() {
   const [userPoints, setUserPoints] = useState(0);
   const [claimingReward, setClaimingReward] = useState(null);
   const [showPointShop, setShowPointShop] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(STUDENT_DASHBOARD_STATE_KEY);
+      if (!saved) return 'dashboard';
+      const parsed = JSON.parse(saved);
+      return parsed.activeTab || 'dashboard';
+    } catch (_error) {
+      return 'dashboard';
+    }
+  });
 
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
-  const [leaderboardType, setLeaderboardType] = useState('global'); // global, weekly, class, peers
-  const [selectedCourseForRanking, setSelectedCourseForRanking] = useState('');
+  const [leaderboardType, setLeaderboardType] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(STUDENT_DASHBOARD_STATE_KEY);
+      if (!saved) return 'global';
+      const parsed = JSON.parse(saved);
+      return parsed.leaderboardType || 'global';
+    } catch (_error) {
+      return 'global';
+    }
+  }); // global, weekly, class, peers
+  const [selectedCourseForRanking, setSelectedCourseForRanking] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(STUDENT_DASHBOARD_STATE_KEY);
+      if (!saved) return '';
+      const parsed = JSON.parse(saved);
+      return parsed.selectedCourseForRanking || '';
+    } catch (_error) {
+      return '';
+    }
+  });
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courseModules, setCourseModules] = useState([]);
@@ -130,6 +157,7 @@ function StudentDashboard() {
   const showRewardsSkeletons = useDelayedLoading(loadingRewards);
   const showLeaderboardSkeletons = useDelayedLoading(loadingLeaderboard);
   const showAnnouncementSkeletons = useDelayedLoading(loadingAnnouncements);
+  const restoredStudentStateRef = useRef(false);
 
   // Mapping of icon names to actual components
   const MAP_ICONS = {
@@ -365,6 +393,16 @@ function StudentDashboard() {
     }
   }, [activeTab, leaderboardType, selectedCourseForRanking]);
 
+  useEffect(() => {
+    sessionStorage.setItem(STUDENT_DASHBOARD_STATE_KEY, JSON.stringify({
+      activeTab,
+      leaderboardType,
+      selectedCourseForRanking,
+      selectedCourseId: selectedCourse?._id || null,
+      expandedModule,
+    }));
+  }, [activeTab, leaderboardType, selectedCourseForRanking, selectedCourse?._id, expandedModule]);
+
   const handleAddPoints = async (amount = 50) => {
     try {
       const userStr = localStorage.getItem('user');
@@ -458,10 +496,60 @@ function StudentDashboard() {
     fetchTaskHistory();
   }, []);
 
+  useEffect(() => {
+    if (restoredStudentStateRef.current || enrolledCourses.length === 0) return;
+
+    try {
+      const saved = sessionStorage.getItem(STUDENT_DASHBOARD_STATE_KEY);
+      if (!saved) {
+        restoredStudentStateRef.current = true;
+        return;
+      }
+
+      const parsed = JSON.parse(saved);
+      const savedCourseId = parsed.selectedCourseId;
+
+      if (savedCourseId && parsed.activeTab === 'myCourses') {
+        const savedEnrollment = enrolledCourses.find((enrollment) => enrollment.course_id?._id === savedCourseId);
+        if (savedEnrollment?.course_id) {
+          handleViewCourse(savedEnrollment.course_id);
+        }
+      }
+    } catch (_error) {
+      // Ignore invalid persisted state.
+    } finally {
+      restoredStudentStateRef.current = true;
+    }
+  }, [enrolledCourses]);
+
+  useEffect(() => {
+    if (!selectedCourse || courseModules.length === 0 || expandedModule) return;
+
+    try {
+      const saved = sessionStorage.getItem(STUDENT_DASHBOARD_STATE_KEY);
+      if (!saved) return;
+
+      const parsed = JSON.parse(saved);
+      const savedExpandedModule = parsed.expandedModule;
+      if (!savedExpandedModule) return;
+
+      const moduleExists = courseModules.some((module) => module._id === savedExpandedModule);
+      if (moduleExists) {
+        toggleModule(savedExpandedModule);
+      }
+    } catch (_error) {
+      // Ignore invalid persisted state.
+    }
+  }, [selectedCourse?._id, courseModules, expandedModule]);
+
   const downloadUploadedFile = async (filePath, filename, fallbackName) => {
     try {
-      const url = `${API_BASE_URL}/${filePath.replace(/\\/g, '/')}`;
-      const response = await fetch(url);
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      const url = `${API_BASE_URL}/api/files?path=${encodeURIComponent(filePath)}&download=1`;
+      const response = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!response.ok) throw new Error(translations.dashboard.student.courseModal.downloadFailed);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
@@ -477,6 +565,25 @@ function StudentDashboard() {
       alert(translations.dashboard.student.courseModal.downloadFailed);
     }
   };
+
+  const openUploadedFile = async (filePath) => {
+    try {
+      const userStr = localStorage.getItem('user');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      const response = await fetch(`${API_BASE_URL}/api/files?path=${encodeURIComponent(filePath)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!response.ok) throw new Error(translations.dashboard.student.courseModal.downloadFailed);
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60 * 1000);
+    } catch (error) {
+      console.error('Open file error', error);
+      alert(translations.dashboard.student.courseModal.downloadFailed);
+    }
+  }
 
   const handleHandoutDownload = async (handoutPath, filename) => {
     await downloadUploadedFile(handoutPath, filename, 'handout.pdf')
@@ -1190,14 +1297,13 @@ function StudentDashboard() {
                                     </div>
                                   </div>
                                   <div className="module-resource-item__actions">
-                                    <a
+                                    <button
+                                      type="button"
                                       className="module-resource-action module-resource-action--secondary"
-                                      href={getUploadFileUrl(file.path)}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
+                                      onClick={() => openUploadedFile(file.path)}
                                     >
                                       <HiArrowTopRightOnSquare /> {t.courseModal.openResource}
-                                    </a>
+                                    </button>
                                     <button
                                       type="button"
                                       className="module-resource-action module-resource-action--primary"

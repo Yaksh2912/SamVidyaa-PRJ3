@@ -265,9 +265,14 @@ async function clearChatHistory(studentId) {
     chatCache.clearForStudent(studentId);
 }
 
+function isReady() {
+    return model !== null;
+}
+
 module.exports = {
     initChatService,
     handleChatMessage,
     getChatHistory,
     clearChatHistory,
+    isReady,
 };

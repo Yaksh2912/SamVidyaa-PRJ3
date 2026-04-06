@@ -29,6 +29,8 @@ const getInitials = (name = '') => name
   .map((part) => part[0]?.toUpperCase() || '')
   .join('') || 'AD'
 
+const ADMIN_DASHBOARD_STATE_KEY = 'admin_dashboard_state'
+
 function AdminDashboard() {
   const { theme, toggleTheme, isDark } = useTheme()
   const { translations, language, changeLanguage, t: translate } = useI18n()
@@ -39,7 +41,16 @@ function AdminDashboard() {
   const installerInputRef = React.useRef(null)
   const testimonialImageInputRef = React.useRef(null)
 
-  const [activeTab, setActiveTab] = React.useState('overview')
+  const [activeTab, setActiveTab] = React.useState(() => {
+    try {
+      const saved = sessionStorage.getItem(ADMIN_DASHBOARD_STATE_KEY)
+      if (!saved) return 'overview'
+      const parsed = JSON.parse(saved)
+      return parsed.activeTab || 'overview'
+    } catch (_error) {
+      return 'overview'
+    }
+  })
   const [platformStats, setPlatformStats] = React.useState({ totalUsers: 0, totalCourses: 0 })
   const [platformStatsLoading, setPlatformStatsLoading] = React.useState(true)
   const [desktopApp, setDesktopApp] = React.useState(null)
@@ -96,6 +107,10 @@ function AdminDashboard() {
     dateStyle: 'medium',
     timeStyle: 'short',
   })
+
+  React.useEffect(() => {
+    sessionStorage.setItem(ADMIN_DASHBOARD_STATE_KEY, JSON.stringify({ activeTab }))
+  }, [activeTab])
 
   const handleLogout = () => {
     logout()

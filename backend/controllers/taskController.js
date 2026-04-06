@@ -4,6 +4,8 @@ const User = require('../models/User');
 const PointTransaction = require('../models/PointTransaction');
 const StudentProgress = require('../models/StudentProgress');
 const TaskCompletion = require('../models/TaskCompletion');
+const DesktopTaskResult = require('../models/DesktopTaskResult');
+const Enrollment = require('../models/Enrollment');
 const { PDFParse } = require('pdf-parse');
 const xlsx = require('xlsx');
 const fs = require('fs');
@@ -15,6 +17,7 @@ const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
 const isStudentRole = (role) => role === 'STUDENT' || role === 'student';
+const ALLOWED_TASK_COMPLETION_STATUSES = ['ACTIVE', 'APPROVED'];
 
 const normalizeImportedText = (text) => text
     .replace(/\r/g, '')
@@ -162,6 +165,43 @@ const buildTaskDraft = (section) => {
         test_cases_count: testCases.length
     };
 };
+
+const getStudentTaskAccess = async (studentId, role, taskId) => {
+    if (!isStudentRole(role)) {
+        return { error: { status: 401, message: 'Only students can complete tasks' } };
+    }
+
+    const task = await Task.findById(taskId).lean();
+    if (!task) {
+        return { error: { status: 404, message: 'Task not found' } };
+    }
+
+    const module = await Module.findById(task.module_id)
+        .populate('course_id', 'course_name')
+        .lean();
+
+    if (!module || !module.course_id) {
+        return { error: { status: 404, message: 'Module or course not found' } };
+    }
+
+    const enrollment = await Enrollment.findOne({
+        course_id: module.course_id._id,
+        student_id: studentId,
+        status: { $in: ALLOWED_TASK_COMPLETION_STATUSES },
+    }).select('_id status').lean();
+
+    if (!enrollment) {
+        return { error: { status: 403, message: 'You are not allowed to complete tasks for this course' } };
+    }
+
+    return { task, module, enrollment };
+};
+
+const getLatestPassingDesktopResult = async (studentId, taskId) => DesktopTaskResult.findOne({
+    student_id: studentId,
+    task_id: taskId,
+    status: 'PASSED',
+}).sort({ createdAt: -1 }).lean();
 
 const getSpreadsheetValue = (row, aliases) => {
     const normalizedRow = Object.entries(row).reduce((acc, [key, value]) => {
@@ -569,6 +609,65 @@ const updateTask = async (req, res) => {
 };
 
 // @desc    Complete a task and optionally award peers colab points
+// @route   POST /api/tasks/:id/desktop-result
+// @access  Private (Student/Desktop app)
+const recordDesktopTaskResult = async (req, res) => {
+    try {
+        const taskId = req.params.id;
+        const {
+            status,
+            passed_test_cases = 0,
+            total_test_cases = 0,
+            runtime_ms,
+            language = '',
+            app_version = '',
+            execution_ref = '',
+            raw_result = {},
+        } = req.body || {};
+
+        const normalizedStatus = String(status || '').toUpperCase();
+        if (!['PASSED', 'FAILED'].includes(normalizedStatus)) {
+            return res.status(400).json({ message: 'A valid desktop execution status is required' });
+        }
+
+        const access = await getStudentTaskAccess(req.user._id, req.user.role, taskId);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
+        }
+
+        const desktopResult = await DesktopTaskResult.create({
+            student_id: req.user._id,
+            course_id: access.module.course_id._id,
+            module_id: access.task.module_id,
+            task_id: access.task._id,
+            status: normalizedStatus,
+            passed_test_cases: Math.max(0, Number(passed_test_cases) || 0),
+            total_test_cases: Math.max(0, Number(total_test_cases) || 0),
+            runtime_ms: runtime_ms === undefined || runtime_ms === null ? null : Math.max(0, Number(runtime_ms) || 0),
+            language: String(language || ''),
+            app_version: String(app_version || ''),
+            execution_ref: String(execution_ref || ''),
+            raw_result: raw_result && typeof raw_result === 'object' ? raw_result : {},
+            submitted_at: new Date(),
+        });
+
+        res.status(201).json({
+            message: normalizedStatus === 'PASSED'
+                ? 'Desktop result recorded and ready for validation'
+                : 'Desktop result recorded',
+            result: desktopResult,
+        });
+    } catch (error) {
+        console.error(error);
+
+        if (error?.code === 11000) {
+            return res.status(400).json({ message: 'This desktop execution result was already submitted' });
+        }
+
+        res.status(500).json({ message: 'Failed to record desktop task result' });
+    }
+};
+
 // @route   POST /api/tasks/:id/complete
 // @access  Private (Student)
 const completeTask = async (req, res) => {
@@ -576,27 +675,26 @@ const completeTask = async (req, res) => {
         const taskId = req.params.id;
         const { collaboratorIds } = req.body; // Array of peer user IDs
 
-        const task = await Task.findById(taskId).lean();
-        if (!task) {
-            return res.status(404).json({ message: 'Task not found' });
+        const access = await getStudentTaskAccess(req.user._id, req.user.role, taskId);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
         }
 
-        const [module, existingCompletion] = await Promise.all([
-            Module.findById(task.module_id)
-                .populate('course_id', 'course_name')
-                .lean(),
+        const { task, module } = access;
+        const [existingCompletion, passedDesktopResult] = await Promise.all([
             TaskCompletion.findOne({
                 student_id: req.user._id,
                 task_id: task._id,
             }).select('_id').lean(),
+            getLatestPassingDesktopResult(req.user._id, task._id),
         ]);
-
-        if (!module || !module.course_id) {
-            return res.status(404).json({ message: 'Module or course not found' });
-        }
 
         if (existingCompletion) {
             return res.status(400).json({ message: 'Task already completed' });
+        }
+
+        if (!passedDesktopResult) {
+            return res.status(400).json({ message: 'Task must be completed in the desktop application before validation' });
         }
 
         if (task.has_deadline && task.deadline_at && new Date(task.deadline_at).getTime() < Date.now()) {
@@ -607,7 +705,20 @@ const completeTask = async (req, res) => {
         let studentPoints = task.points || 0;
         let peerPointsEach = 0;
         let collaboratorsAwarded = 0;
-        const validPeers = (collaboratorIds || []).filter(id => id.toString() !== req.user._id.toString());
+        const collaboratorPool = Array.isArray(collaboratorIds) ? collaboratorIds : [];
+        const uniquePeerIds = [...new Set(collaboratorPool.map((id) => id?.toString()).filter(Boolean))]
+            .filter((id) => id !== req.user._id.toString());
+        let validPeers = [];
+
+        if (task.allow_collaboration && uniquePeerIds.length > 0) {
+            const activePeers = await Enrollment.find({
+                course_id: module.course_id._id,
+                student_id: { $in: uniquePeerIds },
+                status: { $in: ALLOWED_TASK_COMPLETION_STATUSES },
+            }).select('student_id').lean();
+
+            validPeers = activePeers.map((peer) => peer.student_id.toString());
+        }
 
         if (task.allow_collaboration && task.collab_percentage > 0 && validPeers.length > 0) {
             const peerPool = Math.round((task.points * task.collab_percentage) / 100);
@@ -699,7 +810,7 @@ const completeTask = async (req, res) => {
             task_points: task.points || 0,
             points_awarded: studentPoints,
             collaborator_ids: validPeers,
-            completed_at: new Date(),
+            completed_at: passedDesktopResult.submitted_at || new Date(),
         });
 
         res.json({
@@ -713,4 +824,4 @@ const completeTask = async (req, res) => {
     }
 };
 
-module.exports = { createTask, importTasksFromDocument, getTasks, getTaskHistory, deleteTask, updateTask, completeTask };
+module.exports = { createTask, importTasksFromDocument, getTasks, getTaskHistory, deleteTask, updateTask, recordDesktopTaskResult, completeTask };

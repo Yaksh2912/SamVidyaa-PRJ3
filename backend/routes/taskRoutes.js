@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const multer = require('multer');
-const { createTask, importTasksFromDocument, getTasks, getTaskHistory, deleteTask, updateTask, completeTask } = require('../controllers/taskController');
+const { createTask, importTasksFromDocument, getTasks, getTaskHistory, deleteTask, updateTask, recordDesktopTaskResult, completeTask } = require('../controllers/taskController');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -12,6 +12,7 @@ router.route('/')
 
 router.post('/import', protect, upload.single('document'), importTasksFromDocument);
 router.get('/history', protect, getTaskHistory);
+router.post('/:id/desktop-result', protect, recordDesktopTaskResult);
 
 router.route('/:id')
     .put(protect, updateTask)

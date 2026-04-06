@@ -1,76 +1,96 @@
 Production Readiness Gaps
 
 Current assessment:
-The project is not production-ready yet. It is closer to a solid beta or internal pilot.
+The project is materially safer than before, but it is still not production-ready. The highest-risk role escalation and task-completion bypasses have been addressed, and the server surface is harder by default. The remaining work is now concentrated in authorization tightening, transactional integrity, validation, and operational maturity.
+
+Recently addressed
+
+1. Public privileged registration was closed
+- Public registration now creates STUDENT accounts only.
+- Instructor/admin creation moved behind a protected admin-only flow.
+- Files:
+  - backend/controllers/authController.js
+  - backend/controllers/userController.js
+  - backend/routes/userRoutes.js
+  - backend/services/userAccountService.js
+  - client/src/pages/Signup.jsx
+  - client/src/context/AuthContext.jsx
+  - client/src/pages/AdminDashboard.jsx
+
+2. Task completion is now gated by role, enrollment, and desktop validation
+- Task completion now explicitly enforces student-only access.
+- The backend now verifies active enrollment before allowing completion.
+- Completion now requires a stored PASSED desktop execution result.
+- Desktop execution results are stored separately from final completion history.
+- Files:
+  - backend/controllers/taskController.js
+  - backend/routes/taskRoutes.js
+  - backend/models/DesktopTaskResult.js
+  - backend/tests/taskController.test.js
+
+3. Basic server hardening is now in place
+- CORS is restricted to configured origins.
+- Health endpoints exist at /health and /api/health.
+- Centralized not-found and error handling were added.
+- API/auth/chat/upload rate limiting was added.
+- Public file exposure was reduced:
+  - testimonial images remain public
+  - handouts/resources now go through authenticated file access checks
+- Files:
+  - backend/server.js
+  - backend/middleware/errorMiddleware.js
+  - backend/middleware/rateLimitMiddleware.js
+  - backend/controllers/fileController.js
+  - backend/controllers/healthController.js
+  - backend/routes/fileRoutes.js
+  - backend/routes/courseRoutes.js
+  - backend/routes/moduleRoutes.js
+  - backend/routes/desktopAppRoutes.js
+  - client/src/pages/StudentDashboard.jsx
+  - client/src/pages/TeacherDashboard.jsx
 
 Critical blockers
 
-1. Open privileged registration
-- Public registration currently allows callers to submit a role.
-- The backend accepts STUDENT, INSTRUCTOR, and ADMIN from the request body.
-- This means a user could potentially self-register as an admin or instructor.
-- Files:
-  - backend/routes/authRoutes.js
-  - backend/controllers/authController.js
-
-2. Test-only points endpoint exposed in production code
-- /api/users/add-points is available to any authenticated user.
+1. Test-only points endpoint exposed in production code
+- /api/users/add-points is still available to any authenticated user.
 - A user can add points to their own account directly.
 - This is labeled as testing/mock functionality and should not exist in production.
 - Files:
   - backend/routes/userRoutes.js
   - backend/controllers/userController.js
 
-3. Module creation authorization is too weak
-- Module creation only requires authentication.
-- The controller does not verify instructor/admin role before creating a module.
+2. Module creation authorization is still too weak
+- Module creation still only requires authentication.
+- The controller still does not explicitly enforce instructor/admin role before creating a module.
 - It also does not verify ownership/access to the target course before creating a module.
-- A student may be able to create modules against arbitrary courses.
+- A student may still be able to create modules against arbitrary courses.
 - Files:
   - backend/routes/moduleRoutes.js
   - backend/controllers/moduleController.js
 
-4. Task completion path is under-protected
-- Task completion only requires authentication.
-- The controller does not explicitly enforce student-only access.
-- The controller also does not verify that the student is enrolled in the course/module before awarding points.
-- This can allow unauthorized point earning if a user can access a task ID.
-- Files:
-  - backend/routes/taskRoutes.js
-  - backend/controllers/taskController.js
-
-5. Task completion writes are not transactional
-- Completing a task updates multiple collections:
+3. Task completion writes are not transactional
+- Completing a task still updates multiple collections:
   - user points
   - point transactions
   - student progress
   - task completion history
-- These writes happen sequentially without a database transaction.
+- These writes still happen without a MongoDB transaction/session.
 - If one step fails, the system can become partially updated and inconsistent.
 - Files:
   - backend/controllers/taskController.js
 
 Operational gaps
 
-6. Server hardening is incomplete
-- CORS is fully open.
-- Uploaded files are publicly exposed through /uploads.
-- There is no centralized error handler.
-- There is no health endpoint.
-- There is no global API rate limiting.
-- File:
-  - backend/server.js
-
-7. Request validation is weak
+4. Request validation is still weak
 - There is no consistent request-schema validation layer.
-- Most endpoints validate fields manually and inconsistently.
+- Most endpoints still validate fields manually and inconsistently.
 - This increases the risk of malformed input, missed checks, and behavior drift.
 - Suggested libraries:
   - zod
   - joi
   - express-validator
 
-8. Sync filesystem calls remain in request paths
+5. Sync filesystem calls remain in request paths
 - Some upload/delete flows still use fs.existsSync, fs.unlinkSync, and fs.mkdirSync.
 - These block the event loop and are not ideal under production traffic.
 - Files:
@@ -78,65 +98,57 @@ Operational gaps
   - backend/controllers/moduleController.js
   - backend/controllers/testimonialController.js
   - backend/controllers/desktopAppController.js
+  - backend/controllers/fileController.js
 
-9. Logging/monitoring is not production-grade
-- Logging is mostly console.log / console.error.
+6. Logging/monitoring is not production-grade
+- Logging is still mostly console.log / console.error.
 - There is no structured logger, request logging, alerting, or tracing.
 - No evidence of external monitoring or observability hooks.
 
-10. Test coverage is not yet production-level
-- Current backend tests are useful but mostly controller-level regression tests.
+7. Test coverage is still not production-level
+- Current backend tests are useful but still mostly controller-level regression tests.
 - Missing higher-confidence coverage:
   - auth and authorization integration tests
-  - upload flow tests
+  - upload/file-access flow tests
   - task completion end-to-end tests
-  - failure-recovery tests for multi-write flows
+  - transaction/failure-recovery tests
   - route protection tests
 - File:
   - backend/package.json
 
-11. Pagination and scale controls are still limited
+8. Pagination and scale controls are still limited
 - Several list endpoints still do not enforce pagination/limits.
 - This is acceptable at small scale but will become a performance and reliability issue as data grows.
 
 Recommended order of work
 
-1. Fix auth and role escalation
-- Force public registration to create STUDENT accounts only.
-- Move admin/instructor creation behind a protected admin-only flow.
-
-2. Remove or lock down /api/users/add-points
+1. Remove or lock down /api/users/add-points
 - Delete it from production code, or restrict it behind admin-only controls and non-production environment checks.
 
-3. Tighten authorization on module/task write paths
+2. Tighten authorization on module/task write paths
 - Enforce instructor/admin role on create/update/delete routes.
 - Verify course/module ownership before allowing writes.
 
-4. Secure task completion
-- Enforce student-only access.
-- Verify the student is enrolled and allowed to complete the task.
-
-5. Make task completion atomic
+3. Make task completion atomic
 - Use a MongoDB session/transaction for points, progress, and completion history writes.
 
-6. Harden the server
-- Restrict CORS to known origins.
-- Add a health endpoint.
-- Add centralized error handling.
-- Add API rate limiting.
-- Review whether every uploaded file should be publicly accessible.
+4. Add request validation
+- Standardize request validation for auth, tasks, modules, courses, rewards, announcements, uploads, and desktop-result submission.
 
-7. Add request validation
-- Standardize request validation for auth, tasks, modules, courses, rewards, announcements, and uploads.
-
-8. Add integration tests for critical security-sensitive flows
+5. Add integration tests for critical security-sensitive flows
 - Registration role restrictions
 - Route authorization
 - Points protection
 - Enrollment-required task completion
+- Protected file access
 - Task completion transaction behavior
+
+6. Improve operational maturity
+- Replace console logging with structured logging.
+- Add request logging, error correlation, and monitoring hooks.
+- Add pagination/limits where list sizes can grow.
 
 Production target
 
-After items 1 through 8 are addressed, the app should be much closer to staging-ready.
+After items 1 through 5 are addressed, the app should be much closer to staging-ready.
 After that, remaining work would be reliability, observability, pagination, and deployment hardening.
