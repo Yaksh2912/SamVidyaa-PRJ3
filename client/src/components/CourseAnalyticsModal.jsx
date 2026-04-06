@@ -1,6 +1,6 @@
 import React from 'react'
 import { HiBookOpen, HiBolt, HiChartBar, HiStar, HiUsers, HiXMark } from 'react-icons/hi2'
-import { AnalyticsColumnChart, AnalyticsDonutChart } from './AnalyticsGraphs'
+import { AnalyticsColumnChart, AnalyticsDonutChart, AnalyticsHeatGrid } from './AnalyticsGraphs'
 
 const formatPercent = (value) => `${Math.round(value || 0)}%`
 
@@ -10,6 +10,16 @@ const getInitials = (name = '') => name
   .slice(0, 2)
   .map((part) => part[0]?.toUpperCase() || '')
   .join('') || 'ST'
+
+const formatRuntimeCompact = (runtimeMs) => {
+  const value = Number(runtimeMs)
+
+  if (!value || value <= 0) return 'N/A'
+  if (value < 1000) return `${Math.round(value)} ms`
+  if (value < 60000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)} s`
+
+  return `${(value / 60000).toFixed(1)} min`
+}
 
 const PROGRESS_BAND_COLORS = {
   completed: '#10b981',
@@ -26,6 +36,7 @@ function CourseAnalyticsModal({ course, analytics, loading, onClose, labels, com
   const overview = analytics?.overview
   const topPerformer = overview?.topPerformer
   const bottleneckModule = overview?.bottleneckModule
+  const hardestTask = overview?.hardestTask
   const progressBands = modalLabels.progressBands
   const progressDonutItems = Object.entries(analytics?.distributions?.progressBand || {}).map(([key, value]) => ({
     key,
@@ -41,6 +52,35 @@ function CourseAnalyticsModal({ course, analytics, loading, onClose, labels, com
     meta: formatPercent(module.averageScore),
     color: 'var(--accent-gradient)'
   }))
+  const scoreCurveItems = (analytics?.distributions?.scoreBand || []).map((bucket) => ({
+    key: bucket.key,
+    label: bucket.label,
+    shortLabel: bucket.label,
+    value: bucket.value || 0,
+    meta: `${bucket.share || 0}%`,
+    color: 'linear-gradient(180deg, #0f766e 0%, #22c55e 100%)'
+  }))
+  const taskHotspotItems = (analytics?.taskDifficultyHotspots || []).slice(0, 8).map((task) => ({
+    key: task.taskId,
+    title: task.taskName,
+    subtitle: [task.courseName, task.moduleName].filter(Boolean).join(' • '),
+    intensity: task.challengeScore || 0,
+    level: task.heatLevel || 'stable',
+    valueLabel: `${modalLabels.fields.challenge}: ${formatPercent(task.challengeScore)}`,
+    metrics: [
+      { label: modalLabels.fields.passRate, value: formatPercent(task.passRate) },
+      { label: modalLabels.fields.completion, value: formatPercent(task.completionRate) },
+      { label: modalLabels.fields.attempts, value: task.attempts || 0 },
+      { label: modalLabels.fields.runtime, value: formatRuntimeCompact(task.averageRuntimeMs) }
+    ],
+    footer: [task.difficulty, task.language].filter(Boolean).join(' • ')
+  }))
+  const leaderboardSnapshot = analytics?.leaderboardSnapshot || {
+    topPerformers: [],
+    atRiskStudents: [],
+    topAverageEngagement: 0,
+    atRiskAverageEngagement: 0
+  }
 
   return (
     <div className="neumorphic-modal-overlay" onClick={onClose}>
@@ -129,6 +169,20 @@ function CourseAnalyticsModal({ course, analytics, loading, onClose, labels, com
                 </div>
 
                 <div className="course-analytics-highlight">
+                  <span className="course-analytics-highlight__label">{modalLabels.highlights.hardestTask}</span>
+                  {hardestTask ? (
+                    <>
+                      <strong>{hardestTask.taskName}</strong>
+                      <p>
+                        {modalLabels.fields.passRate}: {formatPercent(hardestTask.passRate)} • {modalLabels.fields.challenge}: {formatPercent(hardestTask.challengeScore)}
+                      </p>
+                    </>
+                  ) : (
+                    <p>{modalLabels.emptyTasks}</p>
+                  )}
+                </div>
+
+                <div className="course-analytics-highlight">
                   <span className="course-analytics-highlight__label">{modalLabels.highlights.bottleneck}</span>
                   {bottleneckModule ? (
                     <>
@@ -152,37 +206,72 @@ function CourseAnalyticsModal({ course, analytics, loading, onClose, labels, com
                   emptyLabel={modalLabels.emptyStudents}
                 />
                 <AnalyticsColumnChart
+                  title={modalLabels.charts.scoreCurve}
+                  items={scoreCurveItems}
+                  emptyLabel={modalLabels.emptyStudents}
+                  valueFormatter={(value) => `${value}`}
+                />
+              </div>
+
+              <div className="analytics-visual-grid analytics-visual-grid--dashboard-secondary">
+                <AnalyticsColumnChart
                   title={modalLabels.charts.completionGraph}
                   items={moduleGraphItems}
                   emptyLabel={modalLabels.emptyModules}
+                />
+                <AnalyticsHeatGrid
+                  title={modalLabels.charts.difficultyHeatmap}
+                  items={taskHotspotItems}
+                  emptyLabel={modalLabels.emptyTasks}
                 />
               </div>
 
               <div className="course-analytics-grid">
                 <section className="course-analytics-panel">
                   <div className="course-analytics-panel__header">
-                    <h3>{modalLabels.charts.topPerformers}</h3>
-                    <span>{analytics.topPerformers?.length || 0}</span>
+                    <h3>{modalLabels.charts.leaderboardSnapshot}</h3>
+                    <span>{(leaderboardSnapshot.topPerformers?.length || 0) + (leaderboardSnapshot.atRiskStudents?.length || 0)}</span>
                   </div>
 
-                  {!analytics.topPerformers?.length ? (
+                  {!leaderboardSnapshot.topPerformers?.length && !leaderboardSnapshot.atRiskStudents?.length ? (
                     <p className="empty-state">{modalLabels.emptyStudents}</p>
                   ) : (
-                    <div className="course-analytics-bars">
-                      {analytics.topPerformers.map((student) => (
-                        <div key={student.studentId} className="analytics-bar-row">
-                          <div className="analytics-bar-row__meta">
-                            <strong>{student.name}</strong>
-                            <span>{formatPercent(student.engagementScore)}</span>
-                          </div>
-                          <div className="analytics-bar-track">
-                            <div className="analytics-bar-fill" style={{ width: `${student.engagementScore}%` }} />
-                          </div>
-                          <p>
-                            {modalLabels.fields.completion}: {formatPercent(student.completionRate)} • {modalLabels.fields.score}: {formatPercent(student.averageScore)}
-                          </p>
+                    <div className="analytics-lane-grid">
+                      <div className="analytics-lane">
+                        <div className="analytics-lane__header">
+                          <strong>{modalLabels.charts.topLane}</strong>
+                          <span>{leaderboardSnapshot.topAverageEngagement || 0}%</span>
                         </div>
-                      ))}
+                        <div className="analytics-lane__list">
+                          {(leaderboardSnapshot.topPerformers || []).map((student) => (
+                            <article key={student.studentId} className="analytics-lane__item">
+                              <div>
+                                <strong>{student.name}</strong>
+                                <p>{modalLabels.fields.score}: {formatPercent(student.averageScore)}</p>
+                              </div>
+                              <span>{formatPercent(student.engagementScore)}</span>
+                            </article>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="analytics-lane analytics-lane--risk">
+                        <div className="analytics-lane__header">
+                          <strong>{modalLabels.charts.riskLane}</strong>
+                          <span>{leaderboardSnapshot.atRiskAverageEngagement || 0}%</span>
+                        </div>
+                        <div className="analytics-lane__list">
+                          {(leaderboardSnapshot.atRiskStudents || []).map((student) => (
+                            <article key={student.studentId} className="analytics-lane__item">
+                              <div>
+                                <strong>{student.name}</strong>
+                                <p>{modalLabels.fields.completion}: {formatPercent(student.completionRate)}</p>
+                              </div>
+                              <span>{formatPercent(student.engagementScore)}</span>
+                            </article>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </section>

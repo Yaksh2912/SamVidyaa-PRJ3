@@ -595,7 +595,10 @@ export const translations = {
           charts: {
             progressBreakdown: 'Progress Breakdown',
             performanceMix: 'Performance Mix',
-            engagementGraph: 'Learner Engagement Graph'
+            engagementGraph: 'Learner Engagement Graph',
+            scoreCurve: 'Class Score Curve',
+            difficultyHeatmap: 'Difficult Task Heatmap',
+            leaderboardSnapshot: 'Top vs At-Risk Snapshot'
           }
         },
         sections: {
@@ -666,6 +669,7 @@ export const translations = {
           },
           highlights: {
             topPerformer: 'Top Performer',
+            hardestTask: 'Hardest Task',
             bottleneck: 'Lowest Completion Module'
           },
           charts: {
@@ -674,7 +678,12 @@ export const translations = {
             attentionNeeded: 'Learners Needing Attention',
             studentSnapshot: 'Student Snapshot',
             progressMix: 'Progress Mix',
-            completionGraph: 'Module Completion Graph'
+            completionGraph: 'Module Completion Graph',
+            scoreCurve: 'Class Score Curve',
+            difficultyHeatmap: 'Task Difficulty Heatmap',
+            leaderboardSnapshot: 'Top vs At-Risk Snapshot',
+            topLane: 'Top Momentum',
+            riskLane: 'At-Risk Lane'
           },
           fields: {
             completion: 'Completion',
@@ -682,7 +691,11 @@ export const translations = {
             engagement: 'Engagement',
             started: 'Started',
             completed: 'Completed',
-            lastActivity: 'Last activity'
+            lastActivity: 'Last activity',
+            passRate: 'Pass rate',
+            runtime: 'Runtime',
+            attempts: 'Attempts',
+            challenge: 'Challenge'
           },
           progressBands: {
             completed: 'Completed',
@@ -693,6 +706,7 @@ export const translations = {
           },
           emptyStudents: 'No learner analytics available yet.',
           emptyModules: 'No module analytics available yet.',
+          emptyTasks: 'No task hotspot data is available yet.',
           emptyAttention: 'No learners are currently flagged for support.',
           noRecentActivity: 'No recent update'
         },
@@ -1594,7 +1608,10 @@ export const translations = {
           charts: {
             progressBreakdown: 'प्रगति वितरण',
             performanceMix: 'प्रदर्शन मिश्रण',
-            engagementGraph: 'शिक्षार्थी सक्रियता ग्राफ'
+            engagementGraph: 'शिक्षार्थी सक्रियता ग्राफ',
+            scoreCurve: 'कक्षा स्कोर वक्र',
+            difficultyHeatmap: 'कठिन कार्य हीटमैप',
+            leaderboardSnapshot: 'शीर्ष बनाम जोखिम स्नैपशॉट'
           }
         },
         sections: {
@@ -1665,6 +1682,7 @@ export const translations = {
           },
           highlights: {
             topPerformer: 'शीर्ष प्रदर्शनकर्ता',
+            hardestTask: 'सबसे कठिन कार्य',
             bottleneck: 'सबसे कम पूर्णता वाला मॉड्यूल'
           },
           charts: {
@@ -1673,7 +1691,12 @@ export const translations = {
             attentionNeeded: 'ध्यान चाहने वाले छात्र',
             studentSnapshot: 'छात्र स्नैपशॉट',
             progressMix: 'प्रगति मिश्रण',
-            completionGraph: 'मॉड्यूल पूर्णता ग्राफ'
+            completionGraph: 'मॉड्यूल पूर्णता ग्राफ',
+            scoreCurve: 'कक्षा स्कोर वक्र',
+            difficultyHeatmap: 'कार्य कठिनाई हीटमैप',
+            leaderboardSnapshot: 'शीर्ष बनाम जोखिम स्नैपशॉट',
+            topLane: 'शीर्ष गति',
+            riskLane: 'जोखिम समूह'
           },
           fields: {
             completion: 'पूर्णता',
@@ -1681,7 +1704,11 @@ export const translations = {
             engagement: 'सक्रियता',
             started: 'शुरू',
             completed: 'पूर्ण',
-            lastActivity: 'अंतिम गतिविधि'
+            lastActivity: 'अंतिम गतिविधि',
+            passRate: 'पास दर',
+            runtime: 'रनटाइम',
+            attempts: 'प्रयास',
+            challenge: 'चुनौती'
           },
           progressBands: {
             completed: 'पूर्ण',
@@ -1692,6 +1719,7 @@ export const translations = {
           },
           emptyStudents: 'अभी कोई छात्र एनालिटिक्स उपलब्ध नहीं है।',
           emptyModules: 'अभी कोई मॉड्यूल एनालिटिक्स उपलब्ध नहीं है।',
+          emptyTasks: 'अभी किसी कार्य हीटमैप के लिए पर्याप्त डेटा नहीं है।',
           emptyAttention: 'अभी किसी छात्र को अतिरिक्त सहायता के लिए चिह्नित नहीं किया गया है।',
           noRecentActivity: 'हाल की कोई अपडेट नहीं'
         },

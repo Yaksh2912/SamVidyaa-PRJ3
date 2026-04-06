@@ -3233,7 +3233,7 @@
 
 .course-analytics-highlights {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
 }
 
@@ -3312,6 +3312,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+}
+
+.analytics-visual-grid--dashboard-secondary .analytics-chart-card:last-child {
+  min-height: 100%;
 }
 
 .analytics-chart-card {
@@ -3492,6 +3496,106 @@
   text-align: center;
 }
 
+.analytics-heat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+}
+
+.analytics-heat-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 172px;
+  padding: 1rem;
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.94));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.analytics-heat-card--stable {
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 54%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.94));
+}
+
+.analytics-heat-card--medium {
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.16), transparent 54%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.94));
+}
+
+.analytics-heat-card--high {
+  background:
+    radial-gradient(circle at top right, rgba(234, 88, 12, 0.18), transparent 54%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.94));
+}
+
+.analytics-heat-card--critical {
+  background:
+    radial-gradient(circle at top right, rgba(220, 38, 38, 0.18), transparent 54%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.94));
+}
+
+.analytics-heat-card__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.analytics-heat-card__top strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.96rem;
+  line-height: 1.35;
+}
+
+.analytics-heat-card__top p {
+  margin-top: 0.32rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.analytics-heat-card__top span {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 2rem;
+  padding: 0 0.72rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.analytics-heat-card__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.analytics-heat-card__metrics span,
+.analytics-heat-card__footer {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.4rem 0.72rem;
+  border-radius: 999px;
+  background: rgba(var(--bg-primary-rgb), 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.analytics-heat-card__footer {
+  margin-top: 0.85rem;
+}
+
 .course-analytics-panel {
   position: relative;
   overflow: hidden;
@@ -3537,6 +3641,92 @@
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+}
+
+.analytics-lane-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.analytics-lane {
+  padding: 1rem;
+  border-radius: 22px;
+  background: rgba(var(--bg-primary-rgb), 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.analytics-lane--risk {
+  background: linear-gradient(180deg, rgba(254, 242, 242, 0.92), rgba(var(--bg-primary-rgb), 0.72));
+  border-color: rgba(239, 68, 68, 0.16);
+}
+
+.analytics-lane__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: center;
+  margin-bottom: 0.9rem;
+}
+
+.analytics-lane__header strong {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.analytics-lane__header span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.32rem 0.72rem;
+  border-radius: 999px;
+  background: rgba(20, 184, 166, 0.12);
+  border: 1px solid rgba(20, 184, 166, 0.16);
+  color: #0f766e;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.analytics-lane--risk .analytics-lane__header span {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+
+.analytics-lane__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.analytics-lane__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.9rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.analytics-lane__item strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.analytics-lane__item p {
+  margin-top: 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.analytics-lane__item span {
+  flex-shrink: 0;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .analytics-bar-row,
@@ -3771,7 +3961,9 @@
 [data-theme="dark"] .course-analytics-panel,
 [data-theme="dark"] .analytics-bar-row,
 [data-theme="dark"] .analytics-module-row,
-[data-theme="dark"] .analytics-student-card {
+[data-theme="dark"] .analytics-student-card,
+[data-theme="dark"] .analytics-heat-card,
+[data-theme="dark"] .analytics-lane {
   background-color: rgba(15, 23, 42, 0.72);
   border-color: rgba(148, 163, 184, 0.12);
   box-shadow: 0 14px 32px rgba(2, 6, 23, 0.32);
@@ -3798,9 +3990,16 @@
 
 [data-theme="dark"] .analytics-legend__item,
 [data-theme="dark"] .analytics-columns__bar-wrap,
+[data-theme="dark"] .analytics-heat-card__metrics span,
+[data-theme="dark"] .analytics-heat-card__footer,
+[data-theme="dark"] .analytics-lane__item,
 [data-theme="dark"] .analytics-student-card__metrics span,
 [data-theme="dark"] .analytics-student-card__footer span {
   background: rgba(15, 23, 42, 0.45);
+}
+
+[data-theme="dark"] .analytics-lane--risk {
+  background: linear-gradient(180deg, rgba(69, 10, 10, 0.58), rgba(15, 23, 42, 0.72));
 }
 
 [data-theme="dark"] .analytics-student-card__top,
@@ -4404,6 +4603,9 @@
   .analytics-visual-grid,
   .course-analytics-highlights,
   .course-analytics-grid {
+    grid-template-columns: 1fr;
+  }
+  .analytics-lane-grid {
     grid-template-columns: 1fr;
   }
   .analytics-donut-layout {

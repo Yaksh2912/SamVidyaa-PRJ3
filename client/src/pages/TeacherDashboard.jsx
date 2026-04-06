@@ -13,7 +13,7 @@ import CreateTaskForm from '../components/CreateTaskForm'
 import AddStudentsModal from '../components/AddStudentsModal'
 import ManageRewardsModal from '../components/ManageRewardsModal'
 import CourseAnalyticsModal from '../components/CourseAnalyticsModal'
-import { AnalyticsColumnChart, AnalyticsDonutChart } from '../components/AnalyticsGraphs'
+import { AnalyticsColumnChart, AnalyticsDonutChart, AnalyticsHeatGrid } from '../components/AnalyticsGraphs'
 import {
   AnnouncementFeedSkeleton,
   StudentListSkeleton,
@@ -64,6 +64,15 @@ const DEFAULT_PERFORMANCE_ANALYTICS = {
   },
   topPerformers: [],
   attentionNeeded: [],
+  leaderboardSnapshot: {
+    topPerformers: [],
+    atRiskStudents: [],
+    topAverageEngagement: 0,
+    atRiskAverageEngagement: 0,
+    engagementGap: 0
+  },
+  scoreDistribution: [],
+  taskDifficultyHotspots: [],
   studentCount: 0,
   dataMode: 'enrollment_only'
 }
@@ -86,6 +95,16 @@ const formatFileSize = (size) => {
   const formattedValue = sizeValue / (1024 ** unitIndex)
 
   return `${formattedValue >= 10 || unitIndex === 0 ? Math.round(formattedValue) : formattedValue.toFixed(1)} ${units[unitIndex]}`
+}
+
+const formatRuntimeCompact = (runtimeMs) => {
+  const value = Number(runtimeMs)
+
+  if (!value || value <= 0) return 'N/A'
+  if (value < 1000) return `${Math.round(value)} ms`
+  if (value < 60000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)} s`
+
+  return `${(value / 60000).toFixed(1)} min`
 }
 
 const getModuleTaskCount = (module = {}) => Number(
@@ -951,6 +970,8 @@ function TeacherDashboard() {
   }
   const performanceSection = t.dashboardAnalytics
   const analyticsLabels = t.analyticsModal
+  const getDifficultyLabel = (difficulty) => translations.forms.task.difficulties[difficulty] || difficulty
+  const getStatusLabel = (status) => common.statuses[status] || status
   const performanceAnalytics = stats.performanceAnalytics || DEFAULT_PERFORMANCE_ANALYTICS
   const overallTopPerformer = performanceAnalytics.topPerformers?.[0] || null
   const dashboardDonutItems = PERFORMANCE_BAND_ORDER.map((band) => ({
@@ -967,8 +988,31 @@ function TeacherDashboard() {
     meta: formatPercent(student.averageScore),
     color: 'var(--accent-gradient)'
   }))
-  const getDifficultyLabel = (difficulty) => translations.forms.task.difficulties[difficulty] || difficulty
-  const getStatusLabel = (status) => common.statuses[status] || status
+  const scoreCurveItems = (performanceAnalytics.scoreDistribution || []).map((bucket) => ({
+    key: bucket.key,
+    label: bucket.label,
+    shortLabel: bucket.label,
+    value: bucket.value || 0,
+    meta: `${bucket.share || 0}%`,
+    color: 'linear-gradient(180deg, #0f766e 0%, #22c55e 100%)'
+  }))
+  const leaderboardSnapshot = performanceAnalytics.leaderboardSnapshot || DEFAULT_PERFORMANCE_ANALYTICS.leaderboardSnapshot
+  const overallHardestTask = performanceAnalytics.taskDifficultyHotspots?.[0] || null
+  const taskHotspotItems = (performanceAnalytics.taskDifficultyHotspots || []).slice(0, 6).map((task) => ({
+    key: task.taskId,
+    title: task.taskName,
+    subtitle: [task.courseName, task.moduleName].filter(Boolean).join(' • '),
+    intensity: task.challengeScore || 0,
+    level: task.heatLevel || 'stable',
+    valueLabel: `${analyticsLabels.fields.challenge}: ${formatPercent(task.challengeScore)}`,
+    metrics: [
+      { label: analyticsLabels.fields.passRate, value: formatPercent(task.passRate) },
+      { label: analyticsLabels.fields.completion, value: formatPercent(task.completionRate) },
+      { label: analyticsLabels.fields.attempts, value: task.attempts || 0 },
+      { label: analyticsLabels.fields.runtime, value: formatRuntimeCompact(task.averageRuntimeMs) }
+    ],
+    footer: [getDifficultyLabel(task.difficulty), task.language].filter(Boolean).join(' • ')
+  }))
   const showTopbarCourseBack = activeTab === 'myCourses' && !!selectedCourse
   const topbarBackLabel = selectedModule
     ? t.topbar.backToModules
@@ -1122,6 +1166,20 @@ function TeacherDashboard() {
                         )}
                       </div>
 
+                      <div className="course-analytics-highlight course-analytics-highlight--hero">
+                        <span className="course-analytics-highlight__label">{analyticsLabels.highlights.hardestTask}</span>
+                        {overallHardestTask ? (
+                          <>
+                            <strong>{overallHardestTask.taskName}</strong>
+                            <p>
+                              {analyticsLabels.fields.passRate}: {formatPercent(overallHardestTask.passRate)} • {analyticsLabels.fields.challenge}: {formatPercent(overallHardestTask.challengeScore)}
+                            </p>
+                          </>
+                        ) : (
+                          <p>{analyticsLabels.emptyTasks}</p>
+                        )}
+                      </div>
+
                       <div className="course-analytics-highlight course-analytics-highlight--hero course-analytics-highlight--warning">
                         <span className="course-analytics-highlight__label">{analyticsLabels.overview.supportNeeded}</span>
                         <strong>{performanceAnalytics.studentsNeedingSupport || 0}</strong>
@@ -1182,37 +1240,72 @@ function TeacherDashboard() {
                         emptyLabel={analyticsLabels.emptyStudents}
                       />
                       <AnalyticsColumnChart
+                        title={performanceSection.charts.scoreCurve}
+                        items={scoreCurveItems}
+                        emptyLabel={analyticsLabels.emptyStudents}
+                        valueFormatter={(value) => `${value}`}
+                      />
+                    </div>
+
+                    <div className="analytics-visual-grid analytics-visual-grid--dashboard-secondary">
+                      <AnalyticsColumnChart
                         title={performanceSection.charts.engagementGraph}
                         items={dashboardColumnItems}
                         emptyLabel={analyticsLabels.emptyStudents}
+                      />
+                      <AnalyticsHeatGrid
+                        title={performanceSection.charts.difficultyHeatmap}
+                        items={taskHotspotItems}
+                        emptyLabel={analyticsLabels.emptyTasks}
                       />
                     </div>
 
                     <div className="course-analytics-grid">
                       <section className="course-analytics-panel">
                         <div className="course-analytics-panel__header">
-                          <h3>{analyticsLabels.charts.topPerformers}</h3>
-                          <span>{performanceAnalytics.topPerformers?.length || 0}</span>
+                          <h3>{performanceSection.charts.leaderboardSnapshot}</h3>
+                          <span>{(leaderboardSnapshot.topPerformers?.length || 0) + (leaderboardSnapshot.atRiskStudents?.length || 0)}</span>
                         </div>
 
-                        {!performanceAnalytics.topPerformers?.length ? (
+                        {!leaderboardSnapshot.topPerformers?.length && !leaderboardSnapshot.atRiskStudents?.length ? (
                           <p className="empty-state">{analyticsLabels.emptyStudents}</p>
                         ) : (
-                          <div className="course-analytics-bars">
-                            {performanceAnalytics.topPerformers.map((student) => (
-                              <div key={student.studentId} className="analytics-bar-row">
-                                <div className="analytics-bar-row__meta">
-                                  <strong>{student.name}</strong>
-                                  <span>{formatPercent(student.engagementScore)}</span>
-                                </div>
-                                <div className="analytics-bar-track">
-                                  <div className="analytics-bar-fill" style={{ width: `${student.engagementScore}%` }} />
-                                </div>
-                                <p>
-                                  {analyticsLabels.fields.completion}: {formatPercent(student.completionRate)} • {analyticsLabels.fields.score}: {formatPercent(student.averageScore)}
-                                </p>
+                          <div className="analytics-lane-grid">
+                            <div className="analytics-lane">
+                              <div className="analytics-lane__header">
+                                <strong>{analyticsLabels.charts.topLane}</strong>
+                                <span>{leaderboardSnapshot.topAverageEngagement || 0}%</span>
                               </div>
-                            ))}
+                              <div className="analytics-lane__list">
+                                {(leaderboardSnapshot.topPerformers || []).map((student) => (
+                                  <article key={student.studentId} className="analytics-lane__item">
+                                    <div>
+                                      <strong>{student.name}</strong>
+                                      <p>{analyticsLabels.fields.score}: {formatPercent(student.averageScore)}</p>
+                                    </div>
+                                    <span>{formatPercent(student.engagementScore)}</span>
+                                  </article>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="analytics-lane analytics-lane--risk">
+                              <div className="analytics-lane__header">
+                                <strong>{analyticsLabels.charts.riskLane}</strong>
+                                <span>{leaderboardSnapshot.atRiskAverageEngagement || 0}%</span>
+                              </div>
+                              <div className="analytics-lane__list">
+                                {(leaderboardSnapshot.atRiskStudents || []).map((student) => (
+                                  <article key={student.studentId} className="analytics-lane__item">
+                                    <div>
+                                      <strong>{student.name}</strong>
+                                      <p>{analyticsLabels.fields.completion}: {formatPercent(student.completionRate)}</p>
+                                    </div>
+                                    <span>{formatPercent(student.engagementScore)}</span>
+                                  </article>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </section>
@@ -1275,6 +1368,7 @@ function TeacherDashboard() {
                                 <div className="analytics-student-card__metrics">
                                   <span>{analyticsLabels.fields.completion}: {formatPercent(student.completionRate)}</span>
                                   <span>{analyticsLabels.fields.score}: {formatPercent(student.averageScore)}</span>
+                                  <span>{analyticsLabels.fields.lastActivity}: {student.lastActivityAt ? announcementDateFormatter.format(new Date(student.lastActivityAt)) : analyticsLabels.noRecentActivity}</span>
                                   <span>{common.points}: {student.globalPoints || 0}</span>
                                 </div>
                               </article>

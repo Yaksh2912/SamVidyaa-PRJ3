@@ -3,6 +3,8 @@ const Enrollment = require('../models/Enrollment');
 const StudentProgress = require('../models/StudentProgress');
 const Module = require('../models/Module');
 const Task = require('../models/Task');
+const TaskCompletion = require('../models/TaskCompletion');
+const DesktopTaskResult = require('../models/DesktopTaskResult');
 const CodingQuestion = require('../models/CodingQuestion');
 const multer = require('multer');
 const path = require('path');
@@ -176,6 +178,164 @@ const deriveProgressBand = ({ enrollmentCompleted = false, recordCount = 0, comp
     return 'needs_support';
 };
 
+const SCORE_DISTRIBUTION_BUCKETS = [
+    { key: '0_19', label: '0-19', min: 0, max: 19 },
+    { key: '20_39', label: '20-39', min: 20, max: 39 },
+    { key: '40_59', label: '40-59', min: 40, max: 59 },
+    { key: '60_79', label: '60-79', min: 60, max: 79 },
+    { key: '80_100', label: '80-100', min: 80, max: 100 },
+];
+
+const createScoreDistribution = () => SCORE_DISTRIBUTION_BUCKETS.map((bucket) => ({
+    key: bucket.key,
+    label: bucket.label,
+    value: 0,
+    min: bucket.min,
+    max: bucket.max,
+}));
+
+const buildScoreDistribution = (scores = []) => {
+    const distribution = createScoreDistribution();
+
+    scores
+        .map((score) => Math.max(0, Math.min(100, Number(score) || 0)))
+        .forEach((score) => {
+            const bucketIndex = SCORE_DISTRIBUTION_BUCKETS.findIndex((bucket) => score >= bucket.min && score <= bucket.max);
+            const safeIndex = bucketIndex >= 0 ? bucketIndex : distribution.length - 1;
+            distribution[safeIndex].value += 1;
+        });
+
+    const total = distribution.reduce((sum, bucket) => sum + bucket.value, 0);
+    return distribution.map((bucket) => ({
+        ...bucket,
+        share: total ? clampPercent((bucket.value / total) * 100) : 0,
+    }));
+};
+
+const determineHeatLevel = (challengeScore) => {
+    if (challengeScore >= 75) return 'critical';
+    if (challengeScore >= 55) return 'high';
+    if (challengeScore >= 35) return 'medium';
+    return 'stable';
+};
+
+const buildLeaderboardSnapshot = (topPerformers = [], attentionNeeded = []) => {
+    const topLane = topPerformers.slice(0, 3);
+    const atRiskLane = attentionNeeded.slice(0, 3);
+    const topAverageEngagement = average(topLane.map((student) => student.engagementScore || 0));
+    const atRiskAverageEngagement = average(atRiskLane.map((student) => student.engagementScore || 0));
+
+    return {
+        topPerformers: topLane,
+        atRiskStudents: atRiskLane,
+        topAverageEngagement,
+        atRiskAverageEngagement,
+        engagementGap: Math.max(0, topAverageEngagement - atRiskAverageEngagement),
+    };
+};
+
+const buildTaskDifficultyInsights = ({
+    tasks = [],
+    modules = [],
+    courseLookup = new Map(),
+    desktopResults = [],
+    completions = [],
+    activeLearnerCountByCourse = {},
+}) => {
+    const modulesById = new Map(
+        modules.map((module) => [
+            module._id.toString(),
+            {
+                moduleId: module._id.toString(),
+                moduleName: module.module_name,
+                moduleOrder: module.module_order,
+                courseId: module.course_id?.toString?.() || module.course_id?.toString() || '',
+            },
+        ])
+    );
+
+    const resultsByTask = desktopResults.reduce((acc, result) => {
+        const taskId = result.task_id?.toString();
+        if (!taskId) return acc;
+        if (!acc.has(taskId)) acc.set(taskId, []);
+        acc.get(taskId).push(result);
+        return acc;
+    }, new Map());
+
+    const completionsByTask = completions.reduce((acc, completion) => {
+        const taskId = completion.task_id?.toString();
+        const studentId = completion.student_id?.toString();
+        if (!taskId || !studentId) return acc;
+        if (!acc.has(taskId)) acc.set(taskId, new Set());
+        acc.get(taskId).add(studentId);
+        return acc;
+    }, new Map());
+
+    return tasks
+        .map((task) => {
+            const taskId = task._id.toString();
+            const moduleMeta = modulesById.get(task.module_id?.toString()) || {};
+            const courseMeta = courseLookup.get(moduleMeta.courseId) || {};
+            const taskResults = resultsByTask.get(taskId) || [];
+            const completionCount = completionsByTask.get(taskId)?.size || 0;
+            const attempts = taskResults.length;
+            const passCount = taskResults.filter((result) => result.status === 'PASSED').length;
+            const failCount = taskResults.filter((result) => result.status === 'FAILED').length;
+            const passRate = attempts ? clampPercent((passCount / attempts) * 100) : 0;
+            const averageRuntimeMs = average(taskResults.map((result) => result.runtime_ms).filter((value) => Number.isFinite(value) && value > 0));
+            const averageTestCoverage = average(taskResults.map((result) => {
+                const totalTestCases = Number(result.total_test_cases) || 0;
+                const passedTestCases = Number(result.passed_test_cases) || 0;
+
+                if (totalTestCases > 0) {
+                    return (passedTestCases / totalTestCases) * 100;
+                }
+
+                return result.status === 'PASSED' ? 100 : 0;
+            }));
+            const activeLearners = activeLearnerCountByCourse[moduleMeta.courseId] || 0;
+            const completionRate = activeLearners ? clampPercent((completionCount / activeLearners) * 100) : 0;
+            const failurePressure = attempts ? (failCount / attempts) * 100 : 0;
+            const challengeScore = clampPercent(
+                ((100 - passRate) * 0.45) +
+                ((100 - averageTestCoverage) * 0.2) +
+                ((100 - completionRate) * 0.25) +
+                (failurePressure * 0.1)
+            );
+
+            return {
+                taskId,
+                taskName: task.task_name,
+                courseId: moduleMeta.courseId || null,
+                courseName: courseMeta.course_name || '',
+                courseCode: courseMeta.course_code || '',
+                moduleId: moduleMeta.moduleId || null,
+                moduleName: moduleMeta.moduleName || '',
+                moduleOrder: moduleMeta.moduleOrder || 0,
+                difficulty: task.difficulty || 'MEDIUM',
+                language: task.language || '',
+                points: task.points || 0,
+                attempts,
+                passCount,
+                failCount,
+                passRate,
+                completionCount,
+                completionRate,
+                averageRuntimeMs,
+                averageTestCoverage,
+                challengeScore,
+                heatLevel: determineHeatLevel(challengeScore),
+            };
+        })
+        .filter((item) => item.attempts > 0 || item.completionCount > 0)
+        .sort((left, right) => {
+            if (right.challengeScore !== left.challengeScore) return right.challengeScore - left.challengeScore;
+            if (right.failCount !== left.failCount) return right.failCount - left.failCount;
+            if (right.attempts !== left.attempts) return right.attempts - left.attempts;
+            return right.completionCount - left.completionCount;
+        });
+};
+
 // @desc    Get all courses (or instructor's courses)
 // @route   GET /api/courses
 // @access  Private
@@ -279,9 +439,14 @@ const deleteCourse = async (req, res) => {
 // @access  Private (Instructor)
 const getTeacherStats = async (req, res) => {
     try {
-        const courses = await Course.find({ instructor: req.user._id }).select('_id');
+        const courses = await Course.find({ instructor: req.user._id }).select('_id course_name course_code');
         const courseIds = courses.map(c => c._id);
         const activeClasses = courses.length;
+        const courseLookup = new Map(courses.map((course) => [course._id.toString(), {
+            _id: course._id,
+            course_name: course.course_name,
+            course_code: course.course_code,
+        }]));
         const defaultPerformanceAnalytics = {
             activeLearners: 0,
             avgCompletionRate: 0,
@@ -296,6 +461,9 @@ const getTeacherStats = async (req, res) => {
             },
             topPerformers: [],
             attentionNeeded: [],
+            leaderboardSnapshot: buildLeaderboardSnapshot([], []),
+            scoreDistribution: createScoreDistribution(),
+            taskDifficultyHotspots: [],
             studentCount: 0,
             dataMode: 'enrollment_only',
         };
@@ -312,7 +480,7 @@ const getTeacherStats = async (req, res) => {
 
         const [distinctStudents, modules, enrollments, progressRecords] = await Promise.all([
             Enrollment.distinct('student_id', { course_id: { $in: courseIds } }),
-            Module.find({ course_id: { $in: courseIds } }).select('course_id'),
+            Module.find({ course_id: { $in: courseIds } }).select('course_id module_name module_order'),
             Enrollment.find({ course_id: { $in: courseIds } })
                 .populate('student_id', 'name email enrollment_number points last_login'),
             StudentProgress.find({ course_id: { $in: courseIds } }).lean(),
@@ -321,8 +489,21 @@ const getTeacherStats = async (req, res) => {
         const totalStudents = distinctStudents.length;
         const moduleIds = modules.map((module) => module._id);
         const tasks = moduleIds.length
-            ? await Task.find({ module_id: { $in: moduleIds } }).select('module_id').lean()
+            ? await Task.find({ module_id: { $in: moduleIds } })
+                .select('module_id task_name difficulty language points time_limit')
+                .lean()
             : [];
+        const taskIds = tasks.map((task) => task._id);
+        const [desktopResults, taskCompletions] = taskIds.length
+            ? await Promise.all([
+                DesktopTaskResult.find({ task_id: { $in: taskIds } })
+                    .select('task_id status passed_test_cases total_test_cases runtime_ms')
+                    .lean(),
+                TaskCompletion.find({ task_id: { $in: taskIds } })
+                    .select('task_id student_id')
+                    .lean(),
+            ])
+            : [[], []];
 
         const moduleToCourseMap = new Map(modules.map((module) => [module._id.toString(), module.course_id.toString()]));
         const moduleTotalsByCourse = modules.reduce((acc, module) => {
@@ -339,6 +520,7 @@ const getTeacherStats = async (req, res) => {
 
         const activeEnrollmentStatuses = new Set(['ACTIVE', 'COMPLETED']);
         const activeStudentsById = new Map();
+        const activeLearnerCountByCourse = {};
 
         for (const enrollment of enrollments) {
             if (!activeEnrollmentStatuses.has(enrollment.status) || !enrollment.student_id) continue;
@@ -357,8 +539,10 @@ const getTeacherStats = async (req, res) => {
             }
 
             const entry = activeStudentsById.get(studentId);
-            entry.courseIds.add(enrollment.course_id.toString());
+            const courseId = enrollment.course_id.toString();
+            entry.courseIds.add(courseId);
             entry.enrollmentCompleted = entry.enrollmentCompleted || enrollment.status === 'COMPLETED';
+            activeLearnerCountByCourse[courseId] = (activeLearnerCountByCourse[courseId] || 0) + 1;
 
             const enrollmentUpdatedAt = enrollment.updatedAt ? new Date(enrollment.updatedAt).getTime() : null;
             if (enrollmentUpdatedAt && (!entry.latestEnrollmentActivity || enrollmentUpdatedAt > entry.latestEnrollmentActivity)) {
@@ -441,6 +625,16 @@ const getTeacherStats = async (req, res) => {
             .filter((student) => ['needs_support', 'not_started'].includes(student.progressBand))
             .sort((a, b) => a.engagementScore - b.engagementScore)
             .slice(0, 5);
+        const scoreDistribution = buildScoreDistribution(studentAnalytics.map((student) => student.averageScore));
+        const taskDifficultyHotspots = buildTaskDifficultyInsights({
+            tasks,
+            modules,
+            courseLookup,
+            desktopResults,
+            completions: taskCompletions,
+            activeLearnerCountByCourse,
+        }).slice(0, 8);
+        const leaderboardSnapshot = buildLeaderboardSnapshot(studentAnalytics, attentionNeeded);
 
         const performanceAnalytics = {
             activeLearners: studentAnalytics.length,
@@ -450,6 +644,9 @@ const getTeacherStats = async (req, res) => {
             progressBandBreakdown,
             topPerformers: studentAnalytics.slice(0, 5),
             attentionNeeded,
+            leaderboardSnapshot,
+            scoreDistribution,
+            taskDifficultyHotspots,
             studentCount: studentAnalytics.length,
             dataMode: progressRecords.length ? 'progress' : 'enrollment_only',
         };
@@ -481,7 +678,7 @@ const getCourseAnalytics = async (req, res) => {
 
         const [modules, enrollments, progressRecords] = await Promise.all([
             Module.find({ course_id: course._id })
-                .select('module_name module_order')
+                .select('course_id module_name module_order')
                 .sort({ module_order: 1 }),
             Enrollment.find({ course_id: course._id })
                 .populate('student_id', 'name email enrollment_number points last_login createdAt'),
@@ -490,8 +687,21 @@ const getCourseAnalytics = async (req, res) => {
 
         const moduleIds = modules.map(module => module._id);
         const tasks = moduleIds.length
-            ? await Task.find({ module_id: { $in: moduleIds } }).select('module_id').lean()
+            ? await Task.find({ module_id: { $in: moduleIds } })
+                .select('module_id task_name difficulty language points time_limit')
+                .lean()
             : [];
+        const taskIds = tasks.map((task) => task._id);
+        const [desktopResults, taskCompletions] = taskIds.length
+            ? await Promise.all([
+                DesktopTaskResult.find({ task_id: { $in: taskIds } })
+                    .select('task_id status passed_test_cases total_test_cases runtime_ms')
+                    .lean(),
+                TaskCompletion.find({ task_id: { $in: taskIds } })
+                    .select('task_id student_id')
+                    .lean(),
+            ])
+            : [[], []];
 
         const tasksPerModule = tasks.reduce((acc, task) => {
             const moduleId = task.module_id.toString();
@@ -633,6 +843,21 @@ const getCourseAnalytics = async (req, res) => {
         const bottleneckModule = [...moduleAnalytics]
             .filter((module) => module.taskCount > 0)
             .sort((a, b) => a.completedRate - b.completedRate)[0] || null;
+        const scoreDistribution = buildScoreDistribution(studentAnalytics.map((student) => student.averageScore));
+        const taskDifficultyHotspots = buildTaskDifficultyInsights({
+            tasks,
+            modules,
+            courseLookup: new Map([[course._id.toString(), {
+                _id: course._id,
+                course_name: course.course_name,
+                course_code: course.course_code,
+            }]]),
+            desktopResults,
+            completions: taskCompletions,
+            activeLearnerCountByCourse: { [course._id.toString()]: activeStudents.length },
+        }).slice(0, 10);
+        const hardestTask = taskDifficultyHotspots[0] || null;
+        const leaderboardSnapshot = buildLeaderboardSnapshot(topPerformers, attentionNeeded);
 
         res.json({
             course: {
@@ -654,15 +879,20 @@ const getCourseAnalytics = async (req, res) => {
                 studentsNeedingSupport: (progressBandBreakdown.needs_support || 0) + (progressBandBreakdown.not_started || 0),
                 topPerformer: topPerformers[0] || null,
                 bottleneckModule,
+                hardestTask,
+                avgTaskPassRate: average(taskDifficultyHotspots.map((taskInsight) => taskInsight.passRate)),
                 dataMode: progressRecords.length ? 'progress' : 'enrollment_only',
             },
             distributions: {
                 enrollmentStatus: enrollmentStatusBreakdown,
                 progressBand: progressBandBreakdown,
+                scoreBand: scoreDistribution,
             },
             topPerformers,
             attentionNeeded,
             moduleAnalytics,
+            taskDifficultyHotspots,
+            leaderboardSnapshot,
             studentAnalytics,
         });
     } catch (error) {
