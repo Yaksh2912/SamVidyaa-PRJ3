@@ -432,6 +432,7 @@ const validateAnnouncementCreateRequest = validateRequest((req, errors) => {
     validateString(req.body.title, 'title', errors, { required: true, maxLength: 160 });
     validateString(req.body.message, 'message', errors, { required: true, maxLength: 5000 });
     validateEnum(req.body.audience_type, 'audience_type', errors, ANNOUNCEMENT_AUDIENCES);
+    validateNumber(req.body.expires_in_minutes, 'expires_in_minutes', errors, { integer: true, min: 1, max: 10080 });
 
     const normalizedAudience = trimmedString(req.body.audience_type || 'COURSE').toUpperCase() || 'COURSE';
     const courseRequired = isInstructorRole(req.user?.role) || normalizedAudience !== 'GLOBAL';

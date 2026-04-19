@@ -27,6 +27,10 @@ const announcementSchema = mongoose.Schema(
             required: true,
             ref: 'User',
         },
+        expires_at: {
+            type: Date,
+            default: null,
+        },
     },
     {
         timestamps: true,
@@ -35,5 +39,6 @@ const announcementSchema = mongoose.Schema(
 
 announcementSchema.index({ audience_type: 1, course_id: 1, createdAt: -1 });
 announcementSchema.index({ created_by: 1, createdAt: -1 });
+announcementSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model('Announcement', announcementSchema);

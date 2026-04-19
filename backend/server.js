@@ -5,6 +5,7 @@ const { createApp } = require('./app');
 const { initChatService } = require('./services/chatService');
 const { initVectorStore } = require('./services/vectorStore');
 const { captureError, emitMonitoringEvent } = require('./services/monitoringService');
+const { scheduleExistingAnnouncementExpiries } = require('./services/announcementExpiryService');
 
 dotenv.config();
 installConsoleBridge();
@@ -30,7 +31,6 @@ const server = app.listen(PORT, async () => {
     logger.info('server.started', { port: PORT });
     emitMonitoringEvent('server.started', { port: PORT });
 
-    // Initialize RAG services (non-blocking)
     try {
         initChatService();
         await initVectorStore();
@@ -39,6 +39,8 @@ const server = app.listen(PORT, async () => {
         logger.warn('server.rag_partial_init', { error: err });
         captureError(err, { source: 'server.rag_init' });
     }
+
+    await scheduleExistingAnnouncementExpiries();
 });
 
 module.exports = { app, server };

@@ -15,12 +15,19 @@ import ManageRewardsModal from '../components/ManageRewardsModal'
 import CourseAnalyticsModal from '../components/CourseAnalyticsModal'
 import { AnalyticsColumnChart, AnalyticsDonutChart, AnalyticsHeatGrid } from '../components/AnalyticsGraphs'
 import {
-  AnnouncementFeedSkeleton,
   StudentListSkeleton,
   TeacherModuleGridSkeleton,
   TeacherTaskGridSkeleton,
   useDelayedLoading
 } from '../components/ui/Skeleton'
+import { normalizeAnnouncementList, subscribeToAnnouncementStream } from '../utils/announcementRealtime'
+import {
+  ANNOUNCEMENT_TIMER_PRESETS,
+  ANNOUNCEMENT_TIMER_UNITS,
+  getAnnouncementExpiryMinutes,
+  getDefaultAnnouncementTimerForm,
+  isAnnouncementTimerValid,
+} from '../utils/announcementTimerOptions'
 import './Dashboard.css'
 
 const COURSE_GRADIENTS = [
@@ -203,12 +210,14 @@ function TeacherDashboard() {
   const [announcementForm, setAnnouncementForm] = React.useState({
     courseId: '',
     title: '',
-    message: ''
+    message: '',
+    ...getDefaultAnnouncementTimerForm()
   })
   const showModuleSkeletons = useDelayedLoading(loadingModules)
   const showTaskSkeletons = useDelayedLoading(loadingTasks)
   const showStudentSkeletons = useDelayedLoading(loadingStudents)
-  const showAnnouncementSkeletons = useDelayedLoading(loadingAnnouncements)
+  const isCustomAnnouncementTimer = announcementForm.timerPreset === 'custom'
+  const isAnnouncementTimerReady = isAnnouncementTimerValid(announcementForm)
 
   const [stats, setStats] = React.useState({
     activeClasses: 0,
@@ -369,7 +378,7 @@ function TeacherDashboard() {
       })
       if (response.ok) {
         const data = await response.json()
-        setAnnouncements(Array.isArray(data) ? data : [])
+        setAnnouncements(normalizeAnnouncementList(data))
       }
     } catch (error) {
       console.error('Failed to fetch announcements', error)
@@ -508,6 +517,39 @@ function TeacherDashboard() {
   }, [])
 
   React.useEffect(() => {
+    const expiryPruneInterval = window.setInterval(() => {
+      setAnnouncements((prev) => normalizeAnnouncementList(prev))
+    }, 30000)
+
+    return () => {
+      window.clearInterval(expiryPruneInterval)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    const userStr = localStorage.getItem('user')
+    const token = userStr ? JSON.parse(userStr).token : null
+
+    if (!token) {
+      return undefined
+    }
+
+    return subscribeToAnnouncementStream({
+      token,
+      onEvent: async ({ event, data }) => {
+        if (event !== 'announcement' || !data?.type) {
+          return
+        }
+
+        await fetchAnnouncements()
+      },
+      onError: (error) => {
+        console.error('Announcement stream error:', error)
+      },
+    })
+  }, [])
+
+  React.useEffect(() => {
     if (!announcementForm.courseId && courses.length) {
       setAnnouncementForm((prev) => ({ ...prev, courseId: courses[0]._id }))
     }
@@ -522,13 +564,17 @@ function TeacherDashboard() {
     setAnnouncementForm({
       courseId: courses[0]?._id || '',
       title: '',
-      message: ''
+      message: '',
+      ...getDefaultAnnouncementTimerForm()
     })
     setAnnouncementMessage('')
   }
 
   const handleCreateAnnouncement = async () => {
     if (!announcementForm.courseId || !announcementForm.title.trim() || !announcementForm.message.trim()) return
+
+    const expiresInMinutes = getAnnouncementExpiryMinutes(announcementForm)
+    if (announcementForm.timerPreset === 'custom' && !isAnnouncementTimerReady) return
 
     setSavingAnnouncement(true)
     setAnnouncementMessage('')
@@ -545,7 +591,8 @@ function TeacherDashboard() {
         body: JSON.stringify({
           course_id: announcementForm.courseId,
           title: announcementForm.title.trim(),
-          message: announcementForm.message.trim()
+          message: announcementForm.message.trim(),
+          expires_in_minutes: expiresInMinutes
         })
       })
 
@@ -554,7 +601,7 @@ function TeacherDashboard() {
         throw new Error(data.message || 'announcement_create_failed')
       }
 
-      setAnnouncements((prev) => [data, ...prev])
+      setAnnouncements((prev) => normalizeAnnouncementList([data, ...prev]))
       resetAnnouncementForm()
       setAnnouncementMessage(t.announcements.created)
     } catch (error) {
@@ -1917,11 +1964,64 @@ function TeacherDashboard() {
                     />
                   </label>
 
+                  <label className="admin-installer-panel__label">
+                    {t.announcements.timerLabel}
+                    <select
+                      className="admin-installer-panel__input"
+                      value={announcementForm.timerPreset}
+                      onChange={(event) => handleAnnouncementFieldChange('timerPreset', event.target.value)}
+                    >
+                      {ANNOUNCEMENT_TIMER_PRESETS.map((preset) => (
+                        <option key={preset.value} value={preset.value}>
+                          {t.announcements[preset.labelKey]}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="dashboard-announcement-item__detail">{t.announcements.timerHint}</span>
+                  </label>
+
+                  {isCustomAnnouncementTimer ? (
+                    <>
+                      <div className="dashboard-announcement-timer-row">
+                        <label className="admin-installer-panel__label">
+                          {t.announcements.timerCustomValueLabel}
+                          <input
+                            type="number"
+                            min="1"
+                            className="admin-installer-panel__input"
+                            value={announcementForm.customTimerValue}
+                            placeholder={t.announcements.timerCustomPlaceholder}
+                            onChange={(event) => handleAnnouncementFieldChange('customTimerValue', event.target.value)}
+                          />
+                        </label>
+
+                        <label className="admin-installer-panel__label">
+                          {t.announcements.timerCustomUnitLabel}
+                          <select
+                            className="admin-installer-panel__input"
+                            value={announcementForm.customTimerUnit}
+                            onChange={(event) => handleAnnouncementFieldChange('customTimerUnit', event.target.value)}
+                          >
+                            {ANNOUNCEMENT_TIMER_UNITS.map((unit) => (
+                              <option key={unit.value} value={unit.value}>
+                                {t.announcements[unit.labelKey]}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <span className="dashboard-announcement-item__detail">
+                        {isAnnouncementTimerReady ? t.announcements.timerCustomHint : t.announcements.timerCustomInvalid}
+                      </span>
+                    </>
+                  ) : null}
+
                   <div className="admin-installer-panel__actions">
                     <button
                       type="button"
                       className="btn btn-primary"
-                      disabled={!courses.length || savingAnnouncement || !announcementForm.courseId || !announcementForm.title.trim() || !announcementForm.message.trim()}
+                      disabled={!courses.length || savingAnnouncement || !announcementForm.courseId || !announcementForm.title.trim() || !announcementForm.message.trim() || !isAnnouncementTimerReady}
                       onClick={handleCreateAnnouncement}
                     >
                       {savingAnnouncement ? t.announcements.creating : t.announcements.create}
@@ -1941,7 +2041,7 @@ function TeacherDashboard() {
 
                 <div className="dashboard-announcements-feed">
                   {loadingAnnouncements ? (
-                    <AnnouncementFeedSkeleton count={3} visible={showAnnouncementSkeletons} />
+                    <p className="empty-state">{common.loading}</p>
                   ) : announcements.length ? announcements.map((announcement) => (
                     <article key={announcement._id} className="dashboard-announcement-item">
                       <div className="dashboard-announcement-item__meta">
@@ -1952,6 +2052,11 @@ function TeacherDashboard() {
                             {' • '}
                             {announcementDateFormatter.format(new Date(announcement.createdAt))}
                           </p>
+                          {announcement.expires_at ? (
+                            <p className="dashboard-announcement-item__detail">
+                              {t.announcements.expiresOn.replace('{date}', announcementDateFormatter.format(new Date(announcement.expires_at)))}
+                            </p>
+                          ) : null}
                         </div>
                         <button
                           type="button"

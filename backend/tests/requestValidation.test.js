@@ -95,6 +95,23 @@ test('validateAnnouncementCreateRequest requires course_id for instructors', asy
     assert.equal(res.body.errors.course_id, 'course_id is required');
 });
 
+test('validateAnnouncementCreateRequest rejects invalid expiry duration', async () => {
+    const { res, nextCalled } = await runMiddleware(validateAnnouncementCreateRequest, {
+        user: { role: 'ADMIN' },
+        body: {
+            title: 'Lab update',
+            message: 'New schedule',
+            audience_type: 'GLOBAL',
+            expires_in_minutes: 0,
+        },
+    });
+
+    assert.equal(nextCalled, false);
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.body.message, 'Validation failed');
+    assert.equal(res.body.errors.expires_in_minutes, 'expires_in_minutes must be at least 1');
+});
+
 test('handleUploadMiddleware standardizes upload failures', async () => {
     const uploadMiddleware = (_req, _res, next) => next(new Error('Only PDF files are allowed'));
     const wrappedMiddleware = handleUploadMiddleware(uploadMiddleware);

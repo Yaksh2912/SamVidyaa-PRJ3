@@ -10,7 +10,6 @@ import CompleteTaskModal from '../components/CompleteTaskModal'
 import AskCollaborationModal from '../components/AskCollaborationModal'
 import ChatBot from '../components/ChatBot'
 import {
-  AnnouncementFeedSkeleton,
   CourseGridSkeleton,
   LeaderboardSkeleton,
   RewardGridSkeleton,
@@ -19,6 +18,7 @@ import {
 } from '../components/ui/Skeleton'
 import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification, HiUserGroup, HiCheck, HiXMark, HiBellAlert, HiArrowTopRightOnSquare } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
+import { normalizeAnnouncementList, subscribeToAnnouncementStream } from '../utils/announcementRealtime'
 import './Dashboard.css'
 
 const COURSE_GRADIENTS = [
@@ -59,6 +59,7 @@ const formatFileSize = (size) => {
 };
 
 const STUDENT_DASHBOARD_STATE_KEY = 'student_dashboard_state';
+const STUDENT_ANNOUNCEMENT_POPUP_MS = 8000;
 
 function StudentDashboard() {
   const { theme } = useTheme()
@@ -156,8 +157,15 @@ function StudentDashboard() {
   const showHistorySkeletons = useDelayedLoading(loadingTaskHistory);
   const showRewardsSkeletons = useDelayedLoading(loadingRewards);
   const showLeaderboardSkeletons = useDelayedLoading(loadingLeaderboard);
-  const showAnnouncementSkeletons = useDelayedLoading(loadingAnnouncements);
   const restoredStudentStateRef = useRef(false);
+  const announcementPopupTimerRef = useRef(null);
+  const announcementDropdownRef = useRef(null);
+  const announcementButtonRef = useRef(null);
+  const announcementScopeKey = enrolledCourses
+    .map((enrollment) => enrollment?.course_id?._id)
+    .filter(Boolean)
+    .sort()
+    .join(',');
 
   // Mapping of icon names to actual components
   const MAP_ICONS = {
@@ -173,6 +181,51 @@ function StudentDashboard() {
   const handleLogout = () => {
     logout()
     navigate('/')
+  }
+
+  const closeAnnouncementsPopup = () => {
+    if (announcementPopupTimerRef.current) {
+      window.clearTimeout(announcementPopupTimerRef.current)
+      announcementPopupTimerRef.current = null
+    }
+
+    setShowAnnouncementsPopup(false)
+  }
+
+  const openAnnouncementsPopup = ({ autoClose = false } = {}) => {
+    setShowAnnouncementsPopup(true)
+
+    if (announcementPopupTimerRef.current) {
+      window.clearTimeout(announcementPopupTimerRef.current)
+      announcementPopupTimerRef.current = null
+    }
+
+    if (autoClose) {
+      announcementPopupTimerRef.current = window.setTimeout(() => {
+        setShowAnnouncementsPopup(false)
+        announcementPopupTimerRef.current = null
+      }, STUDENT_ANNOUNCEMENT_POPUP_MS)
+    }
+  }
+
+  const getAnnouncementAuthorName = (announcement) => (
+    announcement?.created_by?.name || translations.auth.roles.teacher
+  )
+
+  const getAnnouncementAvatarLabel = (announcement) => {
+    const authorName = getAnnouncementAuthorName(announcement)
+    return authorName
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || '')
+      .join('') || 'A'
+  }
+
+  const isAnnouncementFresh = (announcement) => {
+    const createdAt = new Date(announcement?.createdAt || 0).getTime()
+    if (!createdAt) return false
+    return Date.now() - createdAt <= 24 * 60 * 60 * 1000
   }
 
   const fetchData = async () => {
@@ -279,7 +332,7 @@ function StudentDashboard() {
       });
       if (res.ok) {
         const data = await res.json();
-        setAnnouncements(Array.isArray(data) ? data : []);
+        setAnnouncements(normalizeAnnouncementList(data));
       } else {
         setAnnouncements([]);
       }
@@ -477,6 +530,86 @@ function StudentDashboard() {
     fetchAnnouncements();
     fetchTaskHistory();
   }, []);
+
+  useEffect(() => () => {
+    if (announcementPopupTimerRef.current) {
+      window.clearTimeout(announcementPopupTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    const expiryPruneInterval = window.setInterval(() => {
+      setAnnouncements((prev) => normalizeAnnouncementList(prev))
+    }, 30000)
+
+    return () => {
+      window.clearInterval(expiryPruneInterval)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!showAnnouncementsPopup || announcements.length > 0) return
+
+    closeAnnouncementsPopup()
+  }, [announcements.length, showAnnouncementsPopup])
+
+  useEffect(() => {
+    if (loadingAnnouncements || announcements.length === 0 || !user?._id) {
+      return
+    }
+
+    const popupSeenKey = `student_announcement_popup_seen:${user?._id || 'unknown'}`
+    if (sessionStorage.getItem(popupSeenKey) === user?.token) {
+      return
+    }
+
+    sessionStorage.setItem(popupSeenKey, user?.token || '')
+    openAnnouncementsPopup({ autoClose: true })
+  }, [announcements.length, loadingAnnouncements, user?._id, user?.token])
+
+  useEffect(() => {
+    if (!user?.token) {
+      return undefined
+    }
+
+    return subscribeToAnnouncementStream({
+      token: user.token,
+      onEvent: async ({ event, data }) => {
+        if (event !== 'announcement' || !data?.type) {
+          return
+        }
+
+        await fetchAnnouncements()
+
+        if (data.type === 'created') {
+          openAnnouncementsPopup({ autoClose: true })
+        }
+      },
+      onError: (error) => {
+        console.error('Announcement stream error:', error)
+      },
+    })
+  }, [announcementScopeKey, user?.token])
+
+  useEffect(() => {
+    if (!showAnnouncementsPopup) {
+      return undefined
+    }
+
+    const handlePointerDown = (event) => {
+      const target = event.target
+      if (announcementDropdownRef.current?.contains(target) || announcementButtonRef.current?.contains(target)) {
+        return
+      }
+
+      closeAnnouncementsPopup()
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+    }
+  }, [showAnnouncementsPopup])
 
   useEffect(() => {
     if (restoredStudentStateRef.current || enrolledCourses.length === 0) return;
@@ -698,21 +831,102 @@ function StudentDashboard() {
             <button className="theme-toggle topbar-theme-toggle" onClick={toggleTheme} aria-label={common.toggleTheme}>
               {isDark ? <FiSun size={18} /> : <FiMoon size={18} />}
             </button>
-            <button
-              type="button"
-              className="topbar-notification-button"
-              aria-label={t.topbar.openAnnouncements}
-              title={t.topbar.openAnnouncements}
-              onClick={() => {
-                setShowAnnouncementsPopup(true)
-                fetchAnnouncements()
-              }}
-            >
-              <HiBellAlert />
-              {announcements.length ? (
-                <span className="topbar-notification-badge">{announcements.length}</span>
+            <div className="announcement-dropdown-anchor">
+              <button
+                ref={announcementButtonRef}
+                type="button"
+                className="topbar-notification-button"
+                aria-label={t.topbar.openAnnouncements}
+                title={t.topbar.openAnnouncements}
+                onClick={() => {
+                  if (showAnnouncementsPopup) {
+                    closeAnnouncementsPopup()
+                    return
+                  }
+
+                  openAnnouncementsPopup()
+                  fetchAnnouncements()
+                }}
+              >
+                <HiBellAlert />
+                {announcements.length ? (
+                  <span className="topbar-notification-badge">{announcements.length}</span>
+                ) : null}
+              </button>
+
+              {showAnnouncementsPopup ? (
+                <motion.div
+                  ref={announcementDropdownRef}
+                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  className="announcement-dropdown"
+                >
+                  <div className="announcement-dropdown__caret" />
+                  <div className="announcement-dropdown__header">
+                    <div>
+                      <h2>{t.announcements.title}</h2>
+                      <p>{t.announcements.popupSubtitle}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="announcement-dropdown__close"
+                      onClick={closeAnnouncementsPopup}
+                    >
+                      {common.close}
+                    </button>
+                  </div>
+
+                  <div className="announcement-dropdown__body">
+                    {loadingAnnouncements ? (
+                      <p className="empty-state">{common.loading}</p>
+                    ) : announcements.length === 0 ? (
+                      <p className="empty-state">{t.announcements.empty}</p>
+                    ) : (
+                      <div className="student-announcements-list student-announcements-list--dropdown">
+                        {announcements.map((announcement) => (
+                          <article key={announcement._id} className="student-announcement-card student-announcement-card--dropdown">
+                            <div className="student-announcement-card__avatar">
+                              {getAnnouncementAvatarLabel(announcement)}
+                            </div>
+
+                            <div className="student-announcement-card__content">
+                              <div className="student-announcement-card__row">
+                                <p className="student-announcement-card__summary">
+                                  <strong>{getAnnouncementAuthorName(announcement)}</strong>
+                                  {' '}
+                                  {announcement.title}
+                                </p>
+                                {isAnnouncementFresh(announcement) ? (
+                                  <span className="student-announcement-card__badge student-announcement-card__badge--new">
+                                    {t.announcements.newBadge}
+                                  </span>
+                                ) : null}
+                              </div>
+
+                              <p className="student-announcement-card__body student-announcement-card__body--dropdown">
+                                {announcement.message}
+                              </p>
+
+                              <div className="student-announcement-card__footer">
+                                <span>
+                                  {announcement.course_id?.course_name || t.announcements.generalAudience}
+                                </span>
+                                <span>{announcementDateFormatter.format(new Date(announcement.createdAt))}</span>
+                                {announcement.expires_at ? (
+                                  <span>
+                                    {t.announcements.expiresOn.replace('{date}', announcementDateFormatter.format(new Date(announcement.expires_at)))}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
               ) : null}
-            </button>
+            </div>
             <div 
               className="points-badge-premium" 
               onClick={() => setActiveTab('pointShop')} 
@@ -1135,63 +1349,6 @@ function StudentDashboard() {
           )}
         </div>
       </main>
-
-      {showAnnouncementsPopup && (
-        <div className="neumorphic-modal-overlay" onClick={() => setShowAnnouncementsPopup(false)}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 18 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="neumorphic-modal-content announcement-popup-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="neumorphic-modal-header announcement-popup-modal__header">
-              <div>
-                <h2>{t.announcements.title}</h2>
-                <p className="announcement-popup-modal__subtitle">{t.announcements.popupSubtitle}</p>
-              </div>
-              <button
-                type="button"
-                className="btn-neumorphic-close"
-                onClick={() => setShowAnnouncementsPopup(false)}
-              >
-                {common.close}
-              </button>
-            </div>
-
-            <div className="announcement-popup-modal__body">
-              {loadingAnnouncements ? (
-                <AnnouncementFeedSkeleton count={3} visible={showAnnouncementSkeletons} className="student-announcements-list" />
-              ) : announcements.length === 0 ? (
-                <p className="empty-state">{t.announcements.empty}</p>
-              ) : (
-                <div className="student-announcements-list">
-                  {announcements.map((announcement) => (
-                    <article key={announcement._id} className="student-announcement-card">
-                      <div className="student-announcement-card__topline">
-                        <p className="student-announcement-card__eyebrow">
-                          {announcement.course_id?.course_name || t.announcements.generalAudience}
-                          {' • '}
-                          {announcement.created_by?.name || translations.auth.roles.teacher}
-                        </p>
-                        <div className="student-announcement-card__meta">
-                          <div className="student-announcement-card__badge">
-                            {announcement.audience_type === 'GLOBAL' ? t.announcements.globalBadge : announcement.course_id?.course_code || t.announcements.courseBadge}
-                          </div>
-                          <span className="student-announcement-card__time">
-                            {announcementDateFormatter.format(new Date(announcement.createdAt))}
-                          </span>
-                        </div>
-                      </div>
-                      <h4 className="student-announcement-card__title">{announcement.title}</h4>
-                      <p className="student-announcement-card__body">{announcement.message}</p>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      )}
 
       {/* NEUMORPHIC COURSE DETAILS MODAL */}
       {selectedCourse && (

@@ -16,10 +16,17 @@ import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import API_BASE_URL from '../config'
 import {
-  AnnouncementFeedSkeleton,
   PanelStatusSkeleton,
   useDelayedLoading
 } from '../components/ui/Skeleton'
+import { normalizeAnnouncementList, subscribeToAnnouncementStream } from '../utils/announcementRealtime'
+import {
+  ANNOUNCEMENT_TIMER_PRESETS,
+  ANNOUNCEMENT_TIMER_UNITS,
+  getAnnouncementExpiryMinutes,
+  getDefaultAnnouncementTimerForm,
+  isAnnouncementTimerValid,
+} from '../utils/announcementTimerOptions'
 import './Dashboard.css'
 
 const getInitials = (name = '') => name
@@ -93,10 +100,12 @@ function AdminDashboard() {
     courseId: '',
     title: '',
     message: '',
+    ...getDefaultAnnouncementTimerForm(),
   })
   const showDesktopAppSkeleton = useDelayedLoading(desktopAppLoading)
-  const showAnnouncementSkeletons = useDelayedLoading(announcementsLoading)
   const showTestimonialStatus = useDelayedLoading(testimonialsLoading)
+  const isCustomAnnouncementTimer = announcementForm.timerPreset === 'custom'
+  const isAnnouncementTimerReady = isAnnouncementTimerValid(announcementForm)
 
   const dateFormatter = new Intl.DateTimeFormat(language === 'hi' ? 'hi-IN' : 'en-US', {
     year: 'numeric',
@@ -249,7 +258,7 @@ function AdminDashboard() {
         if (announcementsResponse.ok) {
           const announcementData = await announcementsResponse.json()
           if (isMounted) {
-            setAnnouncements(Array.isArray(announcementData) ? announcementData : [])
+            setAnnouncements(normalizeAnnouncementList(announcementData))
           }
         } else if (isMounted) {
           setAnnouncements([])
@@ -308,6 +317,7 @@ function AdminDashboard() {
       courseId: '',
       title: '',
       message: '',
+      ...getDefaultAnnouncementTimerForm(),
     })
     setAnnouncementMessage('')
   }
@@ -466,6 +476,13 @@ function AdminDashboard() {
         }
       }
 
+      if (field === 'timerPreset') {
+        return {
+          ...prev,
+          timerPreset: value,
+        }
+      }
+
       return { ...prev, [field]: value }
     })
     setAnnouncementMessage('')
@@ -477,6 +494,11 @@ function AdminDashboard() {
     }
 
     if (announcementForm.audienceType === 'COURSE' && !announcementForm.courseId) {
+      return
+    }
+
+    const expiresInMinutes = getAnnouncementExpiryMinutes(announcementForm)
+    if (announcementForm.timerPreset === 'custom' && !isAnnouncementTimerValid(announcementForm)) {
       return
     }
 
@@ -495,6 +517,7 @@ function AdminDashboard() {
           course_id: announcementForm.audienceType === 'COURSE' ? announcementForm.courseId : null,
           title: announcementForm.title.trim(),
           message: announcementForm.message.trim(),
+          expires_in_minutes: expiresInMinutes,
         }),
       })
 
@@ -503,7 +526,7 @@ function AdminDashboard() {
         throw new Error(data.message || 'announcement_create_failed')
       }
 
-      setAnnouncements((prev) => [data, ...prev])
+      setAnnouncements((prev) => normalizeAnnouncementList([data, ...prev]))
       resetAnnouncementForm()
       setAnnouncementMessage(t.announcements.created)
     } catch (error) {
@@ -544,6 +567,51 @@ function AdminDashboard() {
       setDeletingAnnouncementId(null)
     }
   }
+
+  React.useEffect(() => {
+    const expiryPruneInterval = window.setInterval(() => {
+      setAnnouncements((prev) => normalizeAnnouncementList(prev))
+    }, 30000)
+
+    return () => {
+      window.clearInterval(expiryPruneInterval)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    if (!user?.token) {
+      return undefined
+    }
+
+    return subscribeToAnnouncementStream({
+      token: user.token,
+      onEvent: async ({ event, data }) => {
+        if (event !== 'announcement' || !data?.type) {
+          return
+        }
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/announcements/manage`, {
+            headers: {
+              Authorization: `Bearer ${user.token}`,
+            },
+          })
+
+          if (!response.ok) {
+            throw new Error('announcement_refresh_failed')
+          }
+
+          const announcementData = await response.json()
+          setAnnouncements(normalizeAnnouncementList(announcementData))
+        } catch (error) {
+          console.error('Failed to refresh admin announcements', error)
+        }
+      },
+      onError: (error) => {
+        console.error('Announcement stream error:', error)
+      },
+    })
+  }, [user?.token])
 
   const handleTestimonialFieldChange = (field, value) => {
     setTestimonialForm((prev) => ({ ...prev, [field]: value }))
@@ -730,6 +798,7 @@ function AdminDashboard() {
         || !announcementForm.title.trim()
         || !announcementForm.message.trim()
         || (announcementForm.audienceType === 'COURSE' && !announcementForm.courseId)
+        || !isAnnouncementTimerReady
 
       return (
         <button className="btn btn-primary topbar-create-button" onClick={handleCreateAnnouncement} disabled={isDisabled}>
@@ -1115,7 +1184,7 @@ function AdminDashboard() {
                   </div>
 
                   {announcementsLoading ? (
-                    <AnnouncementFeedSkeleton count={2} visible={showAnnouncementSkeletons} />
+                    <p className="empty-state">{common.loading}</p>
                   ) : recentAnnouncements.length ? (
                     <div className="dashboard-announcements-feed admin-overview-feed">
                       {recentAnnouncements.map((announcement) => (
@@ -1412,8 +1481,66 @@ function AdminDashboard() {
                     />
                   </label>
 
+                  <label className="admin-installer-panel__label">
+                    {t.announcements.timerLabel}
+                    <select
+                      className="admin-installer-panel__input"
+                      value={announcementForm.timerPreset}
+                      onChange={(event) => handleAnnouncementFieldChange('timerPreset', event.target.value)}
+                    >
+                      {ANNOUNCEMENT_TIMER_PRESETS.map((preset) => (
+                        <option key={preset.value} value={preset.value}>
+                          {t.announcements[preset.labelKey]}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="dashboard-announcement-item__detail">{t.announcements.timerHint}</span>
+                  </label>
+
+                  {isCustomAnnouncementTimer ? (
+                    <>
+                      <div className="dashboard-announcement-timer-row">
+                        <label className="admin-installer-panel__label">
+                          {t.announcements.timerCustomValueLabel}
+                          <input
+                            type="number"
+                            min="1"
+                            className="admin-installer-panel__input"
+                            placeholder={t.announcements.timerCustomPlaceholder}
+                            value={announcementForm.customTimerValue}
+                            onChange={(event) => handleAnnouncementFieldChange('customTimerValue', event.target.value)}
+                          />
+                        </label>
+
+                        <label className="admin-installer-panel__label">
+                          {t.announcements.timerCustomUnitLabel}
+                          <select
+                            className="admin-installer-panel__input"
+                            value={announcementForm.customTimerUnit}
+                            onChange={(event) => handleAnnouncementFieldChange('customTimerUnit', event.target.value)}
+                          >
+                            {ANNOUNCEMENT_TIMER_UNITS.map((unit) => (
+                              <option key={unit.value} value={unit.value}>
+                                {t.announcements[unit.labelKey]}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <span className="dashboard-announcement-item__detail">
+                        {isAnnouncementTimerReady ? t.announcements.timerCustomHint : t.announcements.timerCustomInvalid}
+                      </span>
+                    </>
+                  ) : null}
+
                   <div className="admin-installer-panel__actions">
-                    <button type="button" className="btn btn-primary" onClick={handleCreateAnnouncement}>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={handleCreateAnnouncement}
+                      disabled={savingAnnouncement || !announcementForm.title.trim() || !announcementForm.message.trim() || (announcementForm.audienceType === 'COURSE' && !announcementForm.courseId) || !isAnnouncementTimerReady}
+                    >
                       {savingAnnouncement ? t.announcements.creating : t.announcements.create}
                     </button>
                     <button type="button" className="btn btn-secondary" onClick={resetAnnouncementForm}>
@@ -1428,7 +1555,7 @@ function AdminDashboard() {
 
                 <div className="dashboard-announcements-feed">
                   {announcementsLoading ? (
-                    <AnnouncementFeedSkeleton count={3} visible={showAnnouncementSkeletons} />
+                    <p className="empty-state">{common.loading}</p>
                   ) : announcements.length ? announcements.map((announcement) => (
                     <article key={announcement._id} className="dashboard-announcement-item">
                       <div className="dashboard-announcement-item__meta">
@@ -1443,6 +1570,11 @@ function AdminDashboard() {
                             {' • '}
                             {formatDate(announcement.createdAt, announcementDateFormatter)}
                           </p>
+                          {announcement.expires_at ? (
+                            <p className="dashboard-announcement-item__detail">
+                              {t.announcements.expiresOn.replace('{date}', formatDate(announcement.expires_at, announcementDateFormatter))}
+                            </p>
+                          ) : null}
                         </div>
                         <button
                           type="button"

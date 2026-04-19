@@ -7,8 +7,10 @@ const {
     getManageAnnouncements,
     getStudentAnnouncements,
     deleteAnnouncement,
+    streamAnnouncements,
 } = require('../controllers/announcementController');
 
+router.get('/stream', protect, streamAnnouncements);
 router.get('/manage', protect, getManageAnnouncements);
 router.get('/student', protect, getStudentAnnouncements);
 router.post('/', protect, validateAnnouncementCreateRequest, createAnnouncement);
