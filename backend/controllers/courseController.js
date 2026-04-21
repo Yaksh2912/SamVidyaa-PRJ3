@@ -464,6 +464,12 @@ const getTeacherStats = async (req, res) => {
             leaderboardSnapshot: buildLeaderboardSnapshot([], []),
             scoreDistribution: createScoreDistribution(),
             taskDifficultyHotspots: [],
+            courseBreakdown: [],
+            courseHighlights: {
+                strongestCourse: null,
+                needsAttentionCourse: null,
+                toughestCourse: null,
+            },
             studentCount: 0,
             dataMode: 'enrollment_only',
         };
@@ -551,12 +557,19 @@ const getTeacherStats = async (req, res) => {
         }
 
         const progressByStudent = new Map();
+        const progressByCourse = new Map();
         for (const record of progressRecords) {
             const studentId = record.student_id?.toString();
             if (!studentId || !activeStudentsById.has(studentId)) continue;
 
             if (!progressByStudent.has(studentId)) progressByStudent.set(studentId, []);
             progressByStudent.get(studentId).push(record);
+
+            const courseId = record.course_id?.toString();
+            if (courseId) {
+                if (!progressByCourse.has(courseId)) progressByCourse.set(courseId, []);
+                progressByCourse.get(courseId).push(record);
+            }
         }
 
         const studentAnalytics = [...activeStudentsById.values()].map(({ studentId, student, courseIds: enrolledCourseIds, enrollmentCompleted, latestEnrollmentActivity }) => {
@@ -634,7 +647,121 @@ const getTeacherStats = async (req, res) => {
             completions: taskCompletions,
             activeLearnerCountByCourse,
         }).slice(0, 8);
+        const taskHotspotsByCourse = taskDifficultyHotspots.reduce((acc, task) => {
+            if (!task.courseId) return acc;
+            if (!acc.has(task.courseId)) acc.set(task.courseId, []);
+            acc.get(task.courseId).push(task);
+            return acc;
+        }, new Map());
         const leaderboardSnapshot = buildLeaderboardSnapshot(studentAnalytics, attentionNeeded);
+        const courseBreakdown = courseIds.map((courseIdValue) => {
+            const courseId = courseIdValue.toString();
+            const courseMeta = courseLookup.get(courseId);
+            const courseTaskCount = taskTotalsByCourse[courseId] || 0;
+            const courseModuleCount = moduleTotalsByCourse[courseId] || 0;
+            const courseEnrollments = enrollments.filter((enrollment) =>
+                enrollment.course_id?.toString?.() === courseId &&
+                activeEnrollmentStatuses.has(enrollment.status) &&
+                enrollment.student_id
+            );
+            const courseActiveLearners = courseEnrollments.length;
+            const progressRecordsForCourse = progressByCourse.get(courseId) || [];
+            const progressByStudentForCourse = new Map();
+
+            for (const record of progressRecordsForCourse) {
+                const studentId = record.student_id?.toString();
+                if (!studentId) continue;
+                if (!progressByStudentForCourse.has(studentId)) progressByStudentForCourse.set(studentId, []);
+                progressByStudentForCourse.get(studentId).push(record);
+            }
+
+            const courseStudentAnalytics = courseEnrollments.map((enrollment) => {
+                const studentId = enrollment.student_id._id.toString();
+                const records = progressByStudentForCourse.get(studentId) || [];
+                const completedTasks = records.reduce((sum, record) => sum + (record.completed_tasks || 0), 0);
+                const moduleCompletionCount = records.filter((record) =>
+                    record.module_status === 'MODULE_COMPLETED' || record.module_test_completed
+                ).length;
+                const averageScore = average(records.map((record) => record.total_score || 0));
+                const completionRate = courseTaskCount ? clampPercent((completedTasks / courseTaskCount) * 100) : 0;
+                const moduleCompletionRate = courseModuleCount ? clampPercent((moduleCompletionCount / courseModuleCount) * 100) : 0;
+                const engagementScore = clampPercent((completionRate * 0.55) + (moduleCompletionRate * 0.25) + (Math.min(averageScore, 100) * 0.2));
+                const progressBand = deriveProgressBand({
+                    enrollmentCompleted: enrollment.status === 'COMPLETED',
+                    recordCount: records.length,
+                    completionRate,
+                    moduleCompletionRate,
+                });
+
+                return {
+                    studentId,
+                    completionRate,
+                    moduleCompletionRate,
+                    averageScore,
+                    engagementScore,
+                    progressBand,
+                };
+            });
+
+            const progressBandBreakdownForCourse = courseStudentAnalytics.reduce((acc, student) => {
+                acc[student.progressBand] = (acc[student.progressBand] || 0) + 1;
+                return acc;
+            }, { completed: 0, on_track: 0, steady: 0, needs_support: 0, not_started: 0 });
+            const supportNeeded = (progressBandBreakdownForCourse.needs_support || 0) + (progressBandBreakdownForCourse.not_started || 0);
+            const topHotspot = (taskHotspotsByCourse.get(courseId) || [])[0] || null;
+
+            return {
+                courseId,
+                courseName: courseMeta?.course_name || 'Untitled Course',
+                courseCode: courseMeta?.course_code || '',
+                activeLearners: courseActiveLearners,
+                moduleCount: courseModuleCount,
+                taskCount: courseTaskCount,
+                avgCompletionRate: average(courseStudentAnalytics.map((student) => student.completionRate)),
+                avgScore: average(courseStudentAnalytics.map((student) => student.averageScore)),
+                averageEngagement: average(courseStudentAnalytics.map((student) => student.engagementScore)),
+                supportNeeded,
+                supportShare: courseActiveLearners ? clampPercent((supportNeeded / courseActiveLearners) * 100) : 0,
+                completedLearners: progressBandBreakdownForCourse.completed || 0,
+                progressBandBreakdown: progressBandBreakdownForCourse,
+                topHotspot: topHotspot
+                    ? {
+                        taskId: topHotspot.taskId,
+                        taskName: topHotspot.taskName,
+                        challengeScore: topHotspot.challengeScore,
+                        passRate: topHotspot.passRate,
+                    }
+                    : null,
+            };
+        }).sort((left, right) => {
+            if (right.averageEngagement !== left.averageEngagement) return right.averageEngagement - left.averageEngagement;
+            if (right.avgCompletionRate !== left.avgCompletionRate) return right.avgCompletionRate - left.avgCompletionRate;
+            return left.courseName.localeCompare(right.courseName);
+        });
+
+        const strongestCourse = [...courseBreakdown]
+            .filter((course) => course.activeLearners > 0)
+            .sort((left, right) => {
+                if (right.avgCompletionRate !== left.avgCompletionRate) return right.avgCompletionRate - left.avgCompletionRate;
+                if (right.avgScore !== left.avgScore) return right.avgScore - left.avgScore;
+                return right.averageEngagement - left.averageEngagement;
+            })[0] || null;
+        const needsAttentionCourse = [...courseBreakdown]
+            .filter((course) => course.activeLearners > 0)
+            .sort((left, right) => {
+                if (right.supportShare !== left.supportShare) return right.supportShare - left.supportShare;
+                if (left.avgCompletionRate !== right.avgCompletionRate) return left.avgCompletionRate - right.avgCompletionRate;
+                return left.avgScore - right.avgScore;
+            })[0] || null;
+        const toughestCourse = [...courseBreakdown]
+            .filter((course) => course.topHotspot)
+            .sort((left, right) => {
+                if ((right.topHotspot?.challengeScore || 0) !== (left.topHotspot?.challengeScore || 0)) {
+                    return (right.topHotspot?.challengeScore || 0) - (left.topHotspot?.challengeScore || 0);
+                }
+
+                return left.avgCompletionRate - right.avgCompletionRate;
+            })[0] || null;
 
         const performanceAnalytics = {
             activeLearners: studentAnalytics.length,
@@ -647,6 +774,12 @@ const getTeacherStats = async (req, res) => {
             leaderboardSnapshot,
             scoreDistribution,
             taskDifficultyHotspots,
+            courseBreakdown,
+            courseHighlights: {
+                strongestCourse,
+                needsAttentionCourse,
+                toughestCourse,
+            },
             studentCount: studentAnalytics.length,
             dataMode: progressRecords.length ? 'progress' : 'enrollment_only',
         };

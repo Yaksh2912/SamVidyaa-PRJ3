@@ -181,6 +181,8 @@ export const translations = {
       login: {
         title: 'Welcome Back',
         subtitle: 'Sign in to your account',
+        panelTitle: 'Welcome Back!',
+        panelText: 'Stay connected by signing in with your credentials and continue your learning flow.',
         email: 'Email',
         password: 'Password',
         role: 'Role',
@@ -198,6 +200,8 @@ export const translations = {
       signup: {
         title: 'Create Account',
         subtitle: 'Sign up to get started',
+        panelTitle: 'Hey There!',
+        panelText: 'Create your account and begin your journey with SamVidyaa today.',
         name: 'Full Name',
         email: 'Email',
         password: 'Password',
@@ -707,13 +711,29 @@ export const translations = {
           limitedData: 'Detailed progress snapshots are limited right now. These insights are based on enrollments plus any saved progress records.',
           empty: 'No learner analytics are available yet.',
           shareOfLearners: '{percent} of active learners',
+          noHotspot: 'No hotspot data yet',
+          highlights: {
+            strongestCourse: 'Strongest Course',
+            needsAttentionCourse: 'Needs Attention',
+            toughestCourse: 'Toughest Course'
+          },
+          fields: {
+            activeLearners: 'Active Learners',
+            avgEngagement: 'Avg Engagement',
+            supportShare: 'Support Share',
+            modules: 'Modules',
+            tasks: 'Tasks',
+            hotspot: 'Hotspot'
+          },
           charts: {
             progressBreakdown: 'Progress Breakdown',
             performanceMix: 'Performance Mix',
             engagementGraph: 'Learner Engagement Graph',
             scoreCurve: 'Class Score Curve',
             difficultyHeatmap: 'Difficult Task Heatmap',
-            leaderboardSnapshot: 'Top vs At-Risk Snapshot'
+            leaderboardSnapshot: 'Top vs At-Risk Snapshot',
+            courseComparison: 'Course Comparison',
+            courseHealth: 'Course Health Breakdown'
           }
         },
         sections: {
@@ -1309,6 +1329,8 @@ export const translations = {
       login: {
         title: 'वापसी पर स्वागत है',
         subtitle: 'अपने खाते में साइन इन करें',
+        panelTitle: 'फिर से स्वागत है!',
+        panelText: 'अपने क्रेडेंशियल्स से साइन इन करें और अपनी सीखने की यात्रा जारी रखें।',
         email: 'ईमेल',
         password: 'पासवर्ड',
         role: 'भूमिका',
@@ -1326,6 +1348,8 @@ export const translations = {
       signup: {
         title: 'खाता बनाएं',
         subtitle: 'शुरू करने के लिए साइन अप करें',
+        panelTitle: 'नमस्ते!',
+        panelText: 'अपना खाता बनाएं और SamVidyaa के साथ अपनी यात्रा शुरू करें।',
         name: 'पूरा नाम',
         email: 'ईमेल',
         password: 'पासवर्ड',
@@ -1835,13 +1859,29 @@ export const translations = {
           limitedData: 'विस्तृत प्रगति स्नैपशॉट अभी सीमित हैं। ये आँकड़े नामांकन और उपलब्ध प्रगति रिकॉर्ड्स पर आधारित हैं।',
           empty: 'अभी कोई छात्र एनालिटिक्स उपलब्ध नहीं है।',
           shareOfLearners: '{percent} सक्रिय शिक्षार्थी',
+          noHotspot: 'अभी कोई हॉटस्पॉट डेटा नहीं है',
+          highlights: {
+            strongestCourse: 'सबसे मजबूत कोर्स',
+            needsAttentionCourse: 'ध्यान चाहने वाला कोर्स',
+            toughestCourse: 'सबसे कठिन कोर्स'
+          },
+          fields: {
+            activeLearners: 'सक्रिय शिक्षार्थी',
+            avgEngagement: 'औसत सक्रियता',
+            supportShare: 'सहायता अनुपात',
+            modules: 'मॉड्यूल',
+            tasks: 'कार्य',
+            hotspot: 'हॉटस्पॉट'
+          },
           charts: {
             progressBreakdown: 'प्रगति वितरण',
             performanceMix: 'प्रदर्शन मिश्रण',
             engagementGraph: 'शिक्षार्थी सक्रियता ग्राफ',
             scoreCurve: 'कक्षा स्कोर वक्र',
             difficultyHeatmap: 'कठिन कार्य हीटमैप',
-            leaderboardSnapshot: 'शीर्ष बनाम जोखिम स्नैपशॉट'
+            leaderboardSnapshot: 'शीर्ष बनाम जोखिम स्नैपशॉट',
+            courseComparison: 'कोर्स तुलना',
+            courseHealth: 'कोर्स स्वास्थ्य विवरण'
           }
         },
         sections: {

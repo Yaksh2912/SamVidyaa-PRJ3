@@ -80,6 +80,12 @@ const DEFAULT_PERFORMANCE_ANALYTICS = {
   },
   scoreDistribution: [],
   taskDifficultyHotspots: [],
+  courseBreakdown: [],
+  courseHighlights: {
+    strongestCourse: null,
+    needsAttentionCourse: null,
+    toughestCourse: null
+  },
   studentCount: 0,
   dataMode: 'enrollment_only'
 }
@@ -1059,6 +1065,15 @@ function TeacherDashboard() {
   }))
   const leaderboardSnapshot = performanceAnalytics.leaderboardSnapshot || DEFAULT_PERFORMANCE_ANALYTICS.leaderboardSnapshot
   const overallHardestTask = performanceAnalytics.taskDifficultyHotspots?.[0] || null
+  const courseHighlights = performanceAnalytics.courseHighlights || DEFAULT_PERFORMANCE_ANALYTICS.courseHighlights
+  const courseComparisonItems = (performanceAnalytics.courseBreakdown || []).map((course) => ({
+    key: course.courseId,
+    label: course.courseName,
+    shortLabel: course.courseCode || course.courseName?.split(' ').slice(0, 2).join(' '),
+    value: course.avgCompletionRate || 0,
+    meta: `${formatPercent(course.averageEngagement)} • ${course.activeLearners || 0}`,
+    color: 'linear-gradient(180deg, #2563eb 0%, #14b8a6 100%)'
+  }))
   const taskHotspotItems = (performanceAnalytics.taskDifficultyHotspots || []).slice(0, 6).map((task) => ({
     key: task.taskId,
     title: task.taskName,
@@ -1292,6 +1307,50 @@ function TeacherDashboard() {
                       </div>
                     </div>
 
+                    <div className="course-analytics-highlights analytics-highlights--dashboard">
+                      <div className="course-analytics-highlight">
+                        <span className="course-analytics-highlight__label">{performanceSection.highlights.strongestCourse}</span>
+                        {courseHighlights.strongestCourse ? (
+                          <>
+                            <strong>{courseHighlights.strongestCourse.courseName}</strong>
+                            <p>
+                              {analyticsLabels.fields.completion}: {formatPercent(courseHighlights.strongestCourse.avgCompletionRate)} • {analyticsLabels.fields.score}: {formatPercent(courseHighlights.strongestCourse.avgScore)}
+                            </p>
+                          </>
+                        ) : (
+                          <p>{performanceSection.empty}</p>
+                        )}
+                      </div>
+
+                      <div className="course-analytics-highlight course-analytics-highlight--warning">
+                        <span className="course-analytics-highlight__label">{performanceSection.highlights.needsAttentionCourse}</span>
+                        {courseHighlights.needsAttentionCourse ? (
+                          <>
+                            <strong>{courseHighlights.needsAttentionCourse.courseName}</strong>
+                            <p>
+                              {performanceSection.fields.supportShare}: {formatPercent(courseHighlights.needsAttentionCourse.supportShare)} • {analyticsLabels.fields.completion}: {formatPercent(courseHighlights.needsAttentionCourse.avgCompletionRate)}
+                            </p>
+                          </>
+                        ) : (
+                          <p>{performanceSection.empty}</p>
+                        )}
+                      </div>
+
+                      <div className="course-analytics-highlight">
+                        <span className="course-analytics-highlight__label">{performanceSection.highlights.toughestCourse}</span>
+                        {courseHighlights.toughestCourse ? (
+                          <>
+                            <strong>{courseHighlights.toughestCourse.courseName}</strong>
+                            <p>
+                              {performanceSection.fields.hotspot}: {courseHighlights.toughestCourse.topHotspot?.taskName || performanceSection.noHotspot} • {analyticsLabels.fields.challenge}: {formatPercent(courseHighlights.toughestCourse.topHotspot?.challengeScore)}
+                            </p>
+                          </>
+                        ) : (
+                          <p>{performanceSection.noHotspot}</p>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="analytics-visual-grid">
                       <AnalyticsDonutChart
                         title={performanceSection.charts.performanceMix}
@@ -1322,6 +1381,12 @@ function TeacherDashboard() {
                     </div>
 
                     <div className="course-analytics-grid">
+                      <AnalyticsColumnChart
+                        title={performanceSection.charts.courseComparison}
+                        items={courseComparisonItems}
+                        emptyLabel={performanceSection.empty}
+                      />
+
                       <section className="course-analytics-panel">
                         <div className="course-analytics-panel__header">
                           <h3>{performanceSection.charts.leaderboardSnapshot}</h3>
@@ -1367,6 +1432,39 @@ function TeacherDashboard() {
                                 ))}
                               </div>
                             </div>
+                          </div>
+                        )}
+                      </section>
+
+                      <section className="course-analytics-panel">
+                        <div className="course-analytics-panel__header">
+                          <h3>{performanceSection.charts.courseHealth}</h3>
+                          <span>{performanceAnalytics.courseBreakdown?.length || 0}</span>
+                        </div>
+
+                        {!performanceAnalytics.courseBreakdown?.length ? (
+                          <p className="empty-state">{performanceSection.empty}</p>
+                        ) : (
+                          <div className="course-analytics-bars">
+                            {performanceAnalytics.courseBreakdown.map((course) => (
+                              <div key={course.courseId} className="analytics-module-row">
+                                <div className="analytics-bar-row__meta">
+                                  <strong>{course.courseName}</strong>
+                                  <span>{course.courseCode}</span>
+                                </div>
+                                <div className="analytics-module-bars">
+                                  <div className="analytics-bar-track analytics-bar-track--secondary">
+                                    <div className="analytics-bar-fill analytics-bar-fill--soft" style={{ width: `${course.avgScore || 0}%` }} />
+                                  </div>
+                                  <div className="analytics-bar-track">
+                                    <div className="analytics-bar-fill analytics-bar-fill--strong" style={{ width: `${course.avgCompletionRate || 0}%` }} />
+                                  </div>
+                                </div>
+                                <p>
+                                  {performanceSection.fields.activeLearners}: {course.activeLearners || 0} • {performanceSection.fields.avgEngagement}: {formatPercent(course.averageEngagement)} • {performanceSection.fields.supportShare}: {formatPercent(course.supportShare)}
+                                </p>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </section>

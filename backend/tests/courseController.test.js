@@ -81,6 +81,9 @@ test('getTeacherStats returns score distribution, task hotspots, and leaderboard
     assert.equal(res.body.performanceAnalytics.topPerformers.length, 1);
     assert.equal(res.body.performanceAnalytics.leaderboardSnapshot.topPerformers.length, 1);
     assert.equal(res.body.performanceAnalytics.taskDifficultyHotspots[0].taskName, 'Loop Drill');
+    assert.equal(res.body.performanceAnalytics.courseBreakdown.length, 1);
+    assert.equal(res.body.performanceAnalytics.courseBreakdown[0].courseName, 'Algorithms');
+    assert.equal(res.body.performanceAnalytics.courseHighlights.strongestCourse.courseName, 'Algorithms');
     assert.equal(res.body.performanceAnalytics.scoreDistribution[4].label, '80-100');
     assert.equal(res.body.performanceAnalytics.scoreDistribution[4].value, 1);
 });
