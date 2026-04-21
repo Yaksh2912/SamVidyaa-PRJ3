@@ -16,7 +16,7 @@ import {
   StudentHistorySkeleton,
   useDelayedLoading
 } from '../components/ui/Skeleton'
-import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification, HiUserGroup, HiCheck, HiXMark, HiBellAlert, HiArrowTopRightOnSquare } from 'react-icons/hi2'
+import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification, HiUserGroup, HiCheck, HiXMark, HiBellAlert, HiArrowTopRightOnSquare, HiArrowTrendingUp, HiArrowTrendingDown, HiExclamationTriangle, HiFire, HiChartBar, HiCalendarDays } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
 import { normalizeAnnouncementList, subscribeToAnnouncementStream } from '../utils/announcementRealtime'
 import './Dashboard.css'
@@ -60,6 +60,262 @@ const formatFileSize = (size) => {
 
 const STUDENT_DASHBOARD_STATE_KEY = 'student_dashboard_state';
 const STUDENT_ANNOUNCEMENT_POPUP_MS = 8000;
+const STUDENT_ANALYTICS_STREAK_DAY_MS = 24 * 60 * 60 * 1000;
+const ACTIVE_ENROLLMENT_STATUSES = ['ACTIVE', 'APPROVED'];
+
+const getTaskDeadlinePassed = (task) => Boolean(
+  (task?.has_deadline ?? Boolean(task?.deadline_at)) &&
+  task?.deadline_at &&
+  new Date(task.deadline_at).getTime() < Date.now()
+)
+
+const getCalendarDayTimestamp = (value) => {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+  parsed.setHours(0, 0, 0, 0)
+  return parsed.getTime()
+}
+
+const getCurrentStreak = (entries = []) => {
+  const uniqueDayTimestamps = [...new Set(
+    entries
+      .map((entry) => getCalendarDayTimestamp(entry?.completed_at))
+      .filter((dayTimestamp) => dayTimestamp !== null)
+  )].sort((left, right) => right - left)
+
+  if (uniqueDayTimestamps.length === 0) return 0
+
+  const todayTimestamp = getCalendarDayTimestamp(new Date())
+  const yesterdayTimestamp = todayTimestamp - STUDENT_ANALYTICS_STREAK_DAY_MS
+  let expectedTimestamp = null
+
+  if (uniqueDayTimestamps[0] === todayTimestamp) {
+    expectedTimestamp = todayTimestamp
+  } else if (uniqueDayTimestamps[0] === yesterdayTimestamp) {
+    expectedTimestamp = yesterdayTimestamp
+  } else {
+    return 0
+  }
+
+  let streak = 0
+  for (const dayTimestamp of uniqueDayTimestamps) {
+    if (dayTimestamp !== expectedTimestamp) break
+    streak += 1
+    expectedTimestamp -= STUDENT_ANALYTICS_STREAK_DAY_MS
+  }
+
+  return streak
+}
+
+const getDaysUntilDeadline = (deadlineAt) => {
+  const deadlineTime = new Date(deadlineAt).getTime()
+  if (Number.isNaN(deadlineTime)) return null
+  return Math.ceil((deadlineTime - Date.now()) / STUDENT_ANALYTICS_STREAK_DAY_MS)
+}
+
+const buildStudentAnalyticsSnapshot = ({ activeEnrollments = [], courseSnapshots = [], taskHistory = [] }) => {
+  const activeCourseIds = new Set(activeEnrollments.map((enrollment) => enrollment?.course_id?._id).filter(Boolean))
+  const scopedHistory = activeCourseIds.size
+    ? taskHistory.filter((entry) => activeCourseIds.has(entry?.course_id?._id || entry?.course_id))
+    : taskHistory
+
+  const historyByCourseId = new Map()
+  const languageStats = new Map()
+  const completedDifficultyStats = new Map()
+  const pendingDifficultyStats = new Map()
+  const upcomingDeadlines = []
+
+  scopedHistory.forEach((entry) => {
+    const courseId = entry?.course_id?._id || entry?.course_id
+    const language = entry?.task_id?.language || entry?.task_language || 'Unknown'
+    const difficulty = entry?.task_id?.difficulty || entry?.task_difficulty || 'MEDIUM'
+    const pointsAwarded = Number(entry?.points_awarded) || 0
+
+    if (courseId) {
+      const courseBucket = historyByCourseId.get(courseId) || {
+        completedTasks: 0,
+        pointsEarned: 0,
+      }
+      courseBucket.completedTasks += 1
+      courseBucket.pointsEarned += pointsAwarded
+      historyByCourseId.set(courseId, courseBucket)
+    }
+
+    const languageBucket = languageStats.get(language) || {
+      name: language,
+      completedTasks: 0,
+      pointsEarned: 0,
+    }
+    languageBucket.completedTasks += 1
+    languageBucket.pointsEarned += pointsAwarded
+    languageStats.set(language, languageBucket)
+
+    const completedDifficultyBucket = completedDifficultyStats.get(difficulty) || {
+      name: difficulty,
+      completedTasks: 0,
+      pointsEarned: 0,
+    }
+    completedDifficultyBucket.completedTasks += 1
+    completedDifficultyBucket.pointsEarned += pointsAwarded
+    completedDifficultyStats.set(difficulty, completedDifficultyBucket)
+  })
+
+  const courseProgress = courseSnapshots.map(({ course, modules = [] }) => {
+    let pendingTasks = 0
+    let overdueTasks = 0
+    let dueSoonTasks = 0
+
+    modules.forEach((module) => {
+      ;(module.tasks || []).forEach((task) => {
+        pendingTasks += 1
+
+        const pendingDifficultyBucket = pendingDifficultyStats.get(task?.difficulty || 'MEDIUM') || {
+          name: task?.difficulty || 'MEDIUM',
+          pendingTasks: 0,
+          overdueTasks: 0,
+        }
+        pendingDifficultyBucket.pendingTasks += 1
+
+        const isOverdue = getTaskDeadlinePassed(task)
+        if (isOverdue) {
+          overdueTasks += 1
+          pendingDifficultyBucket.overdueTasks += 1
+        }
+
+        const daysUntilDeadline = task?.deadline_at ? getDaysUntilDeadline(task.deadline_at) : null
+        if (!isOverdue && daysUntilDeadline !== null && daysUntilDeadline <= 3) {
+          dueSoonTasks += 1
+        }
+
+        pendingDifficultyStats.set(task?.difficulty || 'MEDIUM', pendingDifficultyBucket)
+
+        if (task?.deadline_at) {
+          const deadlineTime = new Date(task.deadline_at).getTime()
+          if (!Number.isNaN(deadlineTime)) {
+            upcomingDeadlines.push({
+              taskId: task._id,
+              taskName: task.task_name,
+              courseName: course.course_name,
+              moduleName: module.module_name,
+              difficulty: task.difficulty,
+              points: task.points,
+              deadlineAt: task.deadline_at,
+              deadlineTime,
+              daysUntilDeadline,
+              isOverdue,
+            })
+          }
+        }
+      })
+    })
+
+    const completionHistory = historyByCourseId.get(course._id) || { completedTasks: 0, pointsEarned: 0 }
+    const totalTasks = completionHistory.completedTasks + pendingTasks
+    const progressPercent = totalTasks ? Math.round((completionHistory.completedTasks / totalTasks) * 100) : 0
+
+    return {
+      courseId: course._id,
+      courseName: course.course_name,
+      courseCode: course.course_code,
+      completedTasks: completionHistory.completedTasks,
+      pendingTasks,
+      totalTasks,
+      progressPercent,
+      overdueTasks,
+      dueSoonTasks,
+      pointsEarned: completionHistory.pointsEarned,
+    }
+  }).sort((left, right) => {
+    if (right.progressPercent !== left.progressPercent) return right.progressPercent - left.progressPercent
+    if (right.completedTasks !== left.completedTasks) return right.completedTasks - left.completedTasks
+    return left.courseName.localeCompare(right.courseName)
+  })
+
+  const strongestCourse = [...courseProgress]
+    .filter((course) => course.totalTasks > 0 && course.completedTasks > 0)
+    .sort((left, right) => {
+      if (right.progressPercent !== left.progressPercent) return right.progressPercent - left.progressPercent
+      if (right.completedTasks !== left.completedTasks) return right.completedTasks - left.completedTasks
+      return left.courseName.localeCompare(right.courseName)
+    })[0]
+
+  const strongestLanguage = [...languageStats.values()]
+    .filter((language) => language.completedTasks > 0)
+    .sort((left, right) => {
+      if (right.completedTasks !== left.completedTasks) return right.completedTasks - left.completedTasks
+      if (right.pointsEarned !== left.pointsEarned) return right.pointsEarned - left.pointsEarned
+      return left.name.localeCompare(right.name)
+    })[0]
+
+  const strongestDifficulty = [...completedDifficultyStats.values()]
+    .filter((difficulty) => difficulty.completedTasks > 0)
+    .sort((left, right) => {
+      if (right.completedTasks !== left.completedTasks) return right.completedTasks - left.completedTasks
+      if (right.pointsEarned !== left.pointsEarned) return right.pointsEarned - left.pointsEarned
+      return left.name.localeCompare(right.name)
+    })[0]
+
+  const weakCourse = [...courseProgress]
+    .filter((course) => course.pendingTasks > 0)
+    .sort((left, right) => {
+      if (right.overdueTasks !== left.overdueTasks) return right.overdueTasks - left.overdueTasks
+      if (right.pendingTasks !== left.pendingTasks) return right.pendingTasks - left.pendingTasks
+      return left.progressPercent - right.progressPercent
+    })[0]
+
+  const weakDifficulty = [...pendingDifficultyStats.values()]
+    .filter((difficulty) => difficulty.pendingTasks > 0)
+    .sort((left, right) => {
+      if (right.overdueTasks !== left.overdueTasks) return right.overdueTasks - left.overdueTasks
+      if (right.pendingTasks !== left.pendingTasks) return right.pendingTasks - left.pendingTasks
+      return left.name.localeCompare(right.name)
+    })[0]
+
+  const completedTasks = courseProgress.length
+    ? courseProgress.reduce((sum, course) => sum + course.completedTasks, 0)
+    : scopedHistory.length
+  const pendingTasks = courseProgress.reduce((sum, course) => sum + course.pendingTasks, 0)
+  const overdueTasks = courseProgress.reduce((sum, course) => sum + course.overdueTasks, 0)
+  const dueSoonTasks = courseProgress.reduce((sum, course) => sum + course.dueSoonTasks, 0)
+  const totalTrackedTasks = courseProgress.reduce((sum, course) => sum + course.totalTasks, 0)
+  const pointsCollected = scopedHistory.reduce((sum, entry) => sum + (Number(entry?.points_awarded) || 0), 0)
+  const overallProgress = totalTrackedTasks
+    ? Math.round((completedTasks / totalTrackedTasks) * 100)
+    : completedTasks > 0
+      ? 100
+      : 0
+
+  return {
+    overallProgress,
+    completedTasks,
+    pendingTasks,
+    overdueTasks,
+    dueSoonTasks,
+    activeCourseCount: activeEnrollments.length,
+    pointsCollected,
+    averagePointsPerTask: completedTasks ? Math.round(pointsCollected / completedTasks) : 0,
+    streakDays: getCurrentStreak(scopedHistory),
+    courseProgress,
+    strongAreas: [
+      strongestCourse ? { type: 'course', ...strongestCourse } : null,
+      strongestLanguage ? { type: 'language', ...strongestLanguage } : null,
+      strongestDifficulty ? { type: 'difficulty', ...strongestDifficulty } : null,
+    ].filter(Boolean),
+    weakAreas: [
+      weakCourse ? { type: 'course', ...weakCourse } : null,
+      weakDifficulty ? { type: 'difficulty', ...weakDifficulty } : null,
+      overdueTasks > 0 || dueSoonTasks > 0
+        ? { type: 'deadlines', overdueTasks, dueSoonTasks }
+        : null,
+    ].filter(Boolean),
+    upcomingDeadlines: upcomingDeadlines
+      .sort((left, right) => {
+        if (left.isOverdue !== right.isOverdue) return left.isOverdue ? -1 : 1
+        return left.deadlineTime - right.deadlineTime
+      })
+      .slice(0, 5),
+  }
+}
 
 function StudentDashboard() {
   const { theme } = useTheme()
@@ -153,6 +409,8 @@ function StudentDashboard() {
   const [showAnnouncementsPopup, setShowAnnouncementsPopup] = useState(false);
   const [taskHistory, setTaskHistory] = useState([]);
   const [loadingTaskHistory, setLoadingTaskHistory] = useState(false);
+  const [dashboardAnalytics, setDashboardAnalytics] = useState(null);
+  const [loadingDashboardAnalytics, setLoadingDashboardAnalytics] = useState(true);
   const showCourseSkeletons = useDelayedLoading(loading);
   const showHistorySkeletons = useDelayedLoading(loadingTaskHistory);
   const showRewardsSkeletons = useDelayedLoading(loadingRewards);
@@ -351,7 +609,7 @@ function StudentDashboard() {
       const token = userStr ? JSON.parse(userStr).token : null;
       if (!token) return;
 
-      const res = await fetch(`${API_BASE_URL}/api/tasks/history`, {
+      const res = await fetch(`${API_BASE_URL}/api/tasks/history?limit=100`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -530,6 +788,88 @@ function StudentDashboard() {
     fetchAnnouncements();
     fetchTaskHistory();
   }, []);
+
+  useEffect(() => {
+    if (loading || loadingTaskHistory) return undefined
+
+    const activeEnrollments = enrolledCourses.filter((enrollment) => ACTIVE_ENROLLMENT_STATUSES.includes(enrollment?.status))
+    let ignore = false
+
+    const fetchDashboardAnalytics = async () => {
+      if (activeEnrollments.length === 0) {
+        setDashboardAnalytics(buildStudentAnalyticsSnapshot({ activeEnrollments: [], courseSnapshots: [], taskHistory }))
+        setLoadingDashboardAnalytics(false)
+        return
+      }
+
+      setLoadingDashboardAnalytics(true)
+
+      try {
+        const userStr = localStorage.getItem('user')
+        const token = userStr ? JSON.parse(userStr).token : null
+        if (!token) {
+          setDashboardAnalytics(buildStudentAnalyticsSnapshot({ activeEnrollments, courseSnapshots: [], taskHistory }))
+          setLoadingDashboardAnalytics(false)
+          return
+        }
+
+        const courseSnapshots = await Promise.all(activeEnrollments.map(async (enrollment) => {
+          const course = enrollment.course_id
+          const modulesResponse = await fetch(`${API_BASE_URL}/api/modules/course/${course._id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+
+          const modules = modulesResponse.ok
+            ? sortModulesByOrder(await modulesResponse.json())
+            : []
+
+          const moduleSnapshots = await Promise.all(modules.map(async (module) => {
+            const tasksResponse = await fetch(`${API_BASE_URL}/api/tasks?module_id=${module._id}&limit=100`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+
+            const tasks = tasksResponse.ok ? await tasksResponse.json() : []
+            return {
+              ...module,
+              tasks: Array.isArray(tasks) ? tasks : [],
+            }
+          }))
+
+          return {
+            course,
+            modules: moduleSnapshots,
+          }
+        }))
+
+        if (ignore) return
+
+        setDashboardAnalytics(buildStudentAnalyticsSnapshot({
+          activeEnrollments,
+          courseSnapshots,
+          taskHistory,
+        }))
+      } catch (error) {
+        console.error('Error building student analytics:', error)
+        if (ignore) return
+
+        setDashboardAnalytics(buildStudentAnalyticsSnapshot({
+          activeEnrollments,
+          courseSnapshots: [],
+          taskHistory,
+        }))
+      } finally {
+        if (!ignore) {
+          setLoadingDashboardAnalytics(false)
+        }
+      }
+    }
+
+    fetchDashboardAnalytics()
+
+    return () => {
+      ignore = true
+    }
+  }, [loading, loadingTaskHistory, enrolledCourses, taskHistory])
 
   useEffect(() => () => {
     if (announcementPopupTimerRef.current) {
@@ -753,6 +1093,7 @@ function StudentDashboard() {
     pointShop: t.tabs.pointShop,
     rankings: t.tabs.rankings
   }
+  const activeCourseCount = enrolledCourses.filter((enrollment) => ACTIVE_ENROLLMENT_STATUSES.includes(enrollment.status)).length
   const getEnrollmentStatusLabel = (status) => {
     if (status === 'PENDING') return t.courses.requestPending
     if (status === 'REJECTED') return t.courses.notEnrolled
@@ -762,6 +1103,22 @@ function StudentDashboard() {
   const historyCourseCount = new Set(taskHistory.map((entry) => entry.course_id?._id || entry.course_id || entry.course_name).filter(Boolean)).size
   const historyPointsTotal = taskHistory.reduce((sum, entry) => sum + (entry.points_awarded || 0), 0)
   const latestHistoryEntry = taskHistory[0] || null
+  const analytics = dashboardAnalytics || {
+    overallProgress: 0,
+    completedTasks: 0,
+    pendingTasks: 0,
+    overdueTasks: 0,
+    dueSoonTasks: 0,
+    activeCourseCount,
+    pointsCollected: 0,
+    averagePointsPerTask: 0,
+    streakDays: 0,
+    courseProgress: [],
+    strongAreas: [],
+    weakAreas: [],
+    upcomingDeadlines: [],
+  }
+  const analyticsProgressWidth = `${Math.min(100, Math.max(0, analytics.overallProgress || 0))}%`
 
   return (
     <div className="dashboard-layout" data-theme={theme}>
@@ -956,7 +1313,7 @@ function StudentDashboard() {
                   <div className="stat-icon"><HiBookOpen /></div>
                   <div className="stat-info">
                     <h3>{t.stats.enrolledCourses}</h3>
-                    <p className="stat-number">{enrolledCourses.filter(e => e.status === 'ACTIVE' || e.status === 'APPROVED').length}</p>
+                    <p className="stat-number">{activeCourseCount}</p>
                   </div>
                 </div>
                 <div className="stat-card">
@@ -981,6 +1338,282 @@ function StudentDashboard() {
                   </div>
                 </div>
               </div>
+
+              <section className="student-analytics-panel">
+                <div className="workspace-panel-header student-analytics-panel__header">
+                  <div>
+                    <h3>{t.analytics.title}</h3>
+                    <p className="student-analytics-panel__subtitle">{t.analytics.subtitle}</p>
+                  </div>
+                </div>
+
+                {loadingDashboardAnalytics ? (
+                  <p className="empty-state">{t.analytics.loading}</p>
+                ) : analytics.courseProgress.length === 0 && analytics.completedTasks === 0 ? (
+                  <p className="empty-state">{t.analytics.empty}</p>
+                ) : (
+                  <>
+                    <div className="student-analytics-overview">
+                      <div className="student-analytics-hero">
+                        <div className="student-analytics-hero__icon">
+                          <HiChartBar />
+                        </div>
+                        <div className="student-analytics-hero__copy">
+                          <span>{t.analytics.overview.progressLabel}</span>
+                          <strong>{translate('dashboard.student.analytics.overview.progressValue', { percent: analytics.overallProgress })}</strong>
+                          <p>
+                            {translate('dashboard.student.analytics.overview.progressText', {
+                              completed: analytics.completedTasks,
+                              total: analytics.completedTasks + analytics.pendingTasks,
+                            })}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="student-analytics-progress-track" aria-hidden="true">
+                        <span style={{ width: analyticsProgressWidth }} />
+                      </div>
+
+                      <div className="student-analytics-metric-grid">
+                        <div className="student-analytics-metric-card">
+                          <div className="student-analytics-metric-card__icon">
+                            <HiCheckCircle />
+                          </div>
+                          <div>
+                            <span>{t.analytics.metrics.completedTasks}</span>
+                            <strong>{analytics.completedTasks}</strong>
+                          </div>
+                        </div>
+
+                        <div className="student-analytics-metric-card">
+                          <div className="student-analytics-metric-card__icon">
+                            <HiClock />
+                          </div>
+                          <div>
+                            <span>{t.analytics.metrics.pendingTasks}</span>
+                            <strong>{analytics.pendingTasks}</strong>
+                          </div>
+                        </div>
+
+                        <div className="student-analytics-metric-card">
+                          <div className="student-analytics-metric-card__icon student-analytics-metric-card__icon--warning">
+                            <HiExclamationTriangle />
+                          </div>
+                          <div>
+                            <span>{t.analytics.metrics.overdueTasks}</span>
+                            <strong>{analytics.overdueTasks}</strong>
+                          </div>
+                        </div>
+
+                        <div className="student-analytics-metric-card">
+                          <div className="student-analytics-metric-card__icon student-analytics-metric-card__icon--accent">
+                            <HiFire />
+                          </div>
+                          <div>
+                            <span>{t.analytics.metrics.streakDays}</span>
+                            <strong>{translate('dashboard.student.analytics.metrics.streakValue', { count: analytics.streakDays })}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="student-analytics-grid">
+                      <article className="student-analytics-card">
+                        <div className="student-analytics-card__header">
+                          <h4>{t.analytics.cards.strongAreas}</h4>
+                          <span className="student-analytics-card__badge">
+                            <HiArrowTrendingUp /> {t.analytics.labels.momentum}
+                          </span>
+                        </div>
+
+                        {analytics.strongAreas.length === 0 ? (
+                          <p className="student-analytics-card__empty">{t.analytics.emptyStates.strongAreas}</p>
+                        ) : (
+                          <div className="student-analytics-insight-list">
+                            {analytics.strongAreas.map((area) => (
+                              <div key={`${area.type}-${area.courseId || area.name}`} className="student-analytics-insight">
+                                <div>
+                                  <span className="student-analytics-insight__eyebrow">
+                                    {area.type === 'course'
+                                      ? t.analytics.strongAreaLabels.course
+                                      : area.type === 'language'
+                                        ? t.analytics.strongAreaLabels.language
+                                        : t.analytics.strongAreaLabels.difficulty}
+                                  </span>
+                                  <strong>
+                                    {area.type === 'difficulty'
+                                      ? getDifficultyLabel(area.name)
+                                      : area.courseName || area.name}
+                                  </strong>
+                                  <p>
+                                    {area.type === 'course'
+                                      ? translate('dashboard.student.analytics.strongAreaMeta.course', {
+                                        completed: area.completedTasks,
+                                        total: area.totalTasks,
+                                      })
+                                      : area.type === 'language'
+                                        ? translate('dashboard.student.analytics.strongAreaMeta.language', {
+                                          completed: area.completedTasks,
+                                          points: area.pointsEarned,
+                                        })
+                                        : translate('dashboard.student.analytics.strongAreaMeta.difficulty', {
+                                          completed: area.completedTasks,
+                                        })}
+                                  </p>
+                                </div>
+                                <span className="student-analytics-score">
+                                  {area.type === 'course'
+                                    ? translate('dashboard.student.analytics.labels.percentComplete', { percent: area.progressPercent })
+                                    : translate('dashboard.student.analytics.labels.pointShort', { points: area.pointsEarned || area.completedTasks })}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </article>
+
+                      <article className="student-analytics-card">
+                        <div className="student-analytics-card__header">
+                          <h4>{t.analytics.cards.weakAreas}</h4>
+                          <span className="student-analytics-card__badge student-analytics-card__badge--warning">
+                            <HiArrowTrendingDown /> {t.analytics.labels.focus}
+                          </span>
+                        </div>
+
+                        {analytics.weakAreas.length === 0 ? (
+                          <p className="student-analytics-card__empty">{t.analytics.emptyStates.weakAreas}</p>
+                        ) : (
+                          <div className="student-analytics-insight-list">
+                            {analytics.weakAreas.map((area) => (
+                              <div key={`${area.type}-${area.courseId || area.name || 'deadlines'}`} className="student-analytics-insight">
+                                <div>
+                                  <span className="student-analytics-insight__eyebrow">
+                                    {area.type === 'course'
+                                      ? t.analytics.weakAreaLabels.course
+                                      : area.type === 'difficulty'
+                                        ? t.analytics.weakAreaLabels.difficulty
+                                        : t.analytics.weakAreaLabels.deadlines}
+                                  </span>
+                                  <strong>
+                                    {area.type === 'course'
+                                      ? area.courseName
+                                      : area.type === 'difficulty'
+                                        ? getDifficultyLabel(area.name)
+                                        : t.analytics.weakAreaLabels.deadlinesTitle}
+                                  </strong>
+                                  <p>
+                                    {area.type === 'course'
+                                      ? translate('dashboard.student.analytics.weakAreaMeta.course', {
+                                        pending: area.pendingTasks,
+                                        overdue: area.overdueTasks,
+                                      })
+                                      : area.type === 'difficulty'
+                                        ? translate('dashboard.student.analytics.weakAreaMeta.difficulty', {
+                                          pending: area.pendingTasks,
+                                        })
+                                        : translate('dashboard.student.analytics.weakAreaMeta.deadlines', {
+                                          overdue: area.overdueTasks,
+                                          dueSoon: area.dueSoonTasks,
+                                        })}
+                                  </p>
+                                </div>
+                                <span className="student-analytics-score student-analytics-score--warning">
+                                  {area.type === 'course'
+                                    ? translate('dashboard.student.analytics.labels.pendingShort', { count: area.pendingTasks })
+                                    : area.type === 'difficulty'
+                                      ? translate('dashboard.student.analytics.labels.pendingShort', { count: area.pendingTasks })
+                                      : translate('dashboard.student.analytics.labels.overdueShort', { count: area.overdueTasks })}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </article>
+                    </div>
+
+                    <div className="student-analytics-grid student-analytics-grid--secondary">
+                      <article className="student-analytics-card">
+                        <div className="student-analytics-card__header">
+                          <h4>{t.analytics.cards.courseProgress}</h4>
+                          <span className="student-analytics-card__badge">
+                            <HiBookOpen /> {translate('dashboard.student.analytics.labels.courseCount', { count: analytics.activeCourseCount })}
+                          </span>
+                        </div>
+
+                        {analytics.courseProgress.length === 0 ? (
+                          <p className="student-analytics-card__empty">{t.analytics.emptyStates.courseProgress}</p>
+                        ) : (
+                          <div className="student-analytics-course-list">
+                            {analytics.courseProgress.map((course) => (
+                              <div key={course.courseId} className="student-analytics-course-item">
+                                <div className="student-analytics-course-item__top">
+                                  <div>
+                                    <strong>{course.courseName}</strong>
+                                    <p>{course.courseCode}</p>
+                                  </div>
+                                  <span>{translate('dashboard.student.analytics.labels.percentComplete', { percent: course.progressPercent })}</span>
+                                </div>
+
+                                <div className="student-analytics-course-item__bar" aria-hidden="true">
+                                  <span style={{ width: `${Math.min(100, Math.max(0, course.progressPercent))}%` }} />
+                                </div>
+
+                                <div className="student-analytics-course-item__meta">
+                                  <span>{translate('dashboard.student.analytics.courseMeta.completed', { completed: course.completedTasks, total: course.totalTasks })}</span>
+                                  <span>{translate('dashboard.student.analytics.courseMeta.pending', { count: course.pendingTasks })}</span>
+                                  <span>{translate('dashboard.student.analytics.courseMeta.overdue', { count: course.overdueTasks })}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </article>
+
+                      <article className="student-analytics-card">
+                        <div className="student-analytics-card__header">
+                          <h4>{t.analytics.cards.upcomingDeadlines}</h4>
+                          <span className="student-analytics-card__badge student-analytics-card__badge--warning">
+                            <HiCalendarDays /> {translate('dashboard.student.analytics.labels.dueSoonShort', { count: analytics.dueSoonTasks })}
+                          </span>
+                        </div>
+
+                        {analytics.upcomingDeadlines.length === 0 ? (
+                          <p className="student-analytics-card__empty">{t.analytics.emptyStates.upcomingDeadlines}</p>
+                        ) : (
+                          <div className="student-analytics-deadline-list">
+                            {analytics.upcomingDeadlines.map((task) => (
+                              <div key={task.taskId} className={`student-analytics-deadline-item ${task.isOverdue ? 'is-overdue' : ''}`}>
+                                <div>
+                                  <strong>{task.taskName}</strong>
+                                  <p>{task.courseName} · {task.moduleName}</p>
+                                </div>
+                                <div className="student-analytics-deadline-item__meta">
+                                  <span className="student-analytics-deadline-item__badge">
+                                    {getDifficultyLabel(task.difficulty)}
+                                  </span>
+                                  <span className="student-analytics-deadline-item__time">
+                                    {task.isOverdue
+                                      ? translate('dashboard.student.analytics.deadlines.overdueByDays', {
+                                        days: Math.abs(task.daysUntilDeadline || 0),
+                                      })
+                                      : task.daysUntilDeadline <= 0
+                                        ? t.analytics.deadlines.dueToday
+                                        : task.daysUntilDeadline === 1
+                                          ? t.analytics.deadlines.dueTomorrow
+                                          : translate('dashboard.student.analytics.deadlines.dueInDays', {
+                                            days: task.daysUntilDeadline,
+                                          })}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </article>
+                    </div>
+                  </>
+                )}
+              </section>
 
               {collaborations.incoming.length > 0 && (
                 <div className="collabs-section" style={{ marginTop: '2rem' }}>

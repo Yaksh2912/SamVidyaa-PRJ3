@@ -152,12 +152,7 @@ const createAnnouncement = async (req, res) => {
         let audienceType = requestedAudience;
         let courseId = requestedCourseId;
 
-        if (isInstructorRole(req.user.role)) {
-            audienceType = 'COURSE';
-            if (!courseId) {
-                return res.status(400).json({ message: 'Course is required for instructor announcements' });
-            }
-        } else if (audienceType === 'GLOBAL') {
+        if (audienceType === 'GLOBAL') {
             courseId = null;
         } else if (!courseId) {
             return res.status(400).json({ message: 'Course is required for course announcements' });

@@ -22,8 +22,6 @@ const PDF_EXTENSIONS = new Set(['.pdf']);
 const INSTALLER_EXTENSIONS = new Set(['.exe', '.msi']);
 
 const isAdminRole = (role) => String(role || '').toUpperCase() === 'ADMIN';
-const isInstructorRole = (role) => ['INSTRUCTOR', 'TEACHER'].includes(String(role || '').toUpperCase());
-
 const addError = (errors, field, message) => {
     if (!errors[field]) {
         errors[field] = message;
@@ -435,7 +433,7 @@ const validateAnnouncementCreateRequest = validateRequest((req, errors) => {
     validateNumber(req.body.expires_in_minutes, 'expires_in_minutes', errors, { integer: true, min: 1, max: 10080 });
 
     const normalizedAudience = trimmedString(req.body.audience_type || 'COURSE').toUpperCase() || 'COURSE';
-    const courseRequired = isInstructorRole(req.user?.role) || normalizedAudience !== 'GLOBAL';
+    const courseRequired = normalizedAudience !== 'GLOBAL';
     validateObjectId(req.body.course_id, 'course_id', errors, { required: courseRequired });
 });
 

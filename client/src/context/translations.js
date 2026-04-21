@@ -447,6 +447,78 @@ export const translations = {
           available: 'Available',
           pointsEarned: 'Points Earned'
         },
+        analytics: {
+          title: 'Personal Analytics',
+          subtitle: 'Track your progress, momentum, strong areas, and the places that need more attention.',
+          loading: 'Building your analytics...',
+          empty: 'Analytics will appear once your active courses start collecting tasks and completions.',
+          overview: {
+            progressLabel: 'Overall Progress',
+            progressValue: '{percent}%',
+            progressText: '{completed} of {total} tracked tasks completed'
+          },
+          metrics: {
+            completedTasks: 'Completed Tasks',
+            pendingTasks: 'Pending Tasks',
+            overdueTasks: 'Overdue Tasks',
+            streakDays: 'Current Streak',
+            streakValue: '{count} days'
+          },
+          cards: {
+            strongAreas: 'Strong Areas',
+            weakAreas: 'Needs Attention',
+            courseProgress: 'Course Progress',
+            upcomingDeadlines: 'Upcoming Deadlines'
+          },
+          strongAreaLabels: {
+            course: 'Best course momentum',
+            language: 'Strongest language',
+            difficulty: 'Comfort zone'
+          },
+          weakAreaLabels: {
+            course: 'Most pending work',
+            difficulty: 'Difficulty to revisit',
+            deadlines: 'Deadline pressure',
+            deadlinesTitle: 'Time management'
+          },
+          strongAreaMeta: {
+            course: '{completed} of {total} tasks completed',
+            language: '{completed} tasks completed • {points} pts earned',
+            difficulty: '{completed} tasks completed at this level'
+          },
+          weakAreaMeta: {
+            course: '{pending} pending • {overdue} overdue',
+            difficulty: '{pending} tasks still open at this level',
+            deadlines: '{overdue} overdue • {dueSoon} due soon'
+          },
+          courseMeta: {
+            completed: '{completed}/{total} done',
+            pending: '{count} pending',
+            overdue: '{count} overdue'
+          },
+          deadlines: {
+            dueToday: 'Due today',
+            dueTomorrow: 'Due tomorrow',
+            dueInDays: 'Due in {days} days',
+            overdueByDays: 'Overdue by {days} days'
+          },
+          labels: {
+            momentum: 'Momentum',
+            focus: 'Focus',
+            percentComplete: '{percent}% complete',
+            pointShort: '{points} pts',
+            pendingShort: '{count} pending',
+            overdueShort: '{count} overdue',
+            dueSoonShort: '{count} due soon',
+            courseCount: '{count} active courses'
+          },
+          emptyStates: {
+            strongAreas: 'Complete a few more tasks to reveal your strongest patterns.',
+            weakAreas: 'No major weak areas detected right now.',
+            courseProgress: 'Course progress will appear once your active courses publish tasks.',
+            upcomingDeadlines: 'No upcoming deadlines in your active task list.'
+          }
+        },
         collaboration: {
           pendingRequests: 'Pending Collaboration Requests',
           requestMessage: '{name} wants to team up for {task} in {course}.',
@@ -588,7 +660,10 @@ export const translations = {
         },
         announcements: {
           title: 'Announcements',
-          description: 'Send quick updates to students in one of your courses. The latest posts appear in the student announcements view.',
+          description: 'Send quick updates to all students or target one of your courses when the message only applies to that class.',
+          audienceLabel: 'Audience',
+          audienceGlobal: 'All Students',
+          audienceCourse: 'Specific Course',
           courseLabel: 'Course',
           selectCourse: 'Select a course',
           titleLabel: 'Announcement Title',
@@ -1500,6 +1575,78 @@ export const translations = {
           available: 'उपलब्ध',
           pointsEarned: 'अर्जित अंक'
         },
+        analytics: {
+          title: 'व्यक्तिगत एनालिटिक्स',
+          subtitle: 'अपनी प्रगति, गति, मजबूत क्षेत्रों और उन हिस्सों को देखें जहाँ अभी अधिक ध्यान चाहिए।',
+          loading: 'आपका एनालिटिक्स तैयार किया जा रहा है...',
+          empty: 'जब आपके सक्रिय कोर्स में कार्य और पूर्णताएँ जुड़ेंगी तब एनालिटिक्स यहाँ दिखेगा।',
+          overview: {
+            progressLabel: 'कुल प्रगति',
+            progressValue: '{percent}%',
+            progressText: '{total} ट्रैक किए गए कार्यों में से {completed} पूर्ण'
+          },
+          metrics: {
+            completedTasks: 'पूर्ण कार्य',
+            pendingTasks: 'लंबित कार्य',
+            overdueTasks: 'समय सीमा पार',
+            streakDays: 'वर्तमान स्ट्रीक',
+            streakValue: '{count} दिन'
+          },
+          cards: {
+            strongAreas: 'मजबूत क्षेत्र',
+            weakAreas: 'ध्यान देने योग्य क्षेत्र',
+            courseProgress: 'कोर्स प्रगति',
+            upcomingDeadlines: 'आने वाली समय-सीमाएँ'
+          },
+          strongAreaLabels: {
+            course: 'सबसे अच्छा कोर्स मोमेंटम',
+            language: 'सबसे मजबूत भाषा',
+            difficulty: 'सुविधाजनक स्तर'
+          },
+          weakAreaLabels: {
+            course: 'सबसे अधिक लंबित कार्य',
+            difficulty: 'दोबारा देखने योग्य कठिनाई',
+            deadlines: 'समय-सीमा दबाव',
+            deadlinesTitle: 'समय प्रबंधन'
+          },
+          strongAreaMeta: {
+            course: '{total} में से {completed} कार्य पूर्ण',
+            language: '{completed} कार्य पूर्ण • {points} अंक अर्जित',
+            difficulty: 'इस स्तर पर {completed} कार्य पूर्ण'
+          },
+          weakAreaMeta: {
+            course: '{pending} लंबित • {overdue} समय सीमा पार',
+            difficulty: 'इस स्तर पर अभी {pending} कार्य खुले हैं',
+            deadlines: '{overdue} समय सीमा पार • {dueSoon} जल्द देय'
+          },
+          courseMeta: {
+            completed: '{completed}/{total} पूर्ण',
+            pending: '{count} लंबित',
+            overdue: '{count} समय सीमा पार'
+          },
+          deadlines: {
+            dueToday: 'आज देय',
+            dueTomorrow: 'कल देय',
+            dueInDays: '{days} दिनों में देय',
+            overdueByDays: '{days} दिनों से लंबित'
+          },
+          labels: {
+            momentum: 'मोमेंटम',
+            focus: 'फोकस',
+            percentComplete: '{percent}% पूर्ण',
+            pointShort: '{points} अंक',
+            pendingShort: '{count} लंबित',
+            overdueShort: '{count} समय सीमा पार',
+            dueSoonShort: '{count} जल्द देय',
+            courseCount: '{count} सक्रिय कोर्स'
+          },
+          emptyStates: {
+            strongAreas: 'अपने मजबूत पैटर्न देखने के लिए कुछ और कार्य पूर्ण करें।',
+            weakAreas: 'अभी कोई बड़ा कमजोर क्षेत्र नहीं दिख रहा है।',
+            courseProgress: 'जब आपके सक्रिय कोर्स में कार्य प्रकाशित होंगे, तब प्रगति यहाँ दिखेगी।',
+            upcomingDeadlines: 'आपकी सक्रिय कार्य सूची में अभी कोई आने वाली समय-सीमा नहीं है।'
+          }
+        },
         collaboration: {
           pendingRequests: 'लंबित सहयोग अनुरोध',
           requestMessage: '{name} {course} में {task} के लिए साथ काम करना चाहता/चाहती है।',
@@ -1641,7 +1788,10 @@ export const translations = {
         },
         announcements: {
           title: 'घोषणाएँ',
-          description: 'अपने किसी कोर्स के छात्रों के लिए त्वरित अपडेट भेजें। नवीनतम पोस्ट छात्र घोषणाएँ दृश्य में दिखाई देंगी।',
+          description: 'सभी छात्रों के लिए त्वरित अपडेट भेजें या जब संदेश केवल एक कक्षा पर लागू हो तब किसी एक कोर्स को चुनें।',
+          audienceLabel: 'दर्शक',
+          audienceGlobal: 'सभी छात्र',
+          audienceCourse: 'विशिष्ट कोर्स',
           courseLabel: 'कोर्स',
           selectCourse: 'कोर्स चुनें',
           titleLabel: 'घोषणा शीर्षक',

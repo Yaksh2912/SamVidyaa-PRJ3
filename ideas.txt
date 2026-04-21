@@ -1,25 +1,17 @@
 Ideas for Future Features - SamVidyaa 🚀
 
-1. In-Browser IDE Integration 💻
-   - Integrate Monaco Editor (the engine behind VS Code).
-   - Give students syntax highlighting, auto-completion, and a professional environment directly inside the platform for completing CodingQuestions and Tasks.
-
-2. Context-Aware AI Code Reviewer 🤖
-   - Extend the Pinecone/LLM chatbot so it can read the student's current code submission from the IDE.
-   - When a student is stuck on a syntax error or a failing test case, the AI provides localized hints safely guiding them toward the solution without giving away the direct answer.
-
-3. Real-Time Web Sockets (Notifications) 🔔
+1. Real-Time Web Sockets (Notifications) 🔔
    - Implement Socket.io to provide live updates without needing page refreshes.
    - Notify students instantly when a peer requests collaboration, or when a teacher releases a new handout / grades an assignment.
 
-4. Code Plagiarism Detection 🔍
+2. Code Plagiarism Detection 🔍
    - Implement a lightweight AST (Abstract Syntax Tree) comparison tool for submitted code.
    - Flag suspiciously similar code submissions to teachers to ensure the integrity of lab assignments while still encouraging healthy collaboration.
 
-5. Advanced Teacher Analytics Dashboard 📊
+3. Advanced Teacher Analytics Dashboard 📊
    - Enhance the `getTeacherStats` API and integrate a charting library like Recharts or Chart.js on the frontend.
    - Provide teachers with a heat map of difficult tasks, a bell curve of class grades, and a visual leaderboard snapshot of top-performing vs at-risk students.
 
-6. Badges & Achievement System 🏆
+4. Badges & Achievement System 🏆
    - Take gamification beyond just a "Reward Shop" and "Points."
    - Add dynamic achievements (e.g., "First Submission," "Bug Squasher," "Streak of 5 Days") that are permanently displayed on the student's profile for peers to see.

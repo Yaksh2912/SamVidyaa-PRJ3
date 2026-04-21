@@ -208,6 +208,7 @@ function TeacherDashboard() {
   const [deletingAnnouncementId, setDeletingAnnouncementId] = React.useState(null)
   const [announcementMessage, setAnnouncementMessage] = React.useState('')
   const [announcementForm, setAnnouncementForm] = React.useState({
+    audienceType: 'COURSE',
     courseId: '',
     title: '',
     message: '',
@@ -550,18 +551,29 @@ function TeacherDashboard() {
   }, [])
 
   React.useEffect(() => {
-    if (!announcementForm.courseId && courses.length) {
+    if (announcementForm.audienceType === 'COURSE' && !announcementForm.courseId && courses.length) {
       setAnnouncementForm((prev) => ({ ...prev, courseId: courses[0]._id }))
     }
-  }, [announcementForm.courseId, courses])
+  }, [announcementForm.audienceType, announcementForm.courseId, courses])
 
   const handleAnnouncementFieldChange = (field, value) => {
-    setAnnouncementForm((prev) => ({ ...prev, [field]: value }))
+    setAnnouncementForm((prev) => {
+      if (field === 'audienceType') {
+        return {
+          ...prev,
+          audienceType: value,
+          courseId: value === 'GLOBAL' ? '' : (prev.courseId || courses[0]?._id || '')
+        }
+      }
+
+      return { ...prev, [field]: value }
+    })
     setAnnouncementMessage('')
   }
 
   const resetAnnouncementForm = () => {
     setAnnouncementForm({
+      audienceType: 'COURSE',
       courseId: courses[0]?._id || '',
       title: '',
       message: '',
@@ -571,7 +583,8 @@ function TeacherDashboard() {
   }
 
   const handleCreateAnnouncement = async () => {
-    if (!announcementForm.courseId || !announcementForm.title.trim() || !announcementForm.message.trim()) return
+    if (!announcementForm.title.trim() || !announcementForm.message.trim()) return
+    if (announcementForm.audienceType === 'COURSE' && !announcementForm.courseId) return
 
     const expiresInMinutes = getAnnouncementExpiryMinutes(announcementForm)
     if (announcementForm.timerPreset === 'custom' && !isAnnouncementTimerReady) return
@@ -589,7 +602,8 @@ function TeacherDashboard() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          course_id: announcementForm.courseId,
+          audience_type: announcementForm.audienceType,
+          course_id: announcementForm.audienceType === 'COURSE' ? announcementForm.courseId : null,
           title: announcementForm.title.trim(),
           message: announcementForm.message.trim(),
           expires_in_minutes: expiresInMinutes
@@ -1928,20 +1942,34 @@ function TeacherDashboard() {
                   <p className="dashboard-announcement-form-card__intro">{t.announcements.description}</p>
 
                   <label className="admin-installer-panel__label">
-                    {t.announcements.courseLabel}
+                    {t.announcements.audienceLabel}
                     <select
                       className="admin-installer-panel__input"
-                      value={announcementForm.courseId}
-                      onChange={(event) => handleAnnouncementFieldChange('courseId', event.target.value)}
+                      value={announcementForm.audienceType}
+                      onChange={(event) => handleAnnouncementFieldChange('audienceType', event.target.value)}
                     >
-                      <option value="">{t.announcements.selectCourse}</option>
-                      {courses.map((course) => (
-                        <option key={course._id} value={course._id}>
-                          {course.course_name}
-                        </option>
-                      ))}
+                      <option value="GLOBAL">{t.announcements.audienceGlobal}</option>
+                      <option value="COURSE">{t.announcements.audienceCourse}</option>
                     </select>
                   </label>
+
+                  {announcementForm.audienceType === 'COURSE' ? (
+                    <label className="admin-installer-panel__label">
+                      {t.announcements.courseLabel}
+                      <select
+                        className="admin-installer-panel__input"
+                        value={announcementForm.courseId}
+                        onChange={(event) => handleAnnouncementFieldChange('courseId', event.target.value)}
+                      >
+                        <option value="">{t.announcements.selectCourse}</option>
+                        {courses.map((course) => (
+                          <option key={course._id} value={course._id}>
+                            {course.course_name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
 
                   <label className="admin-installer-panel__label">
                     {t.announcements.titleLabel}
@@ -2021,7 +2049,7 @@ function TeacherDashboard() {
                     <button
                       type="button"
                       className="btn btn-primary"
-                      disabled={!courses.length || savingAnnouncement || !announcementForm.courseId || !announcementForm.title.trim() || !announcementForm.message.trim() || !isAnnouncementTimerReady}
+                      disabled={savingAnnouncement || !announcementForm.title.trim() || !announcementForm.message.trim() || (announcementForm.audienceType === 'COURSE' && !announcementForm.courseId) || !isAnnouncementTimerReady}
                       onClick={handleCreateAnnouncement}
                     >
                       {savingAnnouncement ? t.announcements.creating : t.announcements.create}
@@ -2031,7 +2059,7 @@ function TeacherDashboard() {
                     </button>
                   </div>
 
-                  {!courses.length ? (
+                  {!courses.length && announcementForm.audienceType === 'COURSE' ? (
                     <p className="admin-installer-panel__status">{t.announcements.noCourses}</p>
                   ) : null}
                   {announcementMessage ? (

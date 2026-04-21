@@ -142,3 +142,38 @@ test('createAnnouncement stores expiry and emits realtime updates', async (t) =>
     assert.equal(publishedEvent.type, 'created');
     assert.equal(publishedEvent.announcement._id, 'announcement-1');
 });
+
+test('createAnnouncement allows instructors to publish all-student announcements', async (t) => {
+    let createdPayload = null;
+
+    stubMethod(t, Announcement, 'create', async (payload) => {
+        createdPayload = payload;
+        return {
+            ...payload,
+            _id: 'announcement-2',
+            populate: async () => ({
+                _id: 'announcement-2',
+                ...payload,
+                created_by: { _id: payload.created_by, name: 'Teacher User' },
+            }),
+        };
+    });
+    stubMethod(t, announcementExpiryService, 'scheduleAnnouncementExpiry', () => {});
+    stubMethod(t, announcementEvents, 'publishAnnouncementEvent', () => {});
+
+    const req = {
+        user: { _id: 'teacher-1', role: 'INSTRUCTOR' },
+        body: {
+            audience_type: 'GLOBAL',
+            title: 'Campus notice',
+            message: 'The lab opens early tomorrow',
+        },
+    };
+    const res = createMockResponse();
+
+    await announcementController.createAnnouncement(req, res);
+
+    assert.equal(res.statusCode, 201);
+    assert.equal(createdPayload.audience_type, 'GLOBAL');
+    assert.equal(createdPayload.course_id, null);
+});
