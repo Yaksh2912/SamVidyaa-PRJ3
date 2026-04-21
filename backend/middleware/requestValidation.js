@@ -18,6 +18,21 @@ const TASK_IMPORT_MIME_TYPES = new Set([
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ]);
+const MODULE_FILE_EXTENSIONS = new Set([
+    ...TASK_IMPORT_EXTENSIONS,
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.webp',
+]);
+const MODULE_FILE_MIME_TYPES = new Set([
+    ...TASK_IMPORT_MIME_TYPES,
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'image/webp',
+]);
 const PDF_EXTENSIONS = new Set(['.pdf']);
 const INSTALLER_EXTENSIONS = new Set(['.exe', '.msi']);
 
@@ -221,6 +236,19 @@ const validateFile = (file, field, errors, options = {}) => {
     }
 };
 
+const validateFiles = (files, field, errors, options = {}) => {
+    if (!files) return;
+
+    if (!Array.isArray(files)) {
+        addError(errors, field, `${field} must be an array of files`);
+        return;
+    }
+
+    files.forEach((file, index) => {
+        validateFile(file, `${field}[${index}]`, errors, options);
+    });
+};
+
 const validateRequest = (validator) => (req, res, next) => {
     const errors = {};
     validator(req, errors);
@@ -307,6 +335,10 @@ const validateModuleCreateRequest = validateRequest((req, errors) => {
     validateNumber(req.body.module_test_questions, 'module_test_questions', errors, { integer: true, min: 0 });
     validateNumber(req.body.points, 'points', errors, { integer: true, min: 0 });
     validateBoolean(req.body.is_active, 'is_active', errors);
+    validateFiles(req.files, 'files', errors, {
+        allowedExtensions: MODULE_FILE_EXTENSIONS,
+        allowedMimeTypes: MODULE_FILE_MIME_TYPES,
+    });
 });
 
 const validateModuleUpdateRequest = validateRequest((req, errors) => {
@@ -318,6 +350,10 @@ const validateModuleUpdateRequest = validateRequest((req, errors) => {
     validateNumber(req.body.module_test_questions, 'module_test_questions', errors, { integer: true, min: 0 });
     validateNumber(req.body.points, 'points', errors, { integer: true, min: 0 });
     validateBoolean(req.body.is_active, 'is_active', errors);
+    validateFiles(req.files, 'files', errors, {
+        allowedExtensions: MODULE_FILE_EXTENSIONS,
+        allowedMimeTypes: MODULE_FILE_MIME_TYPES,
+    });
 });
 
 const validateModuleFileDeleteRequest = validateRequest((req, errors) => {

@@ -131,3 +131,4 @@ client/dist/
 client/.env
 backend/node_modules/
 backend/.env
+backend/cookies*.txt

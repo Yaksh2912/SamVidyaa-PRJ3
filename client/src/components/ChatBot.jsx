@@ -190,19 +190,63 @@ function ChatBot() {
         }
     };
 
-    // Format assistant messages with basic markdown
-    const formatMessage = (text) => {
-        if (!text) return '';
+    const renderInlineMessage = (text, keyPrefix) => String(text || '')
+        .split(/(\*\*.+?\*\*)/g)
+        .filter(Boolean)
+        .map((segment, index) => {
+            const key = `${keyPrefix}-${index}`;
+            if (segment.startsWith('**') && segment.endsWith('**') && segment.length > 4) {
+                return <strong key={key}>{segment.slice(2, -2)}</strong>;
+            }
 
-        return text
-            // Bold
-            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            // Bullet points
-            .replace(/^[-•]\s+(.+)$/gm, '<li>$1</li>')
-            // Wrap consecutive <li> in <ul>
-            .replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
-            // Emoji-prefixed lines as paragraphs
-            .replace(/\n/g, '<br/>');
+            return <React.Fragment key={key}>{segment}</React.Fragment>;
+        });
+
+    // Render simple markdown-like formatting without injecting raw HTML.
+    const renderMessage = (text) => {
+        const lines = String(text || '').split(/\r?\n/);
+        const elements = [];
+        let bulletItems = [];
+
+        const flushBullets = () => {
+            if (!bulletItems.length) return;
+
+            elements.push(
+                <ul key={`list-${elements.length}`}>
+                    {bulletItems.map((item, index) => (
+                        <li key={`list-item-${elements.length}-${index}`}>
+                            {renderInlineMessage(item, `bullet-${elements.length}-${index}`)}
+                        </li>
+                    ))}
+                </ul>
+            );
+            bulletItems = [];
+        };
+
+        lines.forEach((line, index) => {
+            const bulletMatch = line.match(/^\s*[-•]\s+(.+)$/);
+            if (bulletMatch) {
+                bulletItems.push(bulletMatch[1]);
+                return;
+            }
+
+            flushBullets();
+
+            if (!line.trim()) {
+                elements.push(<br key={`break-${index}`} />);
+                return;
+            }
+
+            elements.push(
+                <React.Fragment key={`line-${index}`}>
+                    {renderInlineMessage(line, `line-${index}`)}
+                    {index < lines.length - 1 ? <br /> : null}
+                </React.Fragment>
+            );
+        });
+
+        flushBullets();
+        return elements;
     };
 
     const SUGGESTIONS = [
@@ -281,12 +325,9 @@ function ChatBot() {
                                         </div>
                                         <div
                                             className="chatbot-msg-bubble"
-                                            dangerouslySetInnerHTML={{
-                                                __html: msg.role === 'assistant'
-                                                    ? formatMessage(msg.content)
-                                                    : msg.content,
-                                            }}
-                                        />
+                                        >
+                                            {renderMessage(msg.content)}
+                                        </div>
                                     </div>
                                 ))}
 

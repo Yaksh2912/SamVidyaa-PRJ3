@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const {
     handleUploadMiddleware,
     validateRegisterRequest,
+    validateModuleCreateRequest,
     validateTaskCreateRequest,
     validateDesktopResultRequest,
     validateAnnouncementCreateRequest,
@@ -59,6 +60,26 @@ test('validateTaskCreateRequest rejects invalid task payloads', async () => {
     assert.equal(res.body.errors.collab_percentage, 'collab_percentage must be at most 100');
     assert.equal(res.body.errors.time_limit, 'time_limit must be at least 1');
     assert.equal(res.body.errors.difficulty, 'difficulty must be one of: EASY, MEDIUM, HARD');
+});
+
+test('validateModuleCreateRequest rejects active content uploads', async () => {
+    const { res, nextCalled } = await runMiddleware(validateModuleCreateRequest, {
+        body: {
+            course_id: '507f1f77bcf86cd799439011',
+            module_name: 'Unsafe Upload',
+        },
+        files: [
+            {
+                originalname: 'payload.html',
+                mimetype: 'text/html',
+            },
+        ],
+    });
+
+    assert.equal(nextCalled, false);
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.body.message, 'Validation failed');
+    assert.equal(res.body.errors['files[0]'], 'files[0] has an unsupported file type');
 });
 
 test('validateDesktopResultRequest rejects invalid desktop result submissions', async () => {

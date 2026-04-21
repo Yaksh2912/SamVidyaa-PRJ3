@@ -8,10 +8,6 @@ Ideas for Future Features - SamVidyaa 🚀
    - Implement a lightweight AST (Abstract Syntax Tree) comparison tool for submitted code.
    - Flag suspiciously similar code submissions to teachers to ensure the integrity of lab assignments while still encouraging healthy collaboration.
 
-3. Advanced Teacher Analytics Dashboard 📊
-   - Enhance the `getTeacherStats` API and integrate a charting library like Recharts or Chart.js on the frontend.
-   - Provide teachers with a heat map of difficult tasks, a bell curve of class grades, and a visual leaderboard snapshot of top-performing vs at-risk students.
-
-4. Badges & Achievement System 🏆
+3. Badges & Achievement System 🏆
    - Take gamification beyond just a "Reward Shop" and "Points."
    - Add dynamic achievements (e.g., "First Submission," "Bug Squasher," "Streak of 5 Days") that are permanently displayed on the student's profile for peers to see.

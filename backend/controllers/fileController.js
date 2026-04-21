@@ -78,6 +78,7 @@ async function getProtectedFile(req, res, next) {
         }
 
         let resolvedName = path.basename(relativePath);
+        let disposition = req.query.download === '1' ? 'attachment' : 'inline';
 
         const course = await Course.findOne({ handout_path: relativePath }).select('_id instructor handout_filename');
         if (course) {
@@ -103,9 +104,9 @@ async function getProtectedFile(req, res, next) {
 
             const fileEntry = module.files?.find((file) => normalizeRelativePath(file.path) === relativePath);
             resolvedName = fileEntry?.name || resolvedName;
+            disposition = 'attachment';
         }
 
-        const disposition = req.query.download === '1' ? 'attachment' : 'inline';
         res.setHeader('Content-Disposition', `${disposition}; filename="${resolvedName.replace(/"/g, '')}"`);
         return res.sendFile(absolutePath);
     } catch (error) {

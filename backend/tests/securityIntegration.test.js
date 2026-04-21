@@ -222,6 +222,7 @@ test('protected file access only succeeds for authorized users through the file 
     });
 
     assert.equal(allowedResponse.status, 200);
+    assert.match(allowedResponse.headers['content-disposition'], /^attachment;/);
     assert.equal(await allowedResponse.text(), 'protected-content');
 });
 
