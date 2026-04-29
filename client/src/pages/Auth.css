@@ -10,16 +10,7 @@
   padding: 2rem;
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 12% 18%, rgba(var(--border-light-rgb), 0.16), transparent 30%),
-    radial-gradient(circle at 85% 14%, rgba(245, 158, 11, 0.12), transparent 24%),
-    radial-gradient(circle at 78% 85%, rgba(59, 130, 246, 0.1), transparent 28%),
-    var(--bg-primary);
-  background-image:
-    radial-gradient(circle at 12% 18%, rgba(var(--border-light-rgb), 0.16), transparent 30%),
-    radial-gradient(circle at 85% 14%, rgba(245, 158, 11, 0.12), transparent 24%),
-    radial-gradient(circle at 78% 85%, rgba(59, 130, 246, 0.1), transparent 28%),
-    var(--bg-gradient-mesh);
+  background: var(--bg-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -37,7 +28,7 @@
   height: 18rem;
   top: 7%;
   left: -4rem;
-  background: rgba(13, 148, 136, 0.12);
+  background: rgba(255, 122, 61, 0.08);
 }
 
 .auth-stage::after {
@@ -45,7 +36,7 @@
   height: 24rem;
   right: -8rem;
   bottom: -10rem;
-  background: rgba(245, 158, 11, 0.12);
+  background: rgba(246, 196, 49, 0.08);
 }
 
 .auth-wrapper {
@@ -165,10 +156,7 @@
   font-weight: 800;
   line-height: 1.08;
   letter-spacing: -0.03em;
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent-primary);
 }
 
 .auth-reference-form > span {
@@ -234,7 +222,7 @@
 .panel-content .transparent-btn {
   border-radius: 999px;
   border: none;
-  background: var(--accent-gradient);
+  background: linear-gradient(135deg, var(--accent-primary) 0%, color-mix(in srgb, var(--accent-primary) 82%, var(--accent-secondary) 18%) 100%);
   color: #fff;
   font-size: 0.84rem;
   font-weight: 700;
@@ -263,7 +251,8 @@
 .auth-reference-form button:hover,
 .panel-content .transparent-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 22px 38px rgba(var(--border-light-rgb), 0.28);
+  background: color-mix(in srgb, var(--accent-primary) 92%, var(--text-primary) 8%);
+  box-shadow: 0 18px 30px rgba(var(--border-light-rgb), 0.2);
 }
 
 .auth-reference-form button:focus-visible,
@@ -277,8 +266,8 @@
   margin: 0.2rem 0 0.55rem;
   padding: 0.78rem 0.9rem;
   border-radius: 14px;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.16);
+  background: rgba(216, 74, 50, 0.08);
+  border: 1px solid rgba(216, 74, 50, 0.16);
   color: var(--accent-red);
   font-size: 0.88rem;
   font-weight: 500;
@@ -333,9 +322,7 @@
 
 .slide-panel {
   background:
-    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.2), transparent 24%),
-    radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.16), transparent 22%),
-    linear-gradient(155deg, color-mix(in srgb, var(--accent-primary) 95%, #083344 5%) 0%, color-mix(in srgb, var(--accent-secondary) 92%, #0f766e 8%) 48%, color-mix(in srgb, var(--accent-blue) 88%, #06b6d4 12%) 100%);
+    linear-gradient(145deg, #ff8f4a 0%, #ffad6d 58%, #f6c431 100%);
   color: #fff;
   position: relative;
   left: -100%;
@@ -386,6 +373,7 @@
   font-size: clamp(2.1rem, 3vw, 2.8rem);
   font-weight: 800;
   line-height: 1.06;
+  color: #fff9ef;
 }
 
 .panel-content p {
@@ -427,16 +415,7 @@
 }
 
 [data-theme="dark"] .auth-stage {
-  background:
-    radial-gradient(circle at 12% 18%, rgba(45, 212, 191, 0.16), transparent 30%),
-    radial-gradient(circle at 85% 14%, rgba(251, 191, 36, 0.12), transparent 24%),
-    radial-gradient(circle at 78% 85%, rgba(59, 130, 246, 0.12), transparent 28%),
-    var(--bg-primary);
-  background-image:
-    radial-gradient(circle at 12% 18%, rgba(45, 212, 191, 0.16), transparent 30%),
-    radial-gradient(circle at 85% 14%, rgba(251, 191, 36, 0.12), transparent 24%),
-    radial-gradient(circle at 78% 85%, rgba(59, 130, 246, 0.12), transparent 28%),
-    var(--bg-gradient-mesh);
+  background: var(--bg-primary);
 }
 
 [data-theme="dark"] .auth-brand-mark,
@@ -455,9 +434,9 @@
 }
 
 [data-theme="dark"] .auth-inline-error {
-  color: #fca5a5;
+  color: #ffb5a4;
   background: rgba(127, 29, 29, 0.3);
-  border-color: rgba(248, 113, 113, 0.2);
+  border-color: rgba(255, 128, 104, 0.2);
 }
 
 @media (max-width: 900px) {

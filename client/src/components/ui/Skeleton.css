@@ -126,7 +126,7 @@
 }
 
 .gc-card-header--skeleton {
-  background: linear-gradient(135deg, rgba(13, 148, 136, 0.78), rgba(6, 182, 212, 0.52));
+  background: linear-gradient(135deg, rgba(255, 122, 61, 0.78), rgba(74, 150, 201, 0.52));
   gap: 0.5rem;
 }
 

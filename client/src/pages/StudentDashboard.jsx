@@ -20,7 +20,7 @@ import {
 } from '../components/ui/Skeleton'
 import { HiDocumentText, HiCheckCircle, HiClock, HiStar, HiTrophy, HiBookOpen, HiPlusCircle, HiArrowDownTray, HiPaperClip, HiShoppingCart, HiGift, HiBolt, HiSparkles, HiCheckBadge, HiLightBulb, HiSwatch, HiIdentification, HiUserGroup, HiCheck, HiXMark, HiBellAlert, HiArrowTopRightOnSquare, HiArrowTrendingUp, HiArrowTrendingDown, HiExclamationTriangle, HiFire, HiChartBar, HiCalendarDays } from 'react-icons/hi2'
 import { FiSun, FiMoon } from 'react-icons/fi'
-import { normalizeAnnouncementList, subscribeToAnnouncementStream } from '../utils/announcementRealtime'
+import { applyAnnouncementEvent, normalizeAnnouncementList, subscribeToAnnouncementStream } from '../utils/announcementRealtime'
 import './Dashboard.css'
 
 const COURSE_GRADIENTS = [
@@ -921,7 +921,7 @@ function StudentDashboard() {
           return
         }
 
-        await fetchAnnouncements()
+        setAnnouncements((prev) => applyAnnouncementEvent(prev, data))
 
         if (data.type === 'created') {
           openAnnouncementsPopup({ autoClose: true })

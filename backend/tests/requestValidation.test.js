@@ -100,13 +100,13 @@ test('validateDesktopResultRequest rejects invalid desktop result submissions', 
     assert.equal(res.body.errors.raw_result, 'raw_result must be an object');
 });
 
-test('validateAnnouncementCreateRequest requires course_id for instructors', async () => {
+test('validateAnnouncementCreateRequest requires course_id for course announcements', async () => {
     const { res, nextCalled } = await runMiddleware(validateAnnouncementCreateRequest, {
         user: { role: 'INSTRUCTOR' },
         body: {
             title: 'Lab update',
             message: 'New schedule',
-            audience_type: 'GLOBAL',
+            audience_type: 'COURSE',
         },
     });
 

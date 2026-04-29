@@ -141,6 +141,7 @@ test('createAnnouncement stores expiry and emits realtime updates', async (t) =>
     assert.equal(scheduledAnnouncement._id, 'announcement-1');
     assert.equal(publishedEvent.type, 'created');
     assert.equal(publishedEvent.announcement._id, 'announcement-1');
+    assert.deepEqual(publishedEvent.announcement.created_by, { _id: 'admin-1', name: 'Admin User' });
 });
 
 test('createAnnouncement allows instructors to publish all-student announcements', async (t) => {

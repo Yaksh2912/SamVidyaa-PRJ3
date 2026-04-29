@@ -598,6 +598,9 @@ export const translations = {
           score: 'Score',
           yourRank: 'You',
           points: 'pts',
+          topThree: 'Top 3',
+          leaderScore: 'Leader score',
+          participants: 'Participants',
           options: {
             global: 'Global Ranking',
             weekly: 'Weekly Top',
@@ -1746,6 +1749,9 @@ export const translations = {
           score: 'स्कोर',
           yourRank: 'आप',
           points: 'अंक',
+          topThree: 'शीर्ष 3',
+          leaderScore: 'शीर्ष स्कोर',
+          participants: 'प्रतिभागी',
           options: {
             global: 'वैश्विक रैंकिंग',
             weekly: 'साप्ताहिक शीर्ष',

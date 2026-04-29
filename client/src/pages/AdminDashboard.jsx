@@ -20,7 +20,7 @@ import {
   useDelayedLoading
 } from '../components/ui/Skeleton'
 import AdminDashboardWorkspace from '../components/dashboard/admin/AdminDashboardWorkspace'
-import { normalizeAnnouncementList, subscribeToAnnouncementStream } from '../utils/announcementRealtime'
+import { applyAnnouncementEvent, normalizeAnnouncementList, subscribeToAnnouncementStream } from '../utils/announcementRealtime'
 import {
   ANNOUNCEMENT_TIMER_PRESETS,
   ANNOUNCEMENT_TIMER_UNITS,
@@ -591,22 +591,7 @@ function AdminDashboard() {
           return
         }
 
-        try {
-          const response = await fetch(`${API_BASE_URL}/api/announcements/manage`, {
-            headers: {
-              Authorization: `Bearer ${user.token}`,
-            },
-          })
-
-          if (!response.ok) {
-            throw new Error('announcement_refresh_failed')
-          }
-
-          const announcementData = await response.json()
-          setAnnouncements(normalizeAnnouncementList(announcementData))
-        } catch (error) {
-          console.error('Failed to refresh admin announcements', error)
-        }
+        setAnnouncements((prev) => applyAnnouncementEvent(prev, data))
       },
       onError: (error) => {
         console.error('Announcement stream error:', error)

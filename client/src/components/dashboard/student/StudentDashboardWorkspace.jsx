@@ -21,6 +21,7 @@ import {
   HiGift,
   HiPlusCircle,
   HiStar,
+  HiTrophy,
   HiUserGroup,
   HiXMark,
 } from 'react-icons/hi2'
@@ -70,6 +71,19 @@ function StudentDashboardWorkspace({
   enrollLoading,
   handleEnroll,
 }) {
+  const leaderboardRows = Array.isArray(leaderboardData) ? leaderboardData : []
+  const isClassRankingAwaitingCourse = leaderboardType === 'class' && !selectedCourseForRanking
+  const selectedLeaderboardLabel = t.leaderboard.options?.[leaderboardType] || t.leaderboard.title
+  const podiumRows = leaderboardType !== 'peers' ? leaderboardRows.slice(0, 3) : []
+  const currentUserIndex = leaderboardRows.findIndex((student) => student._id === user?._id || student.isCurrentUser)
+  const currentUserRank = currentUserIndex >= 0 ? currentUserIndex + 1 : null
+  const leaderPoints = Number(leaderboardRows[0]?.points) || 0
+  const leaderboardLabels = {
+    topThree: t.leaderboard.topThree || 'Top 3',
+    leaderScore: t.leaderboard.leaderScore || 'Leader score',
+    participants: t.leaderboard.participants || 'Participants',
+  }
+
   return (
     <div className="dashboard-workspace">
       {activeTab === 'dashboard' && (
@@ -669,17 +683,36 @@ function StudentDashboardWorkspace({
       )}
 
       {activeTab === 'rankings' && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel">
-          <div className="workspace-panel-header">
-            <h3>{t.leaderboard.title}</h3>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="workspace-panel student-rankings-panel">
+          <div className="student-rankings-hero">
+            <div className="student-rankings-hero__copy">
+              <span className="student-rankings-hero__eyebrow">
+                <HiTrophy /> {selectedLeaderboardLabel}
+              </span>
+              <h3>{t.leaderboard.title}</h3>
+            </div>
+
+            <div className="student-rankings-summary">
+              <div className="student-rankings-summary__item">
+                <span>{leaderboardLabels.leaderScore}</span>
+                <strong>{leaderPoints}</strong>
+              </div>
+              <div className="student-rankings-summary__item">
+                <span>{t.leaderboard.yourRank}</span>
+                <strong>{currentUserRank ? `#${currentUserRank}` : '-'}</strong>
+              </div>
+              <div className="student-rankings-summary__item">
+                <span>{leaderboardLabels.participants}</span>
+                <strong>{leaderboardRows.length}</strong>
+              </div>
+            </div>
           </div>
 
-          <div className="leaderboard-controls" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          <div className="leaderboard-controls">
             <select
               className="language-selector"
               value={leaderboardType}
               onChange={(event) => setLeaderboardType(event.target.value)}
-              style={{ width: 'auto', padding: '0.5rem 1rem' }}
             >
               <option value="global">{t.leaderboard.options.global}</option>
               <option value="weekly">{t.leaderboard.options.weekly}</option>
@@ -692,7 +725,6 @@ function StudentDashboardWorkspace({
                 className="language-selector"
                 value={selectedCourseForRanking}
                 onChange={(event) => setSelectedCourseForRanking(event.target.value)}
-                style={{ width: 'auto', padding: '0.5rem 1rem' }}
               >
                 <option value="">{t.leaderboard.selectClass}</option>
                 {enrolledCourses.filter((entry) => entry.status === 'ACTIVE' || entry.status === 'APPROVED').map((entry) => (
@@ -707,20 +739,46 @@ function StudentDashboardWorkspace({
           {loadingLeaderboard ? (
             <LeaderboardSkeleton count={5} visible={showLeaderboardSkeletons} />
           ) : (
-            <div className="ranking-list">
-              {leaderboardType === 'class' && !selectedCourseForRanking ? (
-                <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{t.leaderboard.selectClassPrompt}</p>
-              ) : leaderboardData.length === 0 ? (
-                <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>{t.leaderboard.empty}</p>
+            <>
+              {podiumRows.length > 0 && (
+                <div className="student-rankings-podium">
+                  {podiumRows.map((student, index) => {
+                    const displayRank = index + 1
+                    const isCurrentUser = student._id === user?._id || student.isCurrentUser
+
+                    return (
+                      <article
+                        key={`podium-${student._id || index}`}
+                        className={`student-rankings-podium__card student-rankings-podium__card--rank-${displayRank} ${isCurrentUser ? 'is-current-user' : ''}`}
+                      >
+                        <span className="student-rankings-podium__rank">#{displayRank}</span>
+                        <div className="student-rankings-podium__avatar">
+                          {(student.name || 'S').charAt(0).toUpperCase()}
+                        </div>
+                        <strong>{isCurrentUser ? t.leaderboard.yourRank : student.name}</strong>
+                        <span className="student-rankings-podium__score">
+                          <HiStar /> {student.points || 0} {t.leaderboard.points}
+                        </span>
+                      </article>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="ranking-list">
+                {isClassRankingAwaitingCourse ? (
+                  <p className="ranking-empty-state">{t.leaderboard.selectClassPrompt}</p>
+                ) : leaderboardRows.length === 0 ? (
+                  <p className="ranking-empty-state">{t.leaderboard.empty}</p>
               ) : (
-                leaderboardData.map((student, index) => {
+                leaderboardRows.map((student, index) => {
                   const isCurrentUser = student._id === user?._id || student.isCurrentUser
                   const displayRank = index + 1
 
                   return (
                     <div
                       key={student._id || index}
-                      className={`ranking-item ${isCurrentUser ? 'current-user' : ''} ${displayRank <= 3 && leaderboardType !== 'peers' ? 'top-3' : ''}`}
+                      className={`ranking-item ranking-item--rank-${Math.min(displayRank, 4)} ${isCurrentUser ? 'current-user' : ''} ${displayRank <= 3 && leaderboardType !== 'peers' ? 'top-3' : ''}`}
                     >
                       <div className="rank-badge">{displayRank}</div>
                       <div className="rank-avatar">{(student.name || 'S').charAt(0).toUpperCase()}</div>
@@ -728,15 +786,19 @@ function StudentDashboardWorkspace({
                         <span className="rank-name">
                           {isCurrentUser ? `${student.name} (${t.leaderboard.yourRank})` : student.name}
                         </span>
+                        <span className="rank-details">
+                          {displayRank <= 3 && leaderboardType !== 'peers' ? leaderboardLabels.topThree : selectedLeaderboardLabel}
+                        </span>
                       </div>
                       <div className="rank-score">
-                        {student.points || 0} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>{t.leaderboard.points}</span>
+                        {student.points || 0} <span>{t.leaderboard.points}</span>
                       </div>
                     </div>
                   )
                 })
               )}
-            </div>
+              </div>
+            </>
           )}
         </motion.div>
       )}

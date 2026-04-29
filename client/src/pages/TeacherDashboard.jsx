@@ -22,7 +22,7 @@ import {
   TeacherTaskGridSkeleton,
   useDelayedLoading
 } from '../components/ui/Skeleton'
-import { normalizeAnnouncementList, subscribeToAnnouncementStream } from '../utils/announcementRealtime'
+import { applyAnnouncementEvent, normalizeAnnouncementList, subscribeToAnnouncementStream } from '../utils/announcementRealtime'
 import {
   ANNOUNCEMENT_TIMER_PRESETS,
   ANNOUNCEMENT_TIMER_UNITS,
@@ -550,7 +550,7 @@ function TeacherDashboard() {
           return
         }
 
-        await fetchAnnouncements()
+        setAnnouncements((prev) => applyAnnouncementEvent(prev, data))
       },
       onError: (error) => {
         console.error('Announcement stream error:', error)

@@ -1,7 +1,7 @@
 /* ─── Variables for Premium Chat UI ─── */
 :root {
-    --chat-accent-start: var(--accent-secondary, #5eead4);
-    --chat-accent-end: var(--accent-primary, #2dd4bf);
+    --chat-accent-start: var(--accent-secondary, #eec75a);
+    --chat-accent-end: var(--accent-primary, #f29a62);
     --chat-gradient: var(--accent-gradient);
     --chat-bg-dark: var(--glass-bg);
     --chat-border-glass: var(--glass-border);

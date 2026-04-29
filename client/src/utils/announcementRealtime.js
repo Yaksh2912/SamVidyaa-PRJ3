@@ -20,6 +20,30 @@ export const normalizeAnnouncementList = (announcements) => (
     : []
 )
 
+export const applyAnnouncementEvent = (announcements, data) => {
+  const currentAnnouncements = Array.isArray(announcements) ? announcements : []
+  const announcementId = data?.announcement?._id
+
+  if (!data?.type || !announcementId) {
+    return normalizeAnnouncementList(currentAnnouncements)
+  }
+
+  if (data.type === 'deleted' || data.type === 'expired') {
+    return normalizeAnnouncementList(
+      currentAnnouncements.filter((announcement) => announcement?._id !== announcementId)
+    )
+  }
+
+  if (data.type === 'created') {
+    return normalizeAnnouncementList([
+      data.announcement,
+      ...currentAnnouncements.filter((announcement) => announcement?._id !== announcementId),
+    ])
+  }
+
+  return normalizeAnnouncementList(currentAnnouncements)
+}
+
 const parseSseEvent = (rawEvent) => {
   const lines = rawEvent.split('\n')
   let eventName = 'message'

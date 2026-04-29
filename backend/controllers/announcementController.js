@@ -175,12 +175,12 @@ const createAnnouncement = async (req, res) => {
         });
 
         announcementExpiryService.scheduleAnnouncementExpiry(announcement);
+        const populatedAnnouncement = await announcement.populate(ANNOUNCEMENT_POPULATE);
         announcementEventService.publishAnnouncementEvent({
             type: 'created',
-            announcement,
+            announcement: populatedAnnouncement,
         });
 
-        const populatedAnnouncement = await announcement.populate(ANNOUNCEMENT_POPULATE);
         return res.status(201).json(populatedAnnouncement);
     } catch (error) {
         console.error('Create announcement failed', error);
