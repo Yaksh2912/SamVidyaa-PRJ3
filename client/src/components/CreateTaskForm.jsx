@@ -273,7 +273,7 @@ function CreateTaskForm({ onClose, onTaskCreated, moduleId, initialData }) {
                                 <label className="task-file-picker">
                                     <input
                                         type="file"
-                                        accept=".pdf,.doc,.docx,.rtf,.txt,.md,.csv,.xlsx,.xls"
+                                        accept=".pdf,.doc,.docx,.rtf,.txt,.md,.csv,.xlsx"
                                         onChange={(e) => setImportFile(e.target.files?.[0] || null)}
                                     />
                                     <span className="task-file-picker__button">{t.chooseFile}</span>

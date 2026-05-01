@@ -33,6 +33,31 @@ const userSchema = mongoose.Schema(
         enrollment_number: {
             type: String,
         },
+        section: {
+            type: String,
+        },
+        analytics_user_id: {
+            type: mongoose.Schema.Types.Mixed,
+        },
+        analytics_source: {
+            type: String,
+            enum: ['students', 'trusted_users', null],
+            default: null,
+        },
+        analytics_synced_at: {
+            type: Date,
+        },
+        google_id: {
+            type: String,
+        },
+        avatar_url: {
+            type: String,
+        },
+        auth_provider: {
+            type: String,
+            enum: ['local', 'google'],
+            default: 'local',
+        },
         last_login: {
             type: Date,
         },
@@ -52,7 +77,7 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
-        next();
+        return next();
     }
 
     const salt = await bcrypt.genSalt(10);

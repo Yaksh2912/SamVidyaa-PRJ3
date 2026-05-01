@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { findAnalyticsProfileByEmail } = require('./analyticsProfileService');
 
 function normalizeRole(role, fallback = 'STUDENT') {
     let normalizedRole = role ? role.toUpperCase() : fallback;
@@ -10,7 +11,8 @@ function normalizeRole(role, fallback = 'STUDENT') {
     return normalizedRole;
 }
 
-async function resolveUsername(email, preferredUsername) {
+async function resolveUsername(email, preferredUsername, options = {}) {
+    const { allowSuffixForPreferred = false } = options;
     let username = (preferredUsername || '').trim();
 
     if (!username) {
@@ -22,7 +24,7 @@ async function resolveUsername(email, preferredUsername) {
         return username;
     }
 
-    if (preferredUsername) {
+    if (preferredUsername && !allowSuffixForPreferred) {
         const error = new Error('Username already taken');
         error.statusCode = 400;
         throw error;
@@ -54,6 +56,7 @@ async function createUserAccount({
         throw error;
     }
 
+    const analyticsProfile = await findAnalyticsProfileByEmail(email);
     const assignedRole = normalizeRole(role);
     if (!['STUDENT', 'INSTRUCTOR', 'ADMIN'].includes(assignedRole)) {
         const error = new Error('Invalid role');
@@ -61,16 +64,24 @@ async function createUserAccount({
         throw error;
     }
 
-    const resolvedUsername = await resolveUsername(email, username);
+    const resolvedUsername = await resolveUsername(email, username || analyticsProfile?.username, {
+        allowSuffixForPreferred: Boolean(!username && analyticsProfile?.username),
+    });
 
     return User.create({
-        name,
+        name: analyticsProfile?.name || name,
         email,
         password,
         role: assignedRole,
         username: resolvedUsername,
-        institution,
-        enrollment_number,
+        institution: analyticsProfile?.institution || institution,
+        enrollment_number: analyticsProfile?.enrollment_number || enrollment_number,
+        section: analyticsProfile?.section,
+        points: analyticsProfile?.points,
+        last_login: analyticsProfile?.last_login,
+        analytics_user_id: analyticsProfile?.analytics_user_id,
+        analytics_source: analyticsProfile?.analytics_source,
+        analytics_synced_at: analyticsProfile?.analytics_synced_at,
     });
 }
 

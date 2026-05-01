@@ -1,4 +1,5 @@
 const dotenv = require('dotenv');
+const path = require('path');
 const { installConsoleBridge, logger } = require('./utils/logger');
 const connectDB = require('./config/db');
 const { createApp } = require('./app');
@@ -7,7 +8,7 @@ const { initVectorStore } = require('./services/vectorStore');
 const { captureError, emitMonitoringEvent } = require('./services/monitoringService');
 const { scheduleExistingAnnouncementExpiries } = require('./services/announcementExpiryService');
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 installConsoleBridge();
 
 connectDB();

@@ -35,7 +35,7 @@ The project is organized as a **monorepo** with two major runtime segments: a Re
   - Google Generative AI embeddings (`text-embedding-004`)
   - Pinecone for vector storage and semantic retrieval
   - `pdf-parse` for PDF extraction during ingestion
-- **Other Utilities:** `cors`, `dotenv`, `archiver`, `xlsx`, native file-system access
+- **Other Utilities:** `cors`, `dotenv`, `archiver`, `read-excel-file`, native file-system access
 
 ## Core Features
 
@@ -111,6 +111,7 @@ SamVidyaa-PRJ3/
    PORT=5001
    MONGO_URI=<your_mongodb_connection_string>
    JWT_SECRET=<your_jwt_secret>
+   GOOGLE_CLIENT_ID=<your_google_oauth_web_client_id>
    
    # LLM provider configuration
    GROQ_API_KEY=<your_groq_api_key>
@@ -131,6 +132,10 @@ SamVidyaa-PRJ3/
 2. Install dependencies: `npm install`
 3. Configure Environment Variables (if required, create `.env` in `client/` and set `VITE_API_URL=http://localhost:5001`).
    *(Note: The client uses Vite, so env variables should be prefixed with `VITE_`)*
+   ```env
+   VITE_API_URL=http://localhost:5001
+   VITE_GOOGLE_CLIENT_ID=<your_google_oauth_web_client_id>
+   ```
 4. Start the Vite development server: `npm run dev`
 5. Open your browser and navigate to `http://localhost:5173`.
 

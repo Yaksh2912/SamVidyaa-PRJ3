@@ -7,7 +7,6 @@ const TaskCompletion = require('../models/TaskCompletion');
 const DesktopTaskResult = require('../models/DesktopTaskResult');
 const Enrollment = require('../models/Enrollment');
 const { PDFParse } = require('pdf-parse');
-const xlsx = require('xlsx');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -15,6 +14,7 @@ const mongoose = require('mongoose');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
+const { parseSpreadsheetRows } = require('../utils/spreadsheet');
 
 const execFileAsync = promisify(execFile);
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
@@ -280,21 +280,8 @@ const buildTaskFromSpreadsheetRow = (row) => {
     };
 };
 
-const extractImportedSpreadsheetTasks = (file) => {
-    const workbook = xlsx.read(file.buffer, {
-        type: 'buffer',
-        raw: true,
-        cellDates: false
-    });
-    const sheetName = workbook.SheetNames[0];
-
-    if (!sheetName) {
-        return [];
-    }
-
-    const worksheet = workbook.Sheets[sheetName];
-    const rows = xlsx.utils.sheet_to_json(worksheet, { defval: '', raw: true });
-
+const extractImportedSpreadsheetTasks = async (file) => {
+    const rows = await parseSpreadsheetRows(file, { defval: '' });
     return rows
         .map((row) => buildTaskFromSpreadsheetRow(row))
         .filter((task) => Object.values(task).some((value) => {
@@ -349,10 +336,9 @@ const extractImportedDocumentText = async (file) => {
 
 const isSpreadsheetImport = (file) => {
     const extension = path.extname(file.originalname || '').toLowerCase();
-    return ['.csv', '.xlsx', '.xls'].includes(extension)
+    return ['.csv', '.xlsx'].includes(extension)
         || [
             'text/csv',
-            'application/vnd.ms-excel',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         ].includes(file.mimetype);
 };
@@ -450,7 +436,7 @@ const createTask = async (req, res) => {
     }
 };
 
-// @desc    Import tasks from a PDF/DOC/DOCX/RTF/TXT/CSV/XLSX/XLS file
+// @desc    Import tasks from a PDF/DOC/DOCX/RTF/TXT/CSV/XLSX file
 // @route   POST /api/tasks/import
 // @access  Private (Teacher/Admin)
 const importTasksFromDocument = async (req, res) => {
@@ -471,7 +457,7 @@ const importTasksFromDocument = async (req, res) => {
         }
 
         const resolvedImportedTasks = isSpreadsheetImport(req.file)
-            ? extractImportedSpreadsheetTasks(req.file)
+            ? await extractImportedSpreadsheetTasks(req.file)
             : splitImportedTasks(await extractImportedDocumentText(req.file))
                 .map((section) => buildTaskDraft(section))
                 .filter((task) => Object.values(task).some((value) => {

@@ -177,7 +177,7 @@ function AddStudentsModal({ onClose, courseId, onStudentsAdded }) {
                             <label>{t.selectExcel}</label>
                             <input
                                 type="file"
-                                accept=".xlsx, .xls, .csv"
+                                accept=".xlsx, .csv"
                                 onChange={(e) => setExcelFile(e.target.files[0])}
                                 required
                             />

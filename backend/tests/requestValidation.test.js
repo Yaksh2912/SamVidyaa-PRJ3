@@ -6,6 +6,7 @@ const {
     validateRegisterRequest,
     validateModuleCreateRequest,
     validateTaskCreateRequest,
+    validateTaskImportRequest,
     validateDesktopResultRequest,
     validateAnnouncementCreateRequest,
 } = require('../middleware/requestValidation');
@@ -60,6 +61,22 @@ test('validateTaskCreateRequest rejects invalid task payloads', async () => {
     assert.equal(res.body.errors.collab_percentage, 'collab_percentage must be at most 100');
     assert.equal(res.body.errors.time_limit, 'time_limit must be at least 1');
     assert.equal(res.body.errors.difficulty, 'difficulty must be one of: EASY, MEDIUM, HARD');
+});
+
+test('validateTaskImportRequest rejects legacy xls uploads', async () => {
+    const { res, nextCalled } = await runMiddleware(validateTaskImportRequest, {
+        body: {
+            module_id: '507f1f77bcf86cd799439011',
+        },
+        file: {
+            originalname: 'tasks.xls',
+            mimetype: 'application/vnd.ms-excel',
+        },
+    });
+
+    assert.equal(nextCalled, false);
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.body.errors.document, 'document has an unsupported file type');
 });
 
 test('validateModuleCreateRequest rejects active content uploads', async () => {

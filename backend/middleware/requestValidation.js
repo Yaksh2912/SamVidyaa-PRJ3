@@ -5,7 +5,7 @@ const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
 const TASK_DIFFICULTIES = new Set(['EASY', 'MEDIUM', 'HARD']);
 const TASK_RESULT_STATUSES = new Set(['PASSED', 'FAILED']);
 const ANNOUNCEMENT_AUDIENCES = new Set(['GLOBAL', 'COURSE']);
-const TASK_IMPORT_EXTENSIONS = new Set(['.pdf', '.doc', '.docx', '.rtf', '.txt', '.md', '.csv', '.xlsx', '.xls']);
+const TASK_IMPORT_EXTENSIONS = new Set(['.pdf', '.doc', '.docx', '.rtf', '.txt', '.md', '.csv', '.xlsx']);
 const TASK_IMPORT_MIME_TYPES = new Set([
     'application/pdf',
     'application/msword',
@@ -20,6 +20,7 @@ const TASK_IMPORT_MIME_TYPES = new Set([
 ]);
 const MODULE_FILE_EXTENSIONS = new Set([
     ...TASK_IMPORT_EXTENSIONS,
+    '.xls',
     '.png',
     '.jpg',
     '.jpeg',

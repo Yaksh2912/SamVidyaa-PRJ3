@@ -1,18 +1,25 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { FcGoogle } from 'react-icons/fc'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useI18n } from '../context/I18nContext'
 import '../pages/Auth.css'
 
+let initializedGoogleClientId = null
+let activeGoogleCredentialHandler = null
+
 function AuthSplitPage({ mode = 'login' }) {
   const navigate = useNavigate()
   const { theme } = useTheme()
   const { translations } = useI18n()
-  const { login, register } = useAuth()
+  const { login, register, loginWithGoogle } = useAuth()
   const [displayMode, setDisplayMode] = useState(mode)
   const isSignupMode = displayMode === 'signup'
+  const loginGoogleButtonRef = useRef(null)
+  const signupGoogleButtonRef = useRef(null)
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
   const [loginForm, setLoginForm] = useState({
     email: '',
@@ -30,9 +37,104 @@ function AuthSplitPage({ mode = 'login' }) {
   const loginText = translations.auth.login
   const signupText = translations.auth.signup
 
+  useEffect(() => {
+    if (!googleClientId) return undefined
+
+    activeGoogleCredentialHandler = async (response) => {
+      try {
+        const data = await loginWithGoogle(response.credential)
+        redirectByRole(data.role)
+      } catch (error) {
+        if (isSignupMode) {
+          setSignupError(error.message)
+        } else {
+          setLoginError(error.message)
+        }
+      }
+    }
+
+    const scriptId = 'google-identity-services'
+
+    const renderGoogleButtons = () => {
+      if (!window.google?.accounts?.id) return
+
+      if (initializedGoogleClientId !== googleClientId) {
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: (response) => {
+            if (activeGoogleCredentialHandler) {
+              activeGoogleCredentialHandler(response)
+            }
+          },
+        })
+        initializedGoogleClientId = googleClientId
+      }
+
+      const buttonOptions = {
+        theme: 'outline',
+        size: 'large',
+        type: 'standard',
+        shape: 'pill',
+        text: isSignupMode ? 'signup_with' : 'signin_with',
+        width: 280,
+      }
+
+      if (loginGoogleButtonRef.current && loginGoogleButtonRef.current.childElementCount === 0) {
+        window.google.accounts.id.renderButton(loginGoogleButtonRef.current, {
+          ...buttonOptions,
+          text: 'signin_with',
+        })
+      }
+
+      if (signupGoogleButtonRef.current && signupGoogleButtonRef.current.childElementCount === 0) {
+        window.google.accounts.id.renderButton(signupGoogleButtonRef.current, {
+          ...buttonOptions,
+          text: 'signup_with',
+        })
+      }
+    }
+
+    if (document.getElementById(scriptId)) {
+      renderGoogleButtons()
+      return undefined
+    }
+
+    const script = document.createElement('script')
+    script.id = scriptId
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.onload = renderGoogleButtons
+    document.head.appendChild(script)
+
+    return undefined
+  }, [googleClientId, isSignupMode, loginWithGoogle])
+
   const handleModeSwitch = (nextMode) => {
     setDisplayMode(nextMode)
   }
+
+  const handleGoogleUnavailable = () => {
+    const message = 'Google sign-in is not configured. Add VITE_GOOGLE_CLIENT_ID in client/.env and restart Vite.'
+    if (isSignupMode) {
+      setSignupError(message)
+    } else {
+      setLoginError(message)
+    }
+  }
+
+  const renderGoogleAuth = (buttonRef, buttonText) => (
+    <>
+      <div className="auth-divider"><span>or</span></div>
+      {googleClientId ? (
+        <div className="google-signin-slot" ref={buttonRef} />
+      ) : (
+        <button type="button" className="google-fallback-button" onClick={handleGoogleUnavailable}>
+          <FcGoogle /> {buttonText}
+        </button>
+      )}
+    </>
+  )
 
   const handleLoginChange = (event) => {
     const { name, value } = event.target
@@ -161,6 +263,8 @@ function AuthSplitPage({ mode = 'login' }) {
 
             <button type="submit">{signupText.signUp}</button>
 
+            {renderGoogleAuth(signupGoogleButtonRef, 'Sign up with Google')}
+
             <div className="mobile-switch">
               <p>{signupText.haveAccount}</p>
               <button type="button" className="auth-mobile-switch-link" onClick={() => handleModeSwitch('login')}>
@@ -199,6 +303,8 @@ function AuthSplitPage({ mode = 'login' }) {
               required
             />
             <button type="submit">{loginText.signIn}</button>
+
+            {renderGoogleAuth(loginGoogleButtonRef, 'Sign in with Google')}
 
             <div className="mobile-switch">
               <p>{loginText.noAccount}</p>

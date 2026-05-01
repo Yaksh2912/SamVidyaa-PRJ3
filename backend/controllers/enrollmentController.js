@@ -1,8 +1,8 @@
 const Enrollment = require('../models/Enrollment');
 const User = require('../models/User');
 const Course = require('../models/Course');
-const xlsx = require('xlsx');
 const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
+const { parseSpreadsheetRows } = require('../utils/spreadsheet');
 
 // @desc    Enroll a student in a course
 // @route   POST /api/enrollments
@@ -360,11 +360,7 @@ const bulkEnrollByExcel = async (req, res) => {
             return res.status(400).json({ message: 'Excel file is required' });
         }
 
-        // Parse excel buffer
-        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const data = xlsx.utils.sheet_to_json(worksheet);
+        const data = await parseSpreadsheetRows(req.file, { defval: '' });
 
         let enrolled = 0;
         let skipped = 0;
@@ -433,7 +429,7 @@ const bulkEnrollByExcel = async (req, res) => {
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Excel bulk enrollment failed' });
+        res.status(error.statusCode || 500).json({ message: error.statusCode ? error.message : 'Excel bulk enrollment failed' });
     }
 };
 
