@@ -18,6 +18,69 @@ const {
     createQueryChain,
 } = require('./testUtils');
 
+test('getCourses scopes instructor aliases to their own courses', async (t) => {
+    let countQuery;
+    let findQuery;
+
+    const courses = [
+        {
+            _id: 'course-1',
+            toObject() {
+                return {
+                    _id: 'course-1',
+                    course_name: 'Algorithms',
+                    course_code: 'CS101',
+                };
+            },
+        },
+    ];
+
+    stubMethod(t, Course, 'countDocuments', async (query) => {
+        countQuery = query;
+        return courses.length;
+    });
+    stubMethod(t, Course, 'find', (query) => {
+        findQuery = query;
+        return createAwaitableQuery(courses, ['sort', 'skip', 'limit', 'populate']);
+    });
+    stubMethod(t, Module, 'aggregate', async () => ([
+        { _id: { toString: () => 'course-1' }, count: 2 },
+    ]));
+
+    const req = { user: { _id: 'teacher-1', role: 'teacher' }, query: {} };
+    const res = createMockResponse();
+
+    await courseController.getCourses(req, res);
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(countQuery, { instructor: 'teacher-1' });
+    assert.deepEqual(findQuery, { instructor: 'teacher-1' });
+    assert.equal(res.body[0].modules_count, 2);
+});
+
+test('getCourses scopes student aliases to active courses only', async (t) => {
+    let countQuery;
+    let findQuery;
+
+    stubMethod(t, Course, 'countDocuments', async (query) => {
+        countQuery = query;
+        return 0;
+    });
+    stubMethod(t, Course, 'find', (query) => {
+        findQuery = query;
+        return createAwaitableQuery([], ['sort', 'skip', 'limit', 'populate']);
+    });
+
+    const req = { user: { _id: 'student-1', role: 'student' }, query: {} };
+    const res = createMockResponse();
+
+    await courseController.getCourses(req, res);
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(countQuery, { is_active: true });
+    assert.deepEqual(findQuery, { is_active: true });
+});
+
 test('getTeacherStats returns score distribution, task hotspots, and leaderboard snapshot data', async (t) => {
     stubMethod(t, Course, 'find', () => createAwaitableQuery([
         { _id: 'course-1', course_name: 'Algorithms', course_code: 'CS101' },

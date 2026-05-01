@@ -63,7 +63,8 @@ const formatFileSize = (size) => {
 const STUDENT_DASHBOARD_STATE_KEY = 'student_dashboard_state';
 const STUDENT_ANNOUNCEMENT_POPUP_MS = 8000;
 const STUDENT_ANALYTICS_STREAK_DAY_MS = 24 * 60 * 60 * 1000;
-const ACTIVE_ENROLLMENT_STATUSES = ['ACTIVE', 'APPROVED'];
+const COURSE_ACCESS_ENROLLMENT_STATUSES = ['ACTIVE', 'APPROVED', 'COMPLETED'];
+const VISIBLE_ENROLLMENT_STATUSES = [...COURSE_ACCESS_ENROLLMENT_STATUSES, 'PENDING'];
 
 const getTaskDeadlinePassed = (task) => Boolean(
   (task?.has_deadline ?? Boolean(task?.deadline_at)) &&
@@ -512,7 +513,7 @@ function StudentDashboard() {
       // We only consider "Active" or "Pending" enrollments as "taking a slot". 
       // Rejected/Dropped should appear in "Available" so they can try again.
       const activeEnrollmentIds = enrolledData
-        .filter(e => e.course_id && ['ACTIVE', 'APPROVED', 'PENDING'].includes(e.status))
+        .filter(e => e.course_id && VISIBLE_ENROLLMENT_STATUSES.includes(e.status))
         .map(e => e.course_id._id);
 
       const available = allCourses.filter(c => !activeEnrollmentIds.includes(c._id) && c.is_active !== false); // Assuming default active if field missing
@@ -520,7 +521,7 @@ function StudentDashboard() {
 
       // Filter Enrolled Courses to only show Active/Pending/Approved - Hide Rejected/Dropped to "archive" them essentially
       // unless we want a "History" tab later. For now, user wants them "back in available", which implies removed from here.
-      setEnrolledCourses(enrolledData.filter(e => e.course_id && ['ACTIVE', 'APPROVED', 'PENDING'].includes(e.status)));
+      setEnrolledCourses(enrolledData.filter(e => e.course_id && VISIBLE_ENROLLMENT_STATUSES.includes(e.status)));
 
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -794,7 +795,7 @@ function StudentDashboard() {
   useEffect(() => {
     if (loading || loadingTaskHistory) return undefined
 
-    const activeEnrollments = enrolledCourses.filter((enrollment) => ACTIVE_ENROLLMENT_STATUSES.includes(enrollment?.status))
+    const activeEnrollments = enrolledCourses.filter((enrollment) => COURSE_ACCESS_ENROLLMENT_STATUSES.includes(enrollment?.status))
     let ignore = false
 
     const fetchDashboardAnalytics = async () => {
@@ -1095,9 +1096,10 @@ function StudentDashboard() {
     pointShop: t.tabs.pointShop,
     rankings: t.tabs.rankings
   }
-  const activeCourseCount = enrolledCourses.filter((enrollment) => ACTIVE_ENROLLMENT_STATUSES.includes(enrollment.status)).length
+  const activeCourseCount = enrolledCourses.filter((enrollment) => COURSE_ACCESS_ENROLLMENT_STATUSES.includes(enrollment.status)).length
   const getEnrollmentStatusLabel = (status) => {
     if (status === 'PENDING') return t.courses.requestPending
+    if (status === 'COMPLETED') return t.courses.completed
     if (status === 'REJECTED') return t.courses.notEnrolled
     return t.courses.active
   }

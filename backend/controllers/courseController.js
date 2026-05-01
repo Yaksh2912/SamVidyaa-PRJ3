@@ -10,11 +10,26 @@ const multer = require('multer');
 const path = require('path');
 const archive = require('archiver');
 const { clearCourseHandoutVectors, resolveUploadPath, syncCourseHandout } = require('../services/courseHandoutIngestionService');
+const {
+    buildAnalyticsTeacherStatsForUser,
+    buildCourseAnalyticsResponseFromDocument,
+    findAnalyticsCourseByCode,
+    findAnalyticsCourseById,
+    isAnalyticsCourseId,
+    listAnalyticsCoursesForUser,
+    mapAnalyticsCourseSummary,
+    parseAnalyticsCourseId,
+} = require('../services/analyticsCourseService');
 const { ensureDir, removeFileIfPresent } = require('../utils/fileSystem');
 const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 
-const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
-const isInstructorRole = (role) => role === 'INSTRUCTOR' || role === 'instructor' || role === 'TEACHER' || role === 'teacher';
+const normalizeRole = (role) => String(role || '').toUpperCase();
+const isAdminRole = (role) => normalizeRole(role) === 'ADMIN';
+const isStudentRole = (role) => normalizeRole(role) === 'STUDENT';
+const isInstructorRole = (role) => {
+    const normalizedRole = normalizeRole(role);
+    return normalizedRole === 'INSTRUCTOR' || normalizedRole === 'TEACHER';
+};
 
 const verifyCourseAccess = async (courseId, user, options = {}) => {
     const { allowStudentReadActive = false } = options;
@@ -32,11 +47,29 @@ const verifyCourseAccess = async (courseId, user, options = {}) => {
         return { course };
     }
 
-    if (allowStudentReadActive && user.role === 'STUDENT' && course.is_active) {
+    if (allowStudentReadActive && isStudentRole(user.role) && course.is_active) {
         return { course };
     }
 
     return { error: { status: 401, message: 'Not authorized' } };
+};
+
+const userCanAccessAnalyticsCourse = (doc, user) => {
+    if (!doc || !user) return false;
+    if (isAdminRole(user.role)) return true;
+
+    if (isStudentRole(user.role)) {
+        const userEmail = String(user.email || '').trim().toLowerCase();
+        return Array.isArray(doc.students) && doc.students.some((student) => (
+            String(student.email || '').trim().toLowerCase() === userEmail
+        ));
+    }
+
+    if (isInstructorRole(user.role)) {
+        return String(doc.instructorName || '').trim().toLowerCase() === String(user.name || '').trim().toLowerCase();
+    }
+
+    return false;
 };
 
 // ---- Multer setup for handout PDFs ----
@@ -336,6 +369,69 @@ const buildTaskDifficultyInsights = ({
         });
 };
 
+const combinePerformanceAnalytics = (appAnalytics, analyticsSyncAnalytics) => {
+    if (!analyticsSyncAnalytics?.studentCount && !analyticsSyncAnalytics?.courseBreakdown?.length) {
+        return appAnalytics;
+    }
+
+    const topPerformers = [
+        ...(appAnalytics.topPerformers || []),
+        ...(analyticsSyncAnalytics.topPerformers || []),
+    ].sort((left, right) => (right.engagementScore || 0) - (left.engagementScore || 0)).slice(0, 5);
+    const attentionNeeded = [
+        ...(appAnalytics.attentionNeeded || []),
+        ...(analyticsSyncAnalytics.attentionNeeded || []),
+    ].sort((left, right) => (left.engagementScore || 0) - (right.engagementScore || 0)).slice(0, 5);
+    const taskDifficultyHotspots = [
+        ...(appAnalytics.taskDifficultyHotspots || []),
+        ...(analyticsSyncAnalytics.taskDifficultyHotspots || []),
+    ].sort((left, right) => (right.challengeScore || 0) - (left.challengeScore || 0)).slice(0, 10);
+    const courseBreakdown = [
+        ...(analyticsSyncAnalytics.courseBreakdown || []),
+        ...(appAnalytics.courseBreakdown || []),
+    ];
+    const totalStudents = (appAnalytics.studentCount || 0) + (analyticsSyncAnalytics.studentCount || 0);
+    const progressBandBreakdown = { completed: 0, on_track: 0, steady: 0, needs_support: 0, not_started: 0 };
+
+    for (const band of Object.keys(progressBandBreakdown)) {
+        progressBandBreakdown[band] = (appAnalytics.progressBandBreakdown?.[band] || 0)
+            + (analyticsSyncAnalytics.progressBandBreakdown?.[band] || 0);
+    }
+
+    return {
+        ...appAnalytics,
+        activeLearners: (appAnalytics.activeLearners || 0) + (analyticsSyncAnalytics.activeLearners || 0),
+        avgCompletionRate: totalStudents
+            ? average([
+                ...(Array(appAnalytics.studentCount || 0).fill(appAnalytics.avgCompletionRate || 0)),
+                ...(Array(analyticsSyncAnalytics.studentCount || 0).fill(analyticsSyncAnalytics.avgCompletionRate || 0)),
+            ])
+            : 0,
+        avgScore: totalStudents
+            ? average([
+                ...(Array(appAnalytics.studentCount || 0).fill(appAnalytics.avgScore || 0)),
+                ...(Array(analyticsSyncAnalytics.studentCount || 0).fill(analyticsSyncAnalytics.avgScore || 0)),
+            ])
+            : 0,
+        studentsNeedingSupport: (appAnalytics.studentsNeedingSupport || 0) + (analyticsSyncAnalytics.studentsNeedingSupport || 0),
+        progressBandBreakdown,
+        topPerformers,
+        attentionNeeded,
+        leaderboardSnapshot: buildLeaderboardSnapshot(topPerformers, attentionNeeded),
+        taskDifficultyHotspots,
+        courseBreakdown,
+        courseHighlights: {
+            strongestCourse: analyticsSyncAnalytics.courseHighlights?.strongestCourse || appAnalytics.courseHighlights?.strongestCourse || null,
+            needsAttentionCourse: analyticsSyncAnalytics.courseHighlights?.needsAttentionCourse || appAnalytics.courseHighlights?.needsAttentionCourse || null,
+            toughestCourse: taskDifficultyHotspots[0]
+                ? courseBreakdown.find((course) => course.courseId === taskDifficultyHotspots[0].courseId) || appAnalytics.courseHighlights?.toughestCourse || null
+                : appAnalytics.courseHighlights?.toughestCourse || null,
+        },
+        studentCount: totalStudents,
+        dataMode: appAnalytics.studentCount && analyticsSyncAnalytics.courseBreakdown?.length ? 'mixed' : analyticsSyncAnalytics.dataMode || appAnalytics.dataMode,
+    };
+};
+
 // @desc    Get all courses (or instructor's courses)
 // @route   GET /api/courses
 // @access  Private
@@ -347,15 +443,16 @@ const getCourses = async (req, res) => {
         // If user is an instructor, only show their courses? 
         // Or if they are student show enrolled? 
         // For now, let's allow fetching all active courses for students, and all created for instructors.
-        if (req.user.role === 'INSTRUCTOR') {
+        if (isInstructorRole(req.user.role)) {
             query = { instructor: req.user._id };
-        } else if (req.user.role === 'STUDENT') {
+        } else if (isStudentRole(req.user.role)) {
             query = { is_active: true };
         }
 
         const [total, courses] = await Promise.all([
             Course.countDocuments(query),
             Course.find(query)
+                .sort({ createdAt: -1 })
                 .skip(pagination.skip)
                 .limit(pagination.limit)
                 .populate('instructor', 'name email'),
@@ -389,9 +486,16 @@ const getCourses = async (req, res) => {
             courseObject.modules_count = moduleCountsByCourse.get(course._id.toString()) || 0;
             return courseObject;
         });
+        const existingCourseCodes = new Set(coursesWithModuleCounts.map((course) => String(course.course_code || '').toUpperCase()));
+        const analyticsCourses = (await listAnalyticsCoursesForUser(req.user, {
+            includeAllForStudent: true,
+            courseCodes: coursesWithModuleCounts.map((course) => course.course_code),
+        }))
+            .filter((course) => !existingCourseCodes.has(String(course.course_code || '').toUpperCase()));
+        const allCourses = [...analyticsCourses, ...coursesWithModuleCounts];
 
-        applyPaginationHeaders(res, { ...pagination, total });
-        res.json(coursesWithModuleCounts);
+        applyPaginationHeaders(res, { ...pagination, total: total + analyticsCourses.length });
+        res.json(allCourses);
     } catch (error) {
         console.error(error);
         res.status(400).json({ message: 'Failed to fetch courses' });
@@ -403,6 +507,17 @@ const getCourses = async (req, res) => {
 // @access  Private
 const getCourseById = async (req, res) => {
     try {
+        if (isAnalyticsCourseId(req.params.id)) {
+            const analyticsCourse = await findAnalyticsCourseById(parseAnalyticsCourseId(req.params.id));
+            if (!analyticsCourse) {
+                return res.status(404).json({ message: 'Course not found' });
+            }
+            if (!userCanAccessAnalyticsCourse(analyticsCourse, req.user)) {
+                return res.status(401).json({ message: 'Not authorized' });
+            }
+            return res.json(mapAnalyticsCourseSummary(analyticsCourse));
+        }
+
         const access = await verifyCourseAccess(req.params.id, req.user, { allowStudentReadActive: true });
         if (access.error) {
             return res.status(access.error.status).json({ message: access.error.message });
@@ -442,6 +557,10 @@ const getTeacherStats = async (req, res) => {
         const courses = await Course.find({ instructor: req.user._id }).select('_id course_name course_code');
         const courseIds = courses.map(c => c._id);
         const activeClasses = courses.length;
+        const analyticsStats = await buildAnalyticsTeacherStatsForUser(req.user, {
+            courseCodes: courses.map((course) => course.course_code),
+            excludeCourseCodes: courses.map((course) => course.course_code),
+        });
         const courseLookup = new Map(courses.map((course) => [course._id.toString(), {
             _id: course._id,
             course_name: course.course_name,
@@ -475,6 +594,10 @@ const getTeacherStats = async (req, res) => {
         };
 
         if (!courseIds.length) {
+            if (analyticsStats.activeClasses > 0) {
+                return res.json(analyticsStats);
+            }
+
             return res.json({
                 activeClasses,
                 totalStudents: 0,
@@ -783,13 +906,17 @@ const getTeacherStats = async (req, res) => {
             studentCount: studentAnalytics.length,
             dataMode: progressRecords.length ? 'progress' : 'enrollment_only',
         };
+        const combinedPerformanceAnalytics = combinePerformanceAnalytics(
+            performanceAnalytics,
+            analyticsStats.performanceAnalytics
+        );
 
         res.json({
-            activeClasses,
-            totalStudents,
+            activeClasses: activeClasses + analyticsStats.activeClasses,
+            totalStudents: totalStudents + analyticsStats.totalStudents,
             pendingGrading: 0,
-            avgPerformance: `${performanceAnalytics.avgScore}%`,
-            performanceAnalytics,
+            avgPerformance: `${combinedPerformanceAnalytics.avgScore}%`,
+            performanceAnalytics: combinedPerformanceAnalytics,
         });
 
     } catch (error) {
@@ -803,11 +930,26 @@ const getTeacherStats = async (req, res) => {
 // @access  Private (Instructor/Admin)
 const getCourseAnalytics = async (req, res) => {
     try {
+        if (isAnalyticsCourseId(req.params.id)) {
+            const analyticsCourse = await findAnalyticsCourseById(parseAnalyticsCourseId(req.params.id));
+            if (!analyticsCourse) {
+                return res.status(404).json({ message: 'Course not found' });
+            }
+            if (!userCanAccessAnalyticsCourse(analyticsCourse, req.user)) {
+                return res.status(401).json({ message: 'Not authorized' });
+            }
+            return res.json(buildCourseAnalyticsResponseFromDocument(analyticsCourse));
+        }
+
         const access = await verifyCourseAccess(req.params.id, req.user);
         if (access.error) {
             return res.status(access.error.status).json({ message: access.error.message });
         }
         const course = access.course;
+        const analyticsCourse = await findAnalyticsCourseByCode(course.course_code);
+        if (analyticsCourse) {
+            return res.json(buildCourseAnalyticsResponseFromDocument(analyticsCourse));
+        }
 
         const [modules, enrollments, progressRecords] = await Promise.all([
             Module.find({ course_id: course._id })

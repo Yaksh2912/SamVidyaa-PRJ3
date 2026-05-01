@@ -78,6 +78,7 @@ function StudentDashboardWorkspace({
   const currentUserIndex = leaderboardRows.findIndex((student) => student._id === user?._id || student.isCurrentUser)
   const currentUserRank = currentUserIndex >= 0 ? currentUserIndex + 1 : null
   const leaderPoints = Number(leaderboardRows[0]?.points) || 0
+  const canOpenEnrollmentCourse = (status) => ['ACTIVE', 'APPROVED', 'COMPLETED'].includes(status)
   const leaderboardLabels = {
     topThree: t.leaderboard.topThree || 'Top 3',
     leaderScore: t.leaderboard.leaderScore || 'Leader score',
@@ -440,13 +441,15 @@ function StudentDashboardWorkspace({
                 const course = enrollment.course_id
                 const instructorName = course.instructor ? course.instructor.name : common.unknownInstructor
                 const initial = instructorName.charAt(0).toUpperCase()
+                const isAnalyticsCourse = Boolean(course.is_analytics_course)
+                const canOpenCourse = canOpenEnrollmentCourse(enrollment.status) && !isAnalyticsCourse
 
                 return (
                   <div
                     key={enrollment._id}
-                    className="gc-course-card"
+                    className={`gc-course-card ${isAnalyticsCourse ? 'is-analytics-course' : ''}`}
                     onClick={() => {
-                      if (enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') {
+                      if (canOpenCourse) {
                         handleViewCourse(course)
                       }
                     }}
@@ -465,7 +468,7 @@ function StudentDashboardWorkspace({
                     </div>
 
                     <div className="gc-card-footer">
-                      {(enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') && course.handout_path && (
+                      {canOpenCourse && course.handout_path && (
                         <button
                           className="btn-icon"
                           title={t.courses.downloadHandout}
@@ -480,9 +483,10 @@ function StudentDashboardWorkspace({
                       <button
                         className="btn-icon"
                         title={t.courses.openCourse}
+                        disabled={!canOpenCourse}
                         onClick={(event) => {
                           event.stopPropagation()
-                          if (enrollment.status === 'ACTIVE' || enrollment.status === 'APPROVED') handleViewCourse(course)
+                          if (canOpenCourse) handleViewCourse(course)
                         }}
                       >
                         <HiBookOpen size={22} />
@@ -602,9 +606,10 @@ function StudentDashboardWorkspace({
               {availableCourses.map((course) => {
                 const instructorName = course.instructor ? course.instructor.name : common.unknownInstructor
                 const initial = instructorName.charAt(0).toUpperCase()
+                const isAnalyticsCourse = Boolean(course.is_analytics_course)
 
                 return (
-                  <div key={course._id} className="gc-course-card" style={{ filter: 'grayscale(0.15)' }}>
+                  <div key={course._id} className={`gc-course-card ${isAnalyticsCourse ? 'is-analytics-course' : ''}`} style={{ filter: 'grayscale(0.15)' }}>
                     <div className="gc-card-header" style={{ background: getCourseGradient(course._id) }}>
                       <h3 title={course.course_name}>{course.course_name}</h3>
                       <p className="gc-course-teacher">{instructorName} • {course.course_code}</p>
@@ -619,15 +624,17 @@ function StudentDashboardWorkspace({
                     </div>
 
                     <div className="gc-card-footer" style={{ borderTop: 'none', paddingBottom: '1.25rem' }}>
-                      <button
-                        className="btn btn-secondary"
-                        style={{ width: '100%' }}
-                        onClick={() => handleEnroll(course._id)}
-                        disabled={enrollLoading === course._id}
-                      >
-                        <HiPlusCircle style={{ marginRight: '0.4rem', marginBottom: '-2px' }} />
-                        {enrollLoading === course._id ? t.availableCourses.requesting : t.availableCourses.requestEnrollment}
-                      </button>
+                      {!isAnalyticsCourse && (
+                        <button
+                          className="btn btn-secondary"
+                          style={{ width: '100%' }}
+                          onClick={() => handleEnroll(course._id)}
+                          disabled={enrollLoading === course._id}
+                        >
+                          <HiPlusCircle style={{ marginRight: '0.4rem', marginBottom: '-2px' }} />
+                          {enrollLoading === course._id ? t.availableCourses.requesting : t.availableCourses.requestEnrollment}
+                        </button>
+                      )}
                     </div>
                   </div>
                 )
@@ -727,7 +734,7 @@ function StudentDashboardWorkspace({
                 onChange={(event) => setSelectedCourseForRanking(event.target.value)}
               >
                 <option value="">{t.leaderboard.selectClass}</option>
-                {enrolledCourses.filter((entry) => entry.status === 'ACTIVE' || entry.status === 'APPROVED').map((entry) => (
+                {enrolledCourses.filter((entry) => canOpenEnrollmentCourse(entry.status)).map((entry) => (
                   <option key={entry.course_id._id} value={entry.course_id._id}>
                     {entry.course_id.course_name}
                   </option>

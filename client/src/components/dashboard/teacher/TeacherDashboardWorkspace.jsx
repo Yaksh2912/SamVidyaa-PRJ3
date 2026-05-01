@@ -485,6 +485,7 @@ function TeacherDashboardWorkspace({
                 return (
                   <div className="gc-course-grid teacher-course-grid">
                     {courses.length === 0 ? <p className="no-data">{t.courses.empty}</p> : courses.map((course) => {
+                      const isAnalyticsCourse = Boolean(course.is_analytics_course)
                       const baseGradient = getCourseGradient(course._id)
                       const baseGradientIndex = courseGradients.indexOf(baseGradient)
                       const safeGradientIndex = baseGradient === previousCourseGradient
@@ -497,9 +498,15 @@ function TeacherDashboardWorkspace({
                       return (
                         <motion.div
                           key={course._id}
-                          className="gc-course-card teacher-course-card"
+                          className={`gc-course-card teacher-course-card ${isAnalyticsCourse ? 'is-analytics-course' : ''}`}
                           whileHover={{ y: -5 }}
-                          onClick={() => handleCourseSelect(course)}
+                          onClick={() => {
+                            if (isAnalyticsCourse) {
+                              openCourseAnalytics(course)
+                            } else {
+                              handleCourseSelect(course)
+                            }
+                          }}
                         >
                           <div className="gc-card-header" style={{ background: cardGradient }}>
                             <h3 title={course.course_name}>{course.course_name}</h3>
@@ -530,43 +537,47 @@ function TeacherDashboardWorkspace({
                             >
                               <HiChartBar size={20} />
                             </button>
-                            <button
-                              className="btn-icon"
-                              title={t.courses.editCourse}
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                openCourseForm(course)
-                              }}
-                            >
-                              <HiPencilSquare size={20} />
-                            </button>
-                            <button
-                              className="btn-icon"
-                              title={t.courses.exportCourse}
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                handleCourseExport(course._id, course.course_code)
-                              }}
-                            >
-                              <HiArrowDownTray size={20} />
-                            </button>
-                            <button
-                              className="btn-icon"
-                              title={t.courses.deleteCourse}
-                              onClick={(event) => handleDeleteCourse(event, course._id)}
-                            >
-                              <HiTrash size={20} />
-                            </button>
-                            <button
-                              className="btn-icon"
-                              title={t.courses.openCourse}
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                handleCourseSelect(course)
-                              }}
-                            >
-                              <HiBookOpen size={22} />
-                            </button>
+                            {!isAnalyticsCourse && (
+                              <>
+                                <button
+                                  className="btn-icon"
+                                  title={t.courses.editCourse}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    openCourseForm(course)
+                                  }}
+                                >
+                                  <HiPencilSquare size={20} />
+                                </button>
+                                <button
+                                  className="btn-icon"
+                                  title={t.courses.exportCourse}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    handleCourseExport(course._id, course.course_code)
+                                  }}
+                                >
+                                  <HiArrowDownTray size={20} />
+                                </button>
+                                <button
+                                  className="btn-icon"
+                                  title={t.courses.deleteCourse}
+                                  onClick={(event) => handleDeleteCourse(event, course._id)}
+                                >
+                                  <HiTrash size={20} />
+                                </button>
+                                <button
+                                  className="btn-icon"
+                                  title={t.courses.openCourse}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    handleCourseSelect(course)
+                                  }}
+                                >
+                                  <HiBookOpen size={22} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </motion.div>
                       )

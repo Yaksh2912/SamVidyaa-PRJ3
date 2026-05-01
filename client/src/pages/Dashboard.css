@@ -5436,7 +5436,7 @@
 
 .gc-card-body {
   flex: 1;
-  padding: 1.5rem 1rem 1rem;
+  padding: 1.15rem 1rem 1rem;
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
@@ -5448,7 +5448,8 @@
   -webkit-box-orient: vertical;  
   overflow: hidden;
   line-height: 1.5;
-  margin-bottom: 0.5rem;
+  margin: 0 4.75rem 0.5rem 0;
+  min-height: 3rem;
 }
 
 .gc-card-footer {

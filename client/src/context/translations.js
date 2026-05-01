@@ -547,6 +547,7 @@ export const translations = {
           requestPending: 'Request Pending',
           notEnrolled: 'Not Enrolled',
           active: 'Active',
+          completed: 'Completed',
           downloadHandout: 'Download Handout',
           openCourse: 'Open Course'
         },
@@ -1698,6 +1699,7 @@ export const translations = {
           requestPending: 'अनुरोध लंबित',
           notEnrolled: 'नामांकन नहीं हुआ',
           active: 'सक्रिय',
+          completed: 'पूर्ण',
           downloadHandout: 'हैंडआउट डाउनलोड करें',
           openCourse: 'कोर्स खोलें'
         },

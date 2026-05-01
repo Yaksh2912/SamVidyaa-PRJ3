@@ -3,6 +3,10 @@ const User = require('../models/User');
 const Course = require('../models/Course');
 const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 const { parseSpreadsheetRows } = require('../utils/spreadsheet');
+const { listAnalyticsEnrollmentsForStudent } = require('../services/analyticsCourseService');
+
+const normalizeRole = (role) => String(role || '').toUpperCase();
+const isAdminRole = (role) => normalizeRole(role) === 'ADMIN';
 
 // @desc    Enroll a student in a course
 // @route   POST /api/enrollments
@@ -50,7 +54,7 @@ const authorizeCourseEnrollmentAccess = async (courseId, user) => {
         return { error: { status: 404, message: 'Course not found' } };
     }
 
-    if (course.instructor.toString() !== user._id.toString() && user.role !== 'ADMIN') {
+    if (course.instructor.toString() !== user._id.toString() && !isAdminRole(user.role)) {
         return { error: { status: 401, message: 'Not authorized' } };
     }
 
@@ -185,7 +189,7 @@ const updateEnrollmentStatus = async (req, res) => {
 
         // Verify that the instructor owns the course
         const course = await Course.findById(enrollment.course_id._id);
-        if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'ADMIN') {
+        if (course.instructor.toString() !== req.user._id.toString() && !isAdminRole(req.user.role)) {
             return res.status(401).json({ message: 'Not authorized' });
         }
 
@@ -218,8 +222,17 @@ const getStudentEnrollments = async (req, res) => {
                 .lean(),
         ]);
 
-        applyPaginationHeaders(res, { ...pagination, total });
-        res.json(enrollments);
+        const enrolledCourseCodes = new Set(
+            enrollments
+                .map((enrollment) => enrollment.course_id?.course_code)
+                .filter(Boolean)
+                .map((courseCode) => String(courseCode).toUpperCase())
+        );
+        const analyticsEnrollments = (await listAnalyticsEnrollmentsForStudent(req.user))
+            .filter((enrollment) => !enrolledCourseCodes.has(String(enrollment.course_id?.course_code || '').toUpperCase()));
+
+        applyPaginationHeaders(res, { ...pagination, total: total + analyticsEnrollments.length });
+        res.json([...analyticsEnrollments, ...enrollments]);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Failed to fetch enrollments' });
