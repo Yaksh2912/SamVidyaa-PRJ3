@@ -4,8 +4,9 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 let pineconeIndex = null;
 let embeddingModel = null;
 
-const INDEX_NAME = process.env.PINECONE_INDEX_NAME || 'samvidyaa-docs';
 const EMBEDDING_DIMENSION = 768; // text-embedding-004 outputs 768 dimensions
+let embeddingApiKey = null;
+let indexName = 'samvidyaa-docs';
 
 /**
  * Initialize connections to Pinecone and the Google embedding model.
@@ -13,13 +14,16 @@ const EMBEDDING_DIMENSION = 768; // text-embedding-004 outputs 768 dimensions
  */
 async function initVectorStore() {
     try {
+        indexName = process.env.PINECONE_INDEX_NAME || 'samvidyaa-docs';
+
         if (!process.env.PINECONE_API_KEY) {
             console.warn('[VectorStore] PINECONE_API_KEY not set — vector search disabled. General knowledge retrieval will be skipped.');
             return false;
         }
 
-        if (!process.env.GOOGLE_API_KEY) {
-            console.warn('[VectorStore] GOOGLE_API_KEY not set — embeddings disabled.');
+        embeddingApiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.LLM_API_KEY;
+        if (!embeddingApiKey) {
+            console.warn('[VectorStore] GOOGLE_API_KEY/GEMINI_API_KEY not set — embeddings disabled.');
             return false;
         }
 
@@ -28,12 +32,12 @@ async function initVectorStore() {
         
         // Check if index exists, create if not
         const indexList = await pc.listIndexes();
-        const indexExists = indexList.indexes?.some(idx => idx.name === INDEX_NAME);
+        const indexExists = indexList.indexes?.some(idx => idx.name === indexName);
 
         if (!indexExists) {
-            console.log(`[VectorStore] Creating Pinecone index: ${INDEX_NAME}`);
+            console.log(`[VectorStore] Creating Pinecone index: ${indexName}`);
             await pc.createIndex({
-                name: INDEX_NAME,
+                name: indexName,
                 dimension: EMBEDDING_DIMENSION,
                 metric: 'cosine',
                 spec: {
@@ -48,10 +52,10 @@ async function initVectorStore() {
             await new Promise(resolve => setTimeout(resolve, 10000));
         }
 
-        pineconeIndex = pc.index(INDEX_NAME);
+        pineconeIndex = pc.index(indexName);
 
         // Initialize Google embedding model
-        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+        const genAI = new GoogleGenerativeAI(embeddingApiKey);
         embeddingModel = genAI.getGenerativeModel({ model: 'text-embedding-004' });
 
         console.log('[VectorStore] Pinecone and embedding model initialized successfully.');

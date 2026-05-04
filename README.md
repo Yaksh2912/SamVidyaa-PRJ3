@@ -222,7 +222,7 @@ http://localhost:5173
 | `GOOGLE_CLIENT_ID` | Optional | None | Backend Google auth verification |
 | `VITE_GOOGLE_CLIENT_ID` | Optional | None | Fallback Google client ID used by backend |
 | `GEMINI_API_KEY` | Optional | None | LLM/chat provider key |
-| `GOOGLE_API_KEY` | Optional | None | LLM embeddings/vector support |
+| `GOOGLE_API_KEY` | Optional | None | LLM embeddings/vector support; falls back to `GEMINI_API_KEY` or `LLM_API_KEY` |
 | `LLM_API_KEY` | Optional | None | Generic LLM API key fallback |
 | `LLM_MODEL` | Optional | `gemini-2.5-flash-lite` | Chat model name |
 | `PINECONE_API_KEY` | Optional | None | Pinecone vector database key |
