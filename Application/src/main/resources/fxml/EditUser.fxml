@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox alignment="CENTER" spacing="20.0" style="-fx-background-color: linear-gradient(to bottom right, #f8fafc, #e3e6ee); -fx-background-radius: 18;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.samvidya.controller.EditUserController">
+    <padding>
+        <Insets bottom="40.0" left="40.0" right="40.0" top="40.0"/>
+    </padding>
+
+    <!-- Logo at the top -->
+    <ImageView fitHeight="300.0" fitWidth="300.0" pickOnBounds="true" preserveRatio="true">
+        <image>
+            <Image url="@/images/logo.png" />
+        </image>
+    </ImageView>
+    <Text style="-fx-font-size: 24px; -fx-fill: #333333; -fx-font-weight: bold;" text="Update User Information"/>
+
+    <GridPane hgap="20" vgap="15" maxWidth="600" alignment="CENTER">
+        <columnConstraints>
+            <ColumnConstraints hgrow="NEVER" minWidth="120" maxWidth="150" prefWidth="130"/>
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="200" maxWidth="400" prefWidth="300"/>
+        </columnConstraints>
+        
+        <!-- Row 0: Username -->
+        <Label text="Username:" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333333;" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <TextField fx:id="usernameField" promptText="Username" maxWidth="300" style="-fx-background-radius: 16; -fx-padding: 10; -fx-font-size: 15px; -fx-background-color: #f5f5f5;" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+        
+        <!-- Row 1: Password -->
+        <Label text="Password:" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333333;" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
+            <TextField fx:id="passwordField" promptText="Password" maxWidth="300" style="-fx-background-radius: 16; -fx-padding: 10; -fx-font-size: 15px; -fx-background-color: #f5f5f5;"/>
+            <Label text="Shows hash if hashed, plain text if not. Change to set new password." style="-fx-font-size: 11px; -fx-text-fill: #666666; -fx-wrap-text: true;" maxWidth="300"/>
+        </VBox>
+        
+        <!-- Row 2: Full Name -->
+        <Label text="Full Name:" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333333;" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+        <TextField fx:id="fullNameField" promptText="Full Name" maxWidth="300" style="-fx-background-radius: 16; -fx-padding: 10; -fx-font-size: 15px; -fx-background-color: #f5f5f5;" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+        
+        <!-- Row 3: Email -->
+        <Label text="Email:" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333333;" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+        <TextField fx:id="emailField" promptText="Email" maxWidth="300" style="-fx-background-radius: 16; -fx-padding: 10; -fx-font-size: 15px; -fx-background-color: #f5f5f5;" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+        
+        <!-- Row 4: Role -->
+        <Label text="Role:" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333333;" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+        <ComboBox fx:id="roleComboBox" promptText="Select Role" maxWidth="300" style="-fx-background-radius: 16; -fx-padding: 10; -fx-font-size: 15px; -fx-background-color: #f5f5f5;" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+        
+        <!-- Row 5: Enrollment Number -->
+        <Label text="Enrollment:" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333333;" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+        <TextField fx:id="enrollmentNumberField" promptText="Enrollment Number (optional)" maxWidth="300" style="-fx-background-radius: 16; -fx-padding: 10; -fx-font-size: 15px; -fx-background-color: #f5f5f5;" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+        
+        <!-- Row 6: Institution -->
+        <Label text="Institution:" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333333;" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+        <TextField fx:id="institutionField" promptText="Institution (optional)" maxWidth="300" style="-fx-background-radius: 16; -fx-padding: 10; -fx-font-size: 15px; -fx-background-color: #f5f5f5;" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
+
+        <!-- Row 7: Section -->
+        <Label text="Section:" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #333333;" GridPane.columnIndex="0" GridPane.rowIndex="7"/>
+        <TextField fx:id="sectionField" promptText="Section (e.g., CSE II)" maxWidth="300" style="-fx-background-radius: 16; -fx-padding: 10; -fx-font-size: 15px; -fx-background-color: #f5f5f5;" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
+    </GridPane>
+
+    <HBox spacing="12" alignment="CENTER">
+        <Button fx:id="saveButton" onAction="#handleSave" text="Save Changes" maxWidth="Infinity"
+                style="-fx-background-color: #1976d2; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 20; -fx-font-size: 16px; -fx-padding: 10 30;"/>
+    </HBox>
+
+    <Label fx:id="messageLabel" style="-fx-text-fill: #4caf50; -fx-font-size: 14px; -fx-font-weight: bold;" visible="false"/>
+    <ProgressIndicator fx:id="loadingIndicator" visible="false" maxWidth="30" maxHeight="30"/>
+    
+    <!-- Copyright Footer -->
+    <Region VBox.vgrow="ALWAYS"/>
+    <VBox alignment="CENTER" spacing="2" style="-fx-padding: 20 0 10 0;">
+        <Text style="-fx-font-size: 12px; -fx-fill: #666666; -fx-font-weight: bold;" text="© SamVidya Educational Platform"/>
+        <Text style="-fx-font-size: 11px; -fx-fill: #888888;" text="Empowering practical programming education"/>
+    </VBox>
+</VBox>

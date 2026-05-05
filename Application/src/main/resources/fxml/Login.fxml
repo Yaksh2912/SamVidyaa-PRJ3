@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.samvidya.controller.LoginController"
+           style="-fx-background-color: linear-gradient(to bottom right, #e0eafc, #cfdef3);">
+
+    <VBox alignment="CENTER" spacing="14.0"
+          style="-fx-background-color: white; -fx-background-radius: 18; -fx-effect: dropshadow(gaussian, rgba(30,144,255,0.13), 18, 0, 0, 4);"
+          maxWidth="420" minWidth="300"
+          StackPane.alignment="CENTER">
+        <padding>
+            <Insets bottom="28.0" left="36.0" right="36.0" top="24.0"/>
+        </padding>
+
+        <!-- Logo -->
+        <ImageView fitHeight="160.0" fitWidth="160.0" pickOnBounds="true" preserveRatio="true">
+            <image>
+                <Image url="@/images/logo.png" />
+            </image>
+        </ImageView>
+
+        <Text fx:id="loginSubtitle" style="-fx-font-size: 14px; -fx-fill: #666666;" text="Login to your account"/>
+
+        <!-- Fields -->
+        <VBox spacing="8.0" alignment="CENTER" maxWidth="Infinity">
+            <TextField fx:id="usernameField" promptText="Username" maxWidth="Infinity"
+                       style="-fx-background-radius: 14; -fx-padding: 8; -fx-font-size: 14px; -fx-background-color: #f5f5f5;"/>
+
+            <StackPane maxWidth="Infinity">
+                <PasswordField fx:id="passwordField" promptText="Password" maxWidth="Infinity"
+                               style="-fx-background-radius: 14; -fx-padding: 8 38 8 8; -fx-font-size: 14px; -fx-background-color: #f5f5f5;"/>
+                <TextField fx:id="passwordTextField" promptText="Password" visible="false" managed="false" maxWidth="Infinity"
+                           style="-fx-background-radius: 14; -fx-padding: 8 38 8 8; -fx-font-size: 14px; -fx-background-color: #f5f5f5;"/>
+                <Button fx:id="togglePasswordButton"
+                        style="-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 6;"
+                        StackPane.alignment="CENTER_RIGHT">
+                    <graphic>
+                        <FontIcon fx:id="eyeIcon" iconLiteral="fas-eye-slash" iconSize="16" iconColor="#666666"/>
+                    </graphic>
+                    <StackPane.margin>
+                        <Insets right="4"/>
+                    </StackPane.margin>
+                </Button>
+            </StackPane>
+        </VBox>
+
+        <!-- Remember Me -->
+        <HBox spacing="8" alignment="CENTER">
+            <CheckBox fx:id="rememberMeCheckbox" text="Remember me"
+                      style="-fx-font-size: 12px; -fx-text-fill: #374151;"/>
+        </HBox>
+
+        <!-- Login / Back -->
+        <HBox spacing="10" alignment="CENTER" maxWidth="Infinity">
+            <Button fx:id="loginButton" onAction="#handleLogin" text="Login"
+                    HBox.hgrow="ALWAYS" maxWidth="Infinity"
+                    style="-fx-background-color: #1976d2; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 18; -fx-font-size: 14px; -fx-padding: 9 24;"/>
+            <Button fx:id="backButton" onAction="#handleBack" text="Back"
+                    HBox.hgrow="ALWAYS" maxWidth="Infinity"
+                    style="-fx-background-color: #e0e0e0; -fx-text-fill: #333; -fx-font-weight: bold; -fx-background-radius: 18; -fx-font-size: 14px; -fx-padding: 9 24;"/>
+        </HBox>
+
+        <!-- Register (conditional) -->
+        <HBox spacing="10" alignment="CENTER" maxWidth="Infinity">
+            <Button fx:id="registerButton" onAction="#handleRegister" text="Register"
+                    visible="false" HBox.hgrow="ALWAYS" maxWidth="Infinity"
+                    style="-fx-background-color: #4caf50; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 18; -fx-font-size: 14px; -fx-padding: 9 24;"/>
+        </HBox>
+
+        <Label fx:id="errorLabel" style="-fx-text-fill: #d32f2f; -fx-font-size: 12px; -fx-font-weight: bold;"/>
+        <ProgressIndicator fx:id="loadingIndicator" visible="false" maxWidth="28" maxHeight="28"/>
+
+        <!-- Footer -->
+        <VBox alignment="CENTER" spacing="2" style="-fx-padding: 4 0 0 0;">
+            <Text style="-fx-font-size: 11px; -fx-fill: #666666; -fx-font-weight: bold;" text="© SamVidya Educational Platform"/>
+            <Text style="-fx-font-size: 10px; -fx-fill: #888888;" text="Empowering practical programming education"/>
+        </VBox>
+    </VBox>
+
+</StackPane>

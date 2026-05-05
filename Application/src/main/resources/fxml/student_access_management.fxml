@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+      fx:controller="com.samvidya.controller.StudentAccessManagementController"
+      spacing="20" style="-fx-background-color: #f8f9fa;">
+    
+    <padding>
+        <Insets top="25" right="25" bottom="25" left="25"/>
+    </padding>
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT" spacing="15" style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 2);">
+        <VBox spacing="5" HBox.hgrow="ALWAYS">
+            <Label fx:id="courseInfoLabel" text="Student Access Management" 
+                   style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Label text="Manage student access via enrollment numbers or email addresses" 
+                   style="-fx-font-size: 13px; -fx-text-fill: #7f8c8d;"/>
+        </VBox>
+    </HBox>
+
+    <!-- Tab Pane -->
+    <TabPane fx:id="accessTabPane" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE"
+             style="-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 2);">
+        
+        <!-- Enrollment Numbers Tab -->
+        <Tab text="📋 Enrollment Numbers" style="-fx-font-size: 14px; -fx-font-weight: bold;">
+            <HBox spacing="20" style="-fx-padding: 20;">
+                
+                <!-- Left Side - Input Area -->
+                <VBox spacing="15" HBox.hgrow="ALWAYS" prefWidth="400" 
+                      style="-fx-background-color: #f8f9fa; -fx-padding: 20; -fx-background-radius: 8;">
+                    
+                    <Label text="Add Enrollment Numbers" 
+                           style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+                    
+                    <VBox spacing="8" style="-fx-background-color: #e3f2fd; -fx-padding: 12; -fx-background-radius: 5;">
+                        <Label text="📝 Formats:" style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1976d2;"/>
+                        <Label text="• Single: 230649" style="-fx-font-size: 11px; -fx-text-fill: #424242;"/>
+                        <Label text="• Range: 210000-220000" style="-fx-font-size: 11px; -fx-text-fill: #424242;"/>
+                        <Label text="• One per line" style="-fx-font-size: 11px; -fx-text-fill: #424242;"/>
+                    </VBox>
+                    
+                    <TextArea fx:id="enrollmentInputArea" 
+                             promptText="230649&#10;210000-220000&#10;230700"
+                             wrapText="true" prefRowCount="12" VBox.vgrow="ALWAYS"
+                             style="-fx-font-family: 'Consolas', 'Monaco', monospace; -fx-font-size: 13px; -fx-background-radius: 5; -fx-border-color: #bdc3c7; -fx-border-radius: 5;"/>
+                    
+                    <HBox spacing="10">
+                        <Button fx:id="addEnrollmentsButton" text="➕ Add" onAction="#handleAddEnrollments"
+                               style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-background-radius: 5; -fx-padding: 10 20;"
+                               prefWidth="120"/>
+                        
+                        <Button fx:id="importEnrollmentCsvButton" text="📁 Import CSV" onAction="#handleImportEnrollmentCsv"
+                               style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-background-radius: 5; -fx-padding: 10 20;"
+                               prefWidth="140"/>
+                    </HBox>
+                </VBox>
+
+                <!-- Right Side - Table -->
+                <VBox spacing="15" HBox.hgrow="ALWAYS" prefWidth="450">
+                    
+                    <HBox alignment="CENTER_LEFT" spacing="10">
+                        <Label text="Current Enrollment Numbers" 
+                               style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="enrollmentCountLabel" text="0 enrollment(s)" 
+                               style="-fx-font-size: 12px; -fx-text-fill: #7f8c8d; -fx-background-color: #ecf0f1; -fx-padding: 5 10; -fx-background-radius: 12;"/>
+                    </HBox>
+                    
+                    <TableView fx:id="enrollmentTable" VBox.vgrow="ALWAYS"
+                              style="-fx-background-radius: 5; -fx-border-color: #bdc3c7; -fx-border-radius: 5;">
+                        <columns>
+                            <TableColumn fx:id="enrollmentColumn" text="Enrollment Number / Range" 
+                                        prefWidth="350" minWidth="200" style="-fx-font-size: 13px;"/>
+                        </columns>
+                        <columnResizePolicy>
+                            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                        </columnResizePolicy>
+                    </TableView>
+                    
+                    <HBox spacing="10">
+                        <Button fx:id="deleteEnrollmentButton" text="🗑️ Remove Selected" onAction="#handleDeleteEnrollment"
+                               style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-background-radius: 5; -fx-padding: 10 20;"
+                               prefWidth="160"/>
+                    </HBox>
+                </VBox>
+            </HBox>
+        </Tab>
+
+        <!-- Email Addresses Tab -->
+        <Tab text="📧 Email Addresses" style="-fx-font-size: 14px; -fx-font-weight: bold;">
+            <HBox spacing="20" style="-fx-padding: 20;">
+                
+                <!-- Left Side - Input Area -->
+                <VBox spacing="15" HBox.hgrow="ALWAYS" prefWidth="400"
+                      style="-fx-background-color: #f8f9fa; -fx-padding: 20; -fx-background-radius: 8;">
+                    
+                    <Label text="Add Email Addresses" 
+                           style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+                    
+                    <VBox spacing="8" style="-fx-background-color: #e8f5e9; -fx-padding: 12; -fx-background-radius: 5;">
+                        <Label text="📝 Instructions:" style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
+                        <Label text="• Enter one email per line" style="-fx-font-size: 11px; -fx-text-fill: #424242;"/>
+                        <Label text="• Or import from CSV file" style="-fx-font-size: 11px; -fx-text-fill: #424242;"/>
+                        <Label text="• Valid format: user@domain.com" style="-fx-font-size: 11px; -fx-text-fill: #424242;"/>
+                    </VBox>
+                    
+                    <TextArea fx:id="emailInputArea" 
+                             promptText="student1@example.com&#10;student2@example.com&#10;student3@example.com"
+                             wrapText="true" prefRowCount="12" VBox.vgrow="ALWAYS"
+                             style="-fx-font-family: 'Consolas', 'Monaco', monospace; -fx-font-size: 13px; -fx-background-radius: 5; -fx-border-color: #bdc3c7; -fx-border-radius: 5;"/>
+                    
+                    <HBox spacing="10">
+                        <Button fx:id="addEmailsButton" text="➕ Add" onAction="#handleAddEmails"
+                               style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-background-radius: 5; -fx-padding: 10 20;"
+                               prefWidth="120"/>
+                        
+                        <Button fx:id="importEmailCsvButton" text="📁 Import CSV" onAction="#handleImportEmailCsv"
+                               style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-background-radius: 5; -fx-padding: 10 20;"
+                               prefWidth="140"/>
+                    </HBox>
+                </VBox>
+
+                <!-- Right Side - Table -->
+                <VBox spacing="15" HBox.hgrow="ALWAYS" prefWidth="450">
+                    
+                    <HBox alignment="CENTER_LEFT" spacing="10">
+                        <Label text="Current Email Addresses" 
+                               style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="emailCountLabel" text="0 email(s)" 
+                               style="-fx-font-size: 12px; -fx-text-fill: #7f8c8d; -fx-background-color: #ecf0f1; -fx-padding: 5 10; -fx-background-radius: 12;"/>
+                    </HBox>
+                    
+                    <TableView fx:id="emailTable" VBox.vgrow="ALWAYS"
+                              style="-fx-background-radius: 5; -fx-border-color: #bdc3c7; -fx-border-radius: 5;">
+                        <columns>
+                            <TableColumn fx:id="emailColumn" text="Email Address" 
+                                        prefWidth="350" minWidth="200" style="-fx-font-size: 13px;"/>
+                        </columns>
+                        <columnResizePolicy>
+                            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                        </columnResizePolicy>
+                    </TableView>
+                    
+                    <HBox spacing="10">
+                        <Button fx:id="deleteEmailButton" text="🗑️ Remove Selected" onAction="#handleDeleteEmail"
+                               style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-background-radius: 5; -fx-padding: 10 20;"
+                               prefWidth="160"/>
+                    </HBox>
+                </VBox>
+            </HBox>
+        </Tab>
+    </TabPane>
+
+    <!-- Messages -->
+    <VBox spacing="10">
+        <Label fx:id="successLabel" wrapText="true" 
+               style="-fx-text-fill: #27ae60; -fx-font-size: 13px; -fx-font-weight: bold; -fx-background-color: #d5f4e6; -fx-padding: 12; -fx-background-radius: 5;"
+               visible="false"/>
+        
+        <Label fx:id="errorLabel" wrapText="true" 
+               style="-fx-text-fill: #c0392b; -fx-font-size: 13px; -fx-font-weight: bold; -fx-background-color: #fadbd8; -fx-padding: 12; -fx-background-radius: 5;"
+               visible="false"/>
+    </VBox>
+
+    <!-- Bottom Buttons -->
+    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 10 0 0 0;">
+        <Button fx:id="closeButton" text="✓ Close" onAction="#handleClose"
+               style="-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-background-radius: 5; -fx-padding: 10 25;"/>
+    </HBox>
+
+</VBox>

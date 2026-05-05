@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<VBox spacing="15.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.samvidya.controller.TestCaseDialogController">
+   <children>
+      <Label fx:id="titleLabel" text="Add New Test Case">
+         <font>
+            <Font name="System Bold" size="18.0" />
+         </font>
+      </Label>
+      
+      <VBox spacing="10.0">
+         <children>
+            <Label text="Input:" />
+            <TextArea fx:id="inputArea" prefRowCount="4" promptText="Enter the input for this test case..." />
+            
+            <Label text="Expected Output:" />
+            <TextArea fx:id="expectedOutputArea" prefRowCount="4" promptText="Enter the expected output for this test case..." />
+         </children>
+      </VBox>
+      
+      <Separator />
+      
+      <VBox spacing="10.0">
+         <children>
+            <Label text="Test Case Type:">
+               <font>
+                  <Font name="System Bold" size="12.0" />
+               </font>
+            </Label>
+            <RadioButton fx:id="sampleRadio" text="Sample Test Case (Shown to students)" />
+            <RadioButton fx:id="validationRadio" text="Validation Test Case (Hidden from students - used for grading)" />
+            <Label text="Note: Points are automatically distributed among validation test cases" textFill="#666666" wrapText="true" />
+         </children>
+      </VBox>
+      
+      <Separator />
+      
+      <GridPane hgap="15.0" vgap="10.0">
+         <columnConstraints>
+            <ColumnConstraints hgrow="NEVER" minWidth="100.0" />
+            <ColumnConstraints hgrow="ALWAYS" minWidth="150.0" />
+         </columnConstraints>
+         
+         <Label text="Order:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+         <Spinner fx:id="orderSpinner" prefWidth="120.0" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+      </GridPane>
+      
+      <Label fx:id="errorLabel" text="Error message" textFill="RED" visible="false" wrapText="true" />
+      
+      <HBox alignment="CENTER_RIGHT" spacing="10.0">
+         <children>
+            <Button fx:id="cancelButton" mnemonicParsing="false" onAction="#handleCancel" text="Cancel" />
+            <Button fx:id="saveButton" mnemonicParsing="false" onAction="#handleSave" text="Create Test Case" styleClass="primary" />
+         </children>
+      </HBox>
+   </children>
+   <padding>
+      <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+   </padding>
+</VBox>

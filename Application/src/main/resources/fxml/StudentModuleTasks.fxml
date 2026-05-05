@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.samvidya.controller.StudentModuleTasksController">
+   <top>
+      <VBox spacing="15.0" styleClass="header-section">
+         <padding>
+            <Insets bottom="20.0" left="30.0" right="30.0" top="30.0" />
+         </padding>
+         
+         <!-- Module Header -->
+         <HBox alignment="CENTER_LEFT" spacing="20.0">
+            <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+               <Label fx:id="moduleNameLabel" styleClass="module-title" text="Module Name">
+                  <font>
+                     <Font name="System Bold" size="24.0" />
+                  </font>
+               </Label>
+               <HBox spacing="15.0">
+                  <Label text="Course:" styleClass="label-secondary" />
+                  <Label fx:id="courseNameLabel" styleClass="course-name" text="Course Name" />
+               </HBox>
+            </VBox>
+         </HBox>
+         
+         <!-- Progress Section -->
+         <VBox spacing="10.0">
+            <Label fx:id="tasksInfoLabel" styleClass="info-text" text="Complete required tasks from this module to unlock the module test" />
+            <VBox spacing="5.0">
+               <Label fx:id="progressLabel" styleClass="progress-text" text="Module Progress: 0/5 tasks passed (0%)" />
+               <ProgressBar fx:id="moduleProgressBar" maxWidth="Infinity" prefHeight="8.0" progress="0.0" styleClass="modern-progress" />
+            </VBox>
+         </VBox>
+      </VBox>
+   </top>
+   
+   <center>
+      <VBox spacing="20.0">
+         <padding>
+            <Insets bottom="20.0" left="30.0" right="30.0" top="10.0" />
+         </padding>
+         
+         <!-- Tasks Section -->
+         <VBox spacing="15.0" VBox.vgrow="ALWAYS">
+            <Label text="Available Tasks" styleClass="section-title" />
+            
+            <TableView fx:id="tasksTable" styleClass="modern-table" VBox.vgrow="ALWAYS">
+               <columns>
+                  <TableColumn fx:id="taskNameColumn" prefWidth="200.0" text="Task Name" />
+                  <TableColumn fx:id="difficultyColumn" prefWidth="100.0" text="Difficulty" />
+                  <TableColumn fx:id="pointsColumn" prefWidth="80.0" text="Points" />
+                  <TableColumn fx:id="timeLimitColumn" prefWidth="100.0" text="Time Limit" />
+                  <TableColumn fx:id="languageColumn" prefWidth="100.0" text="Language" />
+                  <TableColumn fx:id="statusColumn" prefWidth="120.0" text="Status" />
+                  <TableColumn fx:id="scoreColumn" prefWidth="150.0" text="Score" />
+               </columns>
+               <columnResizePolicy>
+                  <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+               </columnResizePolicy>
+            </TableView>
+         </VBox>
+      </VBox>
+   </center>
+   
+   <bottom>
+      <HBox alignment="CENTER_RIGHT" spacing="15.0" styleClass="button-bar">
+         <padding>
+            <Insets bottom="20.0" left="30.0" right="30.0" top="20.0" />
+         </padding>
+         
+         <Button fx:id="startTaskButton" onAction="#handleStartTask" 
+                styleClass="primary-button" text="Start Task" />
+         <Button fx:id="takeModuleTestButton" onAction="#handleTakeModuleTest" 
+                styleClass="accent-button" text="Take Module Test" />
+         <Region HBox.hgrow="ALWAYS" />
+         <Button fx:id="closeButton" onAction="#handleClose" 
+                styleClass="outline-button" text="Close" />
+         
+         <!-- Error Label -->
+         <Label fx:id="errorLabel" styleClass="error-label" text="Error message" visible="false" />
+      </HBox>
+   </bottom>
+</BorderPane>

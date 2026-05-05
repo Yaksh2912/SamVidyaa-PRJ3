@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:id="rootContainer"
+      fx:controller="com.samvidya.controller.RoleSelectionController"
+      spacing="30.0" alignment="CENTER" style="-fx-background-color: linear-gradient(to bottom right, #e0eafc, #cfdef3);">
+    <padding>
+        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0"/>
+    </padding>
+
+    <!-- Logo at the top -->
+    <ImageView fitHeight="280.0" fitWidth="280.0" pickOnBounds="true" preserveRatio="true">
+        <image>
+            <Image url="@/images/logo.png" />
+        </image>
+    </ImageView>
+    
+    <!-- Application Description -->
+    <VBox spacing="0" alignment="CENTER">
+        <Text style="-fx-font-size: 12px; -fx-fill: #888888; -fx-font-style: italic; -fx-text-alignment: center;" text="SamVidya is a comprehensive educational platform for practical programming"/>
+        <Text style="-fx-font-size: 12px; -fx-fill: #888888; -fx-font-style: italic; -fx-text-alignment: center;" text="that provides hands-on coding experience through structured courses,"/>
+        <Text style="-fx-font-size: 12px; -fx-fill: #888888; -fx-font-style: italic; -fx-text-alignment: center;" text="modules, tasks, and real-time code execution with automated evaluation."/>
+    </VBox>
+
+    <HBox spacing="40.0" alignment="CENTER">
+        <!-- Student Card -->
+        <VBox spacing="8.0" alignment="CENTER" style="-fx-background-color: white; -fx-background-radius: 18; -fx-padding: 24 24 16 24; -fx-effect: dropshadow(gaussian, rgba(30,144,255,0.10), 10, 0, 0, 2);">
+            <ImageView fitHeight="80.0" fitWidth="80.0" pickOnBounds="true" preserveRatio="true">
+                <image>
+                    <Image url="@/images/student.jpg" />
+                </image>
+            </ImageView>
+            <Button fx:id="studentButton" text="Student" onAction="#handleStudentSelection"
+                    styleClass="modern-button" 
+                    style="-fx-font-size: 13px; -fx-min-width: 160px;" />
+        </VBox>
+        
+        <!-- Instructor/Admin Combined Card -->
+        <VBox spacing="8.0" alignment="CENTER" style="-fx-background-color: white; -fx-background-radius: 18; -fx-padding: 24 24 16 24; -fx-effect: dropshadow(gaussian, rgba(30,144,255,0.10), 10, 0, 0, 2);">
+            <ImageView fitHeight="80.0" fitWidth="80.0" pickOnBounds="true" preserveRatio="true">
+                <image>
+                    <Image url="@/images/instructor.jpg" />
+                </image>
+            </ImageView>
+            <Button fx:id="instructorButton" text="Instructor / Admin" onAction="#handleInstructorSelection"
+                    styleClass="modern-button" 
+                    style="-fx-font-size: 13px; -fx-min-width: 160px;" />
+        </VBox>
+    </HBox>
+
+    <!-- Copyright Footer -->
+    <Region VBox.vgrow="ALWAYS"/>
+    <VBox alignment="CENTER" spacing="2" style="-fx-padding: 0 0 0 0;">
+        <Text style="-fx-font-size: 12px; -fx-fill: #666666; -fx-font-weight: bold;" text="© SamVidya Educational Platform"/>
+        <Text style="-fx-font-size: 11px; -fx-fill: #888888;" text="Empowering practical programming education"/>
+    </VBox>
+</VBox>

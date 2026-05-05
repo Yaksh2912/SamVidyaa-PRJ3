@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.samvidya.controller.StudentTaskController">
+   <top>
+      <VBox spacing="10.0">
+         <padding>
+            <Insets bottom="10.0" left="20.0" right="20.0" top="20.0" />
+         </padding>
+         <HBox alignment="CENTER_LEFT" spacing="20.0">
+            <Label fx:id="taskNameLabel" styleClass="header-label" text="Task Name" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Label text="Difficulty:" />
+            <Label fx:id="difficultyLabel" styleClass="difficulty-label" text="MEDIUM" />
+            <Label text="Points:" />
+            <Label fx:id="pointsLabel" text="10" />
+            <Label text="Time Limit:" />
+            <Label fx:id="timeLimitLabel" text="30 minutes" />
+            <Label text="Language:" />
+            <Label fx:id="languageLabel" text="Python" />
+         </HBox>
+         <Separator />
+      </VBox>
+   </top>
+   <center>
+      <SplitPane dividerPositions="0.4" orientation="VERTICAL">
+         <VBox spacing="10.0">
+            <padding>
+               <Insets bottom="10.0" left="20.0" right="20.0" top="10.0" />
+            </padding>
+            <Label styleClass="section-header" text="Problem Statement" />
+            <TextArea fx:id="problemStatementArea" prefRowCount="8" wrapText="true" />
+            
+            <Label styleClass="section-header" text="Sample Test Cases" />
+            <TableView fx:id="sampleTestCasesTable" prefHeight="150.0">
+               <columns>
+                  <TableColumn fx:id="sampleInputColumn" prefWidth="200.0" text="Input" />
+                  <TableColumn fx:id="sampleOutputColumn" prefWidth="200.0" text="Expected Output" />
+               </columns>
+            </TableView>
+         </VBox>
+         
+         <VBox spacing="10.0">
+            <padding>
+               <Insets bottom="10.0" left="20.0" right="20.0" top="10.0" />
+            </padding>
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+               <Label styleClass="section-header" text="Your Solution" />
+               <Region HBox.hgrow="ALWAYS" />
+               <Button fx:id="runCodeButton" onAction="#handleRunCode" styleClass="primary-button" text="Run Code" />
+               <Button fx:id="submitCodeButton" onAction="#handleSubmitCode" styleClass="success-button" text="Submit Solution" />
+            </HBox>
+            
+            <TextArea fx:id="codeArea" prefRowCount="15" promptText="Write your code here..." />
+            
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+               <Label styleClass="section-header" text="Output" />
+               <Region HBox.hgrow="ALWAYS" />
+               <Label fx:id="statusLabel" text="Ready" />
+               <ProgressBar fx:id="executionProgress" prefWidth="100.0" />
+            </HBox>
+            
+            <TextArea fx:id="outputArea" prefRowCount="8" promptText="Execution results will appear here..." />
+         </VBox>
+      </SplitPane>
+   </center>
+   <bottom>
+      <VBox spacing="10.0">
+         <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="10.0" />
+         </padding>
+         <Separator />
+         <Label styleClass="section-header" text="Previous Attempts" />
+         <TableView fx:id="attemptsTable" prefHeight="120.0">
+            <columns>
+               <TableColumn fx:id="attemptNumberColumn" prefWidth="80.0" text="Attempt" />
+               <TableColumn fx:id="scoreColumn" prefWidth="80.0" text="Score" />
+               <TableColumn fx:id="statusColumn" prefWidth="100.0" text="Status" />
+               <TableColumn fx:id="submittedAtColumn" prefWidth="150.0" text="Submitted At" />
+            </columns>
+         </TableView>
+         
+         <HBox alignment="CENTER_RIGHT" spacing="10.0">
+            <Label fx:id="errorLabel" styleClass="error-label" text="Error message" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Button fx:id="closeButton" onAction="#handleClose" text="Close" />
+         </HBox>
+      </VBox>
+   </bottom>
+</BorderPane>

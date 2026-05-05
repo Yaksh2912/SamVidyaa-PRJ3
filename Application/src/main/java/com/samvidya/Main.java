@@ -1,0 +1,29 @@
+package com.samvidya;
+
+import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.image.Image;
+import javafx.stage.Stage;
+
+public class Main extends Application {
+    @Override
+    public void start(Stage primaryStage) throws Exception {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/RoleSelection.fxml"));
+        Parent root = loader.load();
+        
+        Scene scene = new Scene(root);
+        scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
+        
+        primaryStage.setTitle("SamVidya - Educational Platform");
+        primaryStage.setScene(scene);
+        primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/images/logo.png")));
+        primaryStage.show();
+        primaryStage.centerOnScreen();
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+}

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<StackPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+           fx:controller="com.samvidya.controller.InstructorDashboardController">
+    
+    <!-- Main Dashboard Content -->
+    <VBox spacing="20" style="-fx-background-color: #d8d8d8;">
+        <padding>
+            <Insets top="20" right="20" bottom="20" left="20"/>
+        </padding>
+        
+        <!-- Header Section -->
+        <HBox alignment="CENTER_LEFT" spacing="20">
+            <Label fx:id="welcomeLabel" text="Welcome, Instructor" 
+                   style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #333333;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            
+            <!-- Action Buttons -->
+            <Button fx:id="studentsButton" text="Students" onAction="#handleStudents" 
+                    visible="false" styleClass="button-secondary" 
+                    style="-fx-font-size: 16px; -fx-text-fill: white; -fx-background-radius: 6px; -fx-padding: 8 16;"/>
+            <Button fx:id="usersButton" text="Users" onAction="#handleUsers" 
+                    visible="false" styleClass="button-primary" 
+                    style="-fx-font-size: 16px; -fx-text-fill: white; -fx-background-radius: 6px; -fx-padding: 8 16;"/>
+            <Button text="Logout" onAction="#handleLogout" styleClass="button-danger" 
+                    style="-fx-font-size: 16px; -fx-background-radius: 6px; -fx-padding: 8 16;"/>
+        </HBox>
+        
+        <!-- Courses Section Header -->
+        <HBox alignment="CENTER_LEFT" spacing="10">
+            <Label text="My Courses" 
+                   style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #333333;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Refresh" onAction="#handleRefresh" styleClass="button-secondary" 
+                    style="-fx-font-size: 14px; -fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 6px; -fx-padding: 6 12;"/>
+        </HBox>
+        
+        <!-- Courses Table -->
+        <TableView fx:id="coursesTable" VBox.vgrow="ALWAYS" styleClass="modern-table">
+            <columns>
+                <TableColumn fx:id="courseCodeColumn" text="Course Code" prefWidth="100"/>
+                <TableColumn fx:id="courseNameColumn" text="Course Name" prefWidth="200"/>
+                <TableColumn fx:id="subjectColumn" text="Subject" prefWidth="100"/>
+                <TableColumn fx:id="moduleCountColumn" text="Modules" prefWidth="80"/>
+                <TableColumn fx:id="createdAtColumn" text="Created" prefWidth="120"/>
+                <TableColumn fx:id="courseTestColumn" text="Test Qs" prefWidth="70"/>
+                <TableColumn fx:id="actionsColumn" text="Actions" prefWidth="200"/>
+            </columns>
+        </TableView>
+        
+        <!-- Action Buttons Section -->
+        <VBox spacing="15">
+            <!-- Primary Actions -->
+            <HBox alignment="CENTER" spacing="15">
+                <Button fx:id="createCourseButton" text="Create Course" onAction="#handleCreateCourse" 
+                        styleClass="button-primary" 
+                        style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 12 24; -fx-background-radius: 6px;"/>
+                <Button fx:id="importCourseButton" text="Import Course" onAction="#handleImportCourse" 
+                        styleClass="button-secondary" 
+                        style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 12 24; -fx-background-radius: 6px; -fx-background-color: #8e44ad;"/>
+                <Button fx:id="editCourseButton" text="Manage Course" onAction="#handleEditCourse" 
+                        styleClass="button-secondary" 
+                        style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 12 24; -fx-background-radius: 6px;"/>
+                <Button fx:id="viewStudentsButton" text="View Students" onAction="#handleViewStudents" 
+                        styleClass="button-secondary" 
+                        style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 12 24; -fx-background-radius: 6px;"/>
+                <Button fx:id="analyticsButton" text="Analytics" onAction="#handleAnalytics" 
+                        styleClass="button-secondary" 
+                        style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 12 24; -fx-background-radius: 6px; -fx-background-color: #FF9800;"/>
+                <Button text="Shop" onAction="#handleShop"
+                        styleClass="button-secondary"
+                        style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 12 24; -fx-background-radius: 6px; -fx-background-color: #00897B; -fx-text-fill: white;"/>
+            </HBox>
+            
+            <!-- Status Information -->
+            <HBox alignment="CENTER" spacing="20">
+                <Label fx:id="courseCountLabel" text="0 courses" 
+                       style="-fx-font-size: 14px; -fx-text-fill: #666666; -fx-font-weight: bold;"/>
+                <Separator orientation="VERTICAL" prefHeight="20"/>
+                <Label fx:id="selectedCourseLabel" text="No course selected" 
+                       style="-fx-font-size: 14px; -fx-text-fill: #666666; -fx-font-style: italic;"/>
+            </HBox>
+        </VBox>
+        
+        <!-- Copyright Footer -->
+        <Region VBox.vgrow="ALWAYS"/>
+        <VBox alignment="CENTER" spacing="2" style="-fx-padding: 20 0 10 0;">
+            <Text style="-fx-font-size: 12px; -fx-fill: #666666; -fx-font-weight: bold;" 
+                  text="© SamVidya Educational Platform"/>
+            <Text style="-fx-font-size: 11px; -fx-fill: #888888;" 
+                  text="Empowering practical programming education"/>
+        </VBox>
+    </VBox>
+    
+</StackPane>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.samvidya.controller.CourseShopController"
+      spacing="0" style="-fx-background-color: #f5f5f5;">
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT" spacing="15"
+          style="-fx-background-color: #1565C0; -fx-padding: 14 20;">
+        <VBox spacing="2">
+            <Label fx:id="titleLabel" text="Course Shop"
+                   style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white;"/>
+            <Label fx:id="pointsSummaryLabel" text="Earned: 0 pts  |  Spent: 0 pts  |  Available: 0 pts"
+                   style="-fx-font-size: 13px; -fx-text-fill: #90CAF9;"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Close" onAction="#handleClose"
+                style="-fx-background-color: #e53935; -fx-text-fill: white; -fx-background-radius: 5; -fx-padding: 6 14;"/>
+    </HBox>
+
+    <Label text="Points are never deducted — spending is tracked separately for your records."
+           style="-fx-background-color: #E3F2FD; -fx-padding: 6 20; -fx-font-size: 12px; -fx-text-fill: #1565C0;"/>
+
+    <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+
+        <!-- ── Shop Tab ── -->
+        <Tab text="Available Items">
+            <VBox spacing="10" style="-fx-padding: 16;">
+                <Label fx:id="shopErrorLabel" text="" style="-fx-text-fill: red;" visible="false"/>
+                <TableView fx:id="shopTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="shopNameCol"    text="Item"           prefWidth="160"/>
+                        <TableColumn fx:id="shopDescCol"    text="Description"    prefWidth="280"/>
+                        <TableColumn fx:id="shopCostCol"    text="Cost (pts)"     prefWidth="90"/>
+                        <TableColumn fx:id="shopMaxCol"     text="Max Qty"        prefWidth="80"/>
+                        <TableColumn fx:id="shopOwnedCol"   text="You Own"        prefWidth="80"/>
+                        <TableColumn fx:id="shopBuyCol"     text="Buy"            prefWidth="80"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- ── History Tab ── -->
+        <Tab text="Purchase History">
+            <VBox spacing="10" style="-fx-padding: 16;">
+                <TableView fx:id="historyTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="histItemCol"  text="Item"         prefWidth="180"/>
+                        <TableColumn fx:id="histQtyCol"   text="Qty"          prefWidth="60"/>
+                        <TableColumn fx:id="histPtsCol"   text="Pts Spent"    prefWidth="100"/>
+                        <TableColumn fx:id="histDateCol"  text="Date"         prefWidth="160"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+    </TabPane>
+</VBox>

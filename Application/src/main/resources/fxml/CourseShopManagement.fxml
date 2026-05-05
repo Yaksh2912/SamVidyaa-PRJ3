@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.samvidya.controller.CourseShopManagementController"
+      spacing="0" style="-fx-background-color: #f5f5f5;">
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT" spacing="15"
+          style="-fx-background-color: #1565C0; -fx-padding: 14 20;">
+        <Label fx:id="titleLabel" text="Shop Management"
+               style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Close" onAction="#handleClose"
+                style="-fx-background-color: #e53935; -fx-text-fill: white; -fx-background-radius: 5; -fx-padding: 6 14;"/>
+    </HBox>
+
+    <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+
+        <!-- ── Items Tab ── -->
+        <Tab text="Shop Items">
+            <VBox spacing="14" style="-fx-padding: 16;">
+
+                <!-- Item form -->
+                <TitledPane text="Add / Edit Item" collapsible="false"
+                            style="-fx-font-weight: bold;">
+                    <GridPane hgap="12" vgap="10" style="-fx-padding: 12;">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="100" prefWidth="110"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                            <ColumnConstraints minWidth="100" prefWidth="110"/>
+                            <ColumnConstraints prefWidth="100"/>
+                        </columnConstraints>
+
+                        <Label text="Name:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <TextField fx:id="nameField" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                                   GridPane.columnSpan="3" promptText="e.g. 1 Mark"/>
+
+                        <Label text="Description:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <TextArea fx:id="descField" prefRowCount="2" wrapText="true"
+                                  GridPane.columnIndex="1" GridPane.rowIndex="1" GridPane.columnSpan="3"/>
+
+                        <Label text="Point Cost:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <Spinner fx:id="costSpinner" min="1" max="9999" initialValue="5" editable="true"
+                                 prefWidth="100" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                        <Label text="Max Qty/Student:" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                        <Spinner fx:id="maxQtySpinner" min="1" max="999" initialValue="10" editable="true"
+                                 prefWidth="100" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+
+                        <CheckBox fx:id="activeCheck" text="Active" selected="true"
+                                  GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+
+                        <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="4"
+                              GridPane.columnSpan="3">
+                            <Button text="Save Item" onAction="#handleSaveItem"
+                                    style="-fx-background-color: #1565C0; -fx-text-fill: white; -fx-background-radius: 4; -fx-padding: 6 16;"/>
+                            <Button text="Clear" onAction="#handleClearForm"
+                                    style="-fx-background-radius: 4; -fx-padding: 6 12;"/>
+                            <Button fx:id="deleteItemButton" text="Delete Selected" onAction="#handleDeleteItem"
+                                    style="-fx-background-color: #e53935; -fx-text-fill: white; -fx-background-radius: 4; -fx-padding: 6 12;"
+                                    disable="true"/>
+                        </HBox>
+                    </GridPane>
+                </TitledPane>
+
+                <Label fx:id="formErrorLabel" text="" style="-fx-text-fill: red;" visible="false"/>
+
+                <!-- Items table -->
+                <TableView fx:id="itemsTable" VBox.vgrow="ALWAYS" prefHeight="280">
+                    <columns>
+                        <TableColumn fx:id="itemNameCol"    text="Name"            prefWidth="160"/>
+                        <TableColumn fx:id="itemDescCol"    text="Description"     prefWidth="260"/>
+                        <TableColumn fx:id="itemCostCol"    text="Cost (pts)"      prefWidth="90"/>
+                        <TableColumn fx:id="itemMaxQtyCol"  text="Max Qty"         prefWidth="80"/>
+                        <TableColumn fx:id="itemActiveCol"  text="Active"          prefWidth="70"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- ── Analytics Tab ── -->
+        <Tab text="Purchase Summary">
+            <VBox spacing="12" style="-fx-padding: 16;">
+                <Label text="Per-item purchase totals across all students"
+                       style="-fx-font-size: 13px; -fx-text-fill: #555;"/>
+                <TableView fx:id="summaryTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="sumItemCol"  text="Item"          prefWidth="200"/>
+                        <TableColumn fx:id="sumQtyCol"   text="Total Bought"  prefWidth="120"/>
+                        <TableColumn fx:id="sumPtsCol"   text="Total Pts Spent" prefWidth="140"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+    </TabPane>
+</VBox>
