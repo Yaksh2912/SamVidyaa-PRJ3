@@ -61,3 +61,6 @@ attachments/
 
 # JDK - do not commit runtime, install separately
 jdk-*/
+
+# MinGW - do not commit compiler toolchain, install separately
+mingw64/
