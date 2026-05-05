@@ -58,3 +58,6 @@ logs/
 temp/
 uploads/
 attachments/
+
+# JDK - do not commit runtime, install separately
+jdk-*/
