@@ -126,6 +126,7 @@ dist-ssr/
 .DS_Store
 
 # local notes/docs
+PROJECT_EXPLANATION.txt
 SamVidyaa.md
 Samvidyaa.md
 gap.txt
@@ -135,6 +136,7 @@ todo.txt
 # client/backend specific (if nested)
 client/node_modules/
 client/dist/
+client/.vite/
 client/.env
 backend/node_modules/
 backend/.env
