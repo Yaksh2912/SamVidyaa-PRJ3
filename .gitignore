@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# Bundled runtimes / SDKs — never commit these binary trees
+jre/
+jdk/
+jdk*/
+openjfx-*/
+**/javafx-sdk-*/
+mingw64/
+**/python-3.*/
+
+# Java build output
+Application/target/
+**/target/
+*.class
+
+# Local env files
+.env
+*.env.local
+
+# Node (root-level safety; nested website/.gitignore covers the rest)
+node_modules/
