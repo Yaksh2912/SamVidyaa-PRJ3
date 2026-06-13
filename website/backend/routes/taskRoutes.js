@@ -8,11 +8,12 @@ const {
     validateTaskCreateRequest,
     validateTaskUpdateRequest,
     validateTaskDeleteRequest,
+    validateTaskGenerateRequest,
     validateTaskImportRequest,
     validateDesktopResultRequest,
     validateTaskCompleteRequest,
 } = require('../middleware/requestValidation');
-const { createTask, importTasksFromDocument, getTasks, getTaskHistory, deleteTask, updateTask, recordDesktopTaskResult, completeTask } = require('../controllers/taskController');
+const { createTask, generateTasksWithAI, importTasksFromDocument, getTasks, getTaskHistory, deleteTask, updateTask, recordDesktopTaskResult, completeTask } = require('../controllers/taskController');
 
 const taskImportExtensions = new Set(['.pdf', '.doc', '.docx', '.rtf', '.txt', '.md', '.csv', '.xlsx']);
 const taskImportMimeTypes = new Set([
@@ -46,6 +47,7 @@ router.route('/')
     .post(protect, instructorOrAdmin, validateTaskCreateRequest, createTask)
     .get(protect, getTasks);
 
+router.post('/generate', protect, instructorOrAdmin, validateTaskGenerateRequest, generateTasksWithAI);
 router.post('/import', protect, instructorOrAdmin, handleUploadMiddleware(upload.single('document')), validateTaskImportRequest, importTasksFromDocument);
 router.get('/history', protect, getTaskHistory);
 router.post('/:id/desktop-result', protect, validateDesktopResultRequest, recordDesktopTaskResult);

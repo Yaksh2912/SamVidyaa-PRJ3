@@ -15,6 +15,7 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 const { parseSpreadsheetRows } = require('../utils/spreadsheet');
+const { generateTasks: generateTaskDrafts, isReady: isTaskGenerationReady } = require('../services/taskGenerationService');
 
 const execFileAsync = promisify(execFile);
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
@@ -511,6 +512,48 @@ const importTasksFromDocument = async (req, res) => {
     }
 };
 
+// @desc    Generate task drafts with the LLM (not persisted — returned for review)
+// @route   POST /api/tasks/generate
+// @access  Private (Teacher/Admin)
+const generateTasksWithAI = async (req, res) => {
+    try {
+        const { module_id, prompt, count, difficulty, language } = req.body;
+
+        if (!module_id || !prompt || !String(prompt).trim()) {
+            return res.status(400).json({ message: 'Module ID and a prompt are required' });
+        }
+
+        if (!isTaskGenerationReady()) {
+            return res.status(503).json({
+                message: 'AI task generation is not configured. Set GEMINI_API_KEY or GOOGLE_API_KEY on the server.',
+            });
+        }
+
+        const access = await verifyModuleAccess(module_id, req.user);
+        if (access.error) {
+            return res.status(access.error.status).json({ message: access.error.message });
+        }
+
+        const tasks = await generateTaskDrafts({
+            prompt: String(prompt).trim(),
+            count: Number(count) || 1,
+            difficulty,
+            language,
+            moduleName: access.module.module_name,
+            moduleDescription: access.module.description || '',
+        });
+
+        if (!tasks.length) {
+            return res.status(422).json({ message: 'The AI did not return any usable tasks. Try refining your prompt.' });
+        }
+
+        res.json({ tasks });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message || 'Failed to generate tasks' });
+    }
+};
+
 // @desc    Get tasks for a module
 // @route   GET /api/tasks?module_id=xxx
 // @access  Private
@@ -917,4 +960,4 @@ const completeTask = async (req, res) => {
     }
 };
 
-module.exports = { createTask, importTasksFromDocument, getTasks, getTaskHistory, deleteTask, updateTask, recordDesktopTaskResult, completeTask };
+module.exports = { createTask, generateTasksWithAI, importTasksFromDocument, getTasks, getTaskHistory, deleteTask, updateTask, recordDesktopTaskResult, completeTask };

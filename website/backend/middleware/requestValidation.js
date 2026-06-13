@@ -431,6 +431,14 @@ const validateTaskDeleteRequest = validateRequest((req, errors) => {
     validateObjectId(req.params.id, 'id', errors, { required: true });
 });
 
+const validateTaskGenerateRequest = validateRequest((req, errors) => {
+    validateObjectId(req.body.module_id, 'module_id', errors, { required: true });
+    validateString(req.body.prompt, 'prompt', errors, { required: true, maxLength: 2000 });
+    validateNumber(req.body.count, 'count', errors, { integer: true, min: 1, max: 10 });
+    validateEnum(req.body.difficulty, 'difficulty', errors, TASK_DIFFICULTIES);
+    validateString(req.body.language, 'language', errors, { maxLength: 60 });
+});
+
 const validateTaskImportRequest = validateRequest((req, errors) => {
     validateObjectId(req.body.module_id, 'module_id', errors, { required: true });
     validateFile(req.file, 'document', errors, {
@@ -521,6 +529,7 @@ module.exports = {
     validateTaskCreateRequest,
     validateTaskUpdateRequest,
     validateTaskDeleteRequest,
+    validateTaskGenerateRequest,
     validateTaskImportRequest,
     validateDesktopResultRequest,
     validateTaskCompleteRequest,

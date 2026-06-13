@@ -4,6 +4,7 @@ const { installConsoleBridge, logger } = require('./utils/logger');
 const connectDB = require('./config/db');
 const { createApp } = require('./app');
 const { initChatService } = require('./services/chatService');
+const { initTaskGenerationService } = require('./services/taskGenerationService');
 const { initVectorStore } = require('./services/vectorStore');
 const { captureError, emitMonitoringEvent } = require('./services/monitoringService');
 const { scheduleExistingAnnouncementExpiries } = require('./services/announcementExpiryService');
@@ -34,6 +35,7 @@ const server = app.listen(PORT, async () => {
 
     try {
         initChatService();
+        initTaskGenerationService();
         await initVectorStore();
         logger.info('server.rag_initialized');
     } catch (err) {
