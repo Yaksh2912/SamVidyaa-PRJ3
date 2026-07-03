@@ -12,6 +12,14 @@ const { scheduleExistingAnnouncementExpiries } = require('./services/announcemen
 dotenv.config({ path: path.join(__dirname, '.env') });
 installConsoleBridge();
 
+// Fail fast on a missing or weak JWT secret — a short/guessable secret allows token forgery.
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    logger.error('server.invalid_jwt_secret', {
+        message: 'JWT_SECRET must be set and at least 32 characters long. Refusing to start.',
+    });
+    process.exit(1);
+}
+
 connectDB();
 
 const app = createApp();

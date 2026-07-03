@@ -71,6 +71,11 @@ test('bulkEnrollByEmail reports exact enrolled and skipped counts under concurre
 });
 
 test('bulkEnrollByRange returns zero changes when no matching students are provided', async (t) => {
+    stubMethod(t, Course, 'findById', async () => ({
+        _id: 'course-1',
+        instructor: 'teacher-1',
+    }));
+
     stubMethod(t, User, 'find', () => ({
         select() {
             return this;
@@ -88,6 +93,10 @@ test('bulkEnrollByRange returns zero changes when no matching students are provi
             course_id: 'course-1',
             start_enrollment: '100',
             end_enrollment: '101',
+        },
+        user: {
+            _id: 'admin-1',
+            role: 'ADMIN',
         },
     };
     const res = createMockResponse();

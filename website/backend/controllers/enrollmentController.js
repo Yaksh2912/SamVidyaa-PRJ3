@@ -7,6 +7,10 @@ const { listAnalyticsEnrollmentsForStudent } = require('../services/analyticsCou
 
 const normalizeRole = (role) => String(role || '').toUpperCase();
 const isAdminRole = (role) => normalizeRole(role) === 'ADMIN';
+const isInstructorOrAdminRole = (role) => {
+    const normalizedRole = normalizeRole(role);
+    return normalizedRole === 'ADMIN' || normalizedRole === 'INSTRUCTOR' || normalizedRole === 'TEACHER';
+};
 
 // @desc    Enroll a student in a course
 // @route   POST /api/enrollments
@@ -15,8 +19,44 @@ const enrollStudent = async (req, res) => {
     try {
         const { course_id, student_email } = req.body;
 
-        if (!course_id || !student_email) {
-            return res.status(400).json({ message: 'Course ID and Student Email are required' });
+        if (!course_id) {
+            return res.status(400).json({ message: 'Course ID is required' });
+        }
+
+        // Students may only create a self-enrollment REQUEST. It always lands in PENDING and the
+        // course instructor approves it; a student cannot enroll someone else or grant ACTIVE access.
+        if (!isInstructorOrAdminRole(req.user.role)) {
+            const course = await Course.findById(course_id).select('_id');
+            if (!course) {
+                return res.status(404).json({ message: 'Course not found' });
+            }
+
+            const existing = await Enrollment.findOne({ course_id, student_id: req.user._id });
+            if (existing) {
+                if (existing.status === 'REJECTED' || existing.status === 'DROPPED') {
+                    existing.status = 'PENDING';
+                    await existing.save();
+                    return res.status(200).json(existing);
+                }
+                return res.status(400).json({ message: 'You already have an enrollment for this course' });
+            }
+
+            const requestedEnrollment = await Enrollment.create({
+                course_id,
+                student_id: req.user._id,
+                status: 'PENDING',
+            });
+            return res.status(201).json(requestedEnrollment);
+        }
+
+        // Instructor/Admin path: enroll a named student into a course they own.
+        if (!student_email) {
+            return res.status(400).json({ message: 'Student Email is required' });
+        }
+
+        const authorization = await authorizeCourseEnrollmentAccess(course_id, req.user);
+        if (authorization.error) {
+            return res.status(authorization.error.status).json({ message: authorization.error.message });
         }
 
         const student = await User.findOne({ email: student_email });
@@ -145,7 +185,30 @@ const applyBulkEnrollmentChanges = async (courseId, studentIds = []) => {
 // @access  Private
 const getEnrolledStudents = async (req, res) => {
     try {
-        const query = { course_id: req.params.courseId };
+        const courseId = req.params.courseId;
+        const isStaffViewer = isInstructorOrAdminRole(req.user.role);
+
+        // Instructors/admins must own the course. Students may only view the roster of a course
+        // they are actively enrolled in (needed for collaboration peer selection), and never see
+        // classmates' email addresses.
+        if (isStaffViewer) {
+            const authorization = await authorizeCourseEnrollmentAccess(courseId, req.user);
+            if (authorization.error) {
+                return res.status(authorization.error.status).json({ message: authorization.error.message });
+            }
+        } else {
+            const ownEnrollment = await Enrollment.findOne({
+                course_id: courseId,
+                student_id: req.user._id,
+                status: { $in: ['ACTIVE', 'APPROVED'] },
+            }).select('_id').lean();
+
+            if (!ownEnrollment) {
+                return res.status(403).json({ message: 'Not authorized' });
+            }
+        }
+
+        const query = { course_id: courseId };
         const pagination = parsePagination(req, { defaultLimit: 100, maxLimit: 200 });
         const [total, enrollments] = await Promise.all([
             Enrollment.countDocuments(query),
@@ -157,15 +220,17 @@ const getEnrolledStudents = async (req, res) => {
         ]);
 
         // Transform to return just students with enrollment info
-        const students = enrollments.map(e => ({
-            _id: e.student_id._id,
-            enrollment_id: e._id,
-            name: e.student_id.name,
-            email: e.student_id.email,
-            enrollment_number: e.student_id.enrollment_number,
-            status: e.status,
-            enrolledAt: e.createdAt
-        }));
+        const students = enrollments
+            .filter((e) => e.student_id)
+            .map(e => ({
+                _id: e.student_id._id,
+                enrollment_id: e._id,
+                name: e.student_id.name,
+                email: isStaffViewer ? e.student_id.email : undefined,
+                enrollment_number: e.student_id.enrollment_number,
+                status: e.status,
+                enrolledAt: e.createdAt
+            }));
 
         applyPaginationHeaders(res, { ...pagination, total });
         res.json(students);
@@ -181,6 +246,12 @@ const getEnrolledStudents = async (req, res) => {
 const updateEnrollmentStatus = async (req, res) => {
     try {
         const { status } = req.body;
+        const ALLOWED_STATUSES = ['ACTIVE', 'DROPPED', 'COMPLETED', 'PENDING', 'REJECTED'];
+
+        if (!ALLOWED_STATUSES.includes(String(status || '').toUpperCase())) {
+            return res.status(400).json({ message: 'Invalid enrollment status' });
+        }
+
         const enrollment = await Enrollment.findById(req.params.id).populate('course_id');
 
         if (!enrollment) {
@@ -193,7 +264,7 @@ const updateEnrollmentStatus = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized' });
         }
 
-        enrollment.status = status;
+        enrollment.status = String(status).toUpperCase();
         await enrollment.save();
 
         res.json(enrollment);
@@ -248,6 +319,11 @@ const bulkEnrollByRange = async (req, res) => {
 
         if (!course_id || !start_enrollment || !end_enrollment) {
             return res.status(400).json({ message: 'Course ID, start and end enrollment numbers are required' });
+        }
+
+        const authorization = await authorizeCourseEnrollmentAccess(course_id, req.user);
+        if (authorization.error) {
+            return res.status(authorization.error.status).json({ message: authorization.error.message });
         }
 
         // Find all students whose enrollment_number falls in the range
@@ -367,6 +443,11 @@ const bulkEnrollByExcel = async (req, res) => {
 
         if (!course_id) {
             return res.status(400).json({ message: 'Course ID is required' });
+        }
+
+        const authorization = await authorizeCourseEnrollmentAccess(course_id, req.user);
+        if (authorization.error) {
+            return res.status(authorization.error.status).json({ message: authorization.error.message });
         }
 
         if (!req.file) {

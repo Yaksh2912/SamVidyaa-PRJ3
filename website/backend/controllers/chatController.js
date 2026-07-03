@@ -4,6 +4,11 @@ const { ingestHandoutPdf } = require('../services/courseHandoutIngestionService'
 const path = require('path');
 const { pathExists } = require('../utils/fileSystem');
 
+// Collapse traversal sequences and strip leading slashes so a caller cannot escape the uploads dir.
+const normalizeRelativePath = (input = '') => path.posix
+    .normalize(String(input).replace(/\\/g, '/'))
+    .replace(/^\/+/, '');
+
 /**
  * POST /api/chat
  * Send a message to the RAG chatbot.
@@ -111,15 +116,23 @@ const ingestPdf = async (req, res) => {
             return res.status(400).json({ message: 'File path is required.' });
         }
 
-        const absolutePath = path.resolve(__dirname, '..', filePath);
+        // Containment: only files inside the uploads directory may be ingested. Without this a
+        // privileged caller could pass e.g. "../.env" and read server secrets back via the chatbot.
+        const relativePath = normalizeRelativePath(filePath);
+        const uploadsRoot = path.resolve(__dirname, '..', 'uploads');
+        const absolutePath = path.resolve(__dirname, '..', relativePath);
+
+        if (!relativePath.startsWith('uploads/') || !absolutePath.startsWith(uploadsRoot + path.sep)) {
+            return res.status(400).json({ message: 'Invalid file path.' });
+        }
 
         if (!(await pathExists(absolutePath))) {
             return res.status(404).json({ message: 'File not found.' });
         }
 
         const result = await ingestHandoutPdf({
-            relativePath: filePath,
-            source: path.basename(filePath),
+            relativePath,
+            source: path.basename(relativePath),
             courseId: courseId || '',
             courseName: courseName || '',
             replaceExistingForCourse: Boolean(courseId),
