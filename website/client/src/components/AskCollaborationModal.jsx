@@ -26,7 +26,7 @@ function AskCollaborationModal({ onClose, task, courseId }) {
 
                 if (response.ok) {
                     const data = await response.json();
-                    const filteredPeers = data.filter(p => p.student_id && p.student_id._id !== currentUser._id && ['ACTIVE', 'APPROVED'].includes(p.status));
+                    const filteredPeers = data.filter(p => p._id !== currentUser._id && p.status === 'ACTIVE');
                     setPeers(filteredPeers);
                 }
             } catch (err) {
@@ -119,20 +119,20 @@ function AskCollaborationModal({ onClose, task, courseId }) {
                                 <div key={peer._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--accent-gradient)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                            {(peer.student_id?.name || 'S').charAt(0).toUpperCase()}
+                                            {(peer.name || 'S').charAt(0).toUpperCase()}
                                         </div>
                                         <div>
-                                            <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{peer.student_id?.name || translations.common.unknownStudent}</div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{peer.student_id?.enrollment_number || peer.student_id?.email || translations.common.notAvailable}</div>
+                                            <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{peer.name || translations.common.unknownStudent}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{peer.enrollment_number || peer.email || translations.common.notAvailable}</div>
                                         </div>
                                     </div>
-                                    <button 
-                                        className="btn btn-primary" 
+                                    <button
+                                        className="btn btn-primary"
                                         style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-                                        onClick={() => handleInvite(peer.student_id?._id)}
-                                        disabled={inviting === peer.student_id?._id}
+                                        onClick={() => handleInvite(peer._id)}
+                                        disabled={inviting === peer._id}
                                     >
-                                        {inviting === peer.student_id?._id ? t.inviting : <><HiOutlinePaperAirplane style={{ marginRight:'4px' }}/> {t.invite}</>}
+                                        {inviting === peer._id ? t.inviting : <><HiOutlinePaperAirplane style={{ marginRight:'4px' }}/> {t.invite}</>}
                                     </button>
                                 </div>
                             ))}

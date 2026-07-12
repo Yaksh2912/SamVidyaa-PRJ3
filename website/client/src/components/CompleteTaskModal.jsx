@@ -165,7 +165,7 @@ function CompleteTaskModal({ task, courseId, onClose, onComplete }) {
                                                 checked={selectedPeers.includes(peer._id)}
                                                 onChange={() => togglePeer(peer._id)}
                                             />
-                                            {peer.name} ({peer.email})
+                                            {peer.name}{peer.enrollment_number ? ` (${peer.enrollment_number})` : ''}
                                         </label>
                                     ))}
                                 </div>

@@ -2,12 +2,7 @@ const { handleChatMessage, getChatHistory, clearChatHistory } = require('../serv
 const { embedAndStore } = require('../services/vectorStore');
 const { ingestHandoutPdf } = require('../services/courseHandoutIngestionService');
 const path = require('path');
-const { pathExists } = require('../utils/fileSystem');
-
-// Collapse traversal sequences and strip leading slashes so a caller cannot escape the uploads dir.
-const normalizeRelativePath = (input = '') => path.posix
-    .normalize(String(input).replace(/\\/g, '/'))
-    .replace(/^\/+/, '');
+const { pathExists, resolveWithinUploads } = require('../utils/fileSystem');
 
 /**
  * POST /api/chat
@@ -118,11 +113,9 @@ const ingestPdf = async (req, res) => {
 
         // Containment: only files inside the uploads directory may be ingested. Without this a
         // privileged caller could pass e.g. "../.env" and read server secrets back via the chatbot.
-        const relativePath = normalizeRelativePath(filePath);
-        const uploadsRoot = path.resolve(__dirname, '..', 'uploads');
-        const absolutePath = path.resolve(__dirname, '..', relativePath);
+        const { relativePath, absolutePath, isWithinUploads } = resolveWithinUploads(filePath);
 
-        if (!relativePath.startsWith('uploads/') || !absolutePath.startsWith(uploadsRoot + path.sep)) {
+        if (!isWithinUploads) {
             return res.status(400).json({ message: 'Invalid file path.' });
         }
 

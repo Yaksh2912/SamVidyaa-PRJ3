@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const { enrollStudent, getEnrolledStudents, getStudentEnrollments, updateEnrollmentStatus, bulkEnrollByRange, bulkEnrollByEmail, bulkEnrollByExcel } = require('../controllers/enrollmentController');
-const { handleUploadMiddleware } = require('../middleware/requestValidation');
+const { handleUploadMiddleware, validateEnrollmentStatusRequest } = require('../middleware/requestValidation');
 const multer = require('multer');
 const path = require('path');
 
@@ -31,7 +31,7 @@ router.post('/', protect, enrollStudent);
 router.post('/bulk', protect, bulkEnrollByRange);
 router.post('/bulk-email', protect, bulkEnrollByEmail);
 router.post('/excel-upload', protect, handleUploadMiddleware(upload.single('excel')), bulkEnrollByExcel);
-router.put('/:id', protect, updateEnrollmentStatus);
+router.put('/:id', protect, validateEnrollmentStatusRequest, updateEnrollmentStatus);
 router.get('/course/:courseId', protect, getEnrolledStudents);
 router.get('/student', protect, getStudentEnrollments);
 

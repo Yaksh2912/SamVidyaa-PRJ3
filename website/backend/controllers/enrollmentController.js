@@ -4,13 +4,7 @@ const Course = require('../models/Course');
 const { parsePagination, applyPaginationHeaders } = require('../utils/pagination');
 const { parseSpreadsheetRows } = require('../utils/spreadsheet');
 const { listAnalyticsEnrollmentsForStudent } = require('../services/analyticsCourseService');
-
-const normalizeRole = (role) => String(role || '').toUpperCase();
-const isAdminRole = (role) => normalizeRole(role) === 'ADMIN';
-const isInstructorOrAdminRole = (role) => {
-    const normalizedRole = normalizeRole(role);
-    return normalizedRole === 'ADMIN' || normalizedRole === 'INSTRUCTOR' || normalizedRole === 'TEACHER';
-};
+const { isAdminRole, isInstructorOrAdminRole } = require('../middleware/authMiddleware');
 
 // @desc    Enroll a student in a course
 // @route   POST /api/enrollments
@@ -41,12 +35,20 @@ const enrollStudent = async (req, res) => {
                 return res.status(400).json({ message: 'You already have an enrollment for this course' });
             }
 
-            const requestedEnrollment = await Enrollment.create({
-                course_id,
-                student_id: req.user._id,
-                status: 'PENDING',
-            });
-            return res.status(201).json(requestedEnrollment);
+            try {
+                const requestedEnrollment = await Enrollment.create({
+                    course_id,
+                    student_id: req.user._id,
+                    status: 'PENDING',
+                });
+                return res.status(201).json(requestedEnrollment);
+            } catch (error) {
+                // Concurrent request won the unique (course_id, student_id) race — treat as duplicate.
+                if (error.code === 11000) {
+                    return res.status(400).json({ message: 'You already have an enrollment for this course' });
+                }
+                throw error;
+            }
         }
 
         // Instructor/Admin path: enroll a named student into a course they own.
@@ -75,12 +77,18 @@ const enrollStudent = async (req, res) => {
             return res.status(400).json({ message: 'Student already enrolled' });
         }
 
-        const enrollment = await Enrollment.create({
-            course_id,
-            student_id: student._id,
-        });
-
-        res.status(201).json(enrollment);
+        try {
+            const enrollment = await Enrollment.create({
+                course_id,
+                student_id: student._id,
+            });
+            return res.status(201).json(enrollment);
+        } catch (error) {
+            if (error.code === 11000) {
+                return res.status(400).json({ message: 'Student already enrolled' });
+            }
+            throw error;
+        }
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Enrollment failed' });
@@ -200,7 +208,7 @@ const getEnrolledStudents = async (req, res) => {
             const ownEnrollment = await Enrollment.findOne({
                 course_id: courseId,
                 student_id: req.user._id,
-                status: { $in: ['ACTIVE', 'APPROVED'] },
+                status: 'ACTIVE',
             }).select('_id').lean();
 
             if (!ownEnrollment) {
@@ -209,6 +217,11 @@ const getEnrolledStudents = async (req, res) => {
         }
 
         const query = { course_id: courseId };
+        if (!isStaffViewer) {
+            // Students only see fellow ACTIVE classmates for peer selection — never pending/
+            // rejected/dropped rows, which would leak classmates' academic status.
+            query.status = 'ACTIVE';
+        }
         const pagination = parsePagination(req, { defaultLimit: 100, maxLimit: 200 });
         const [total, enrollments] = await Promise.all([
             Enrollment.countDocuments(query),
@@ -246,11 +259,6 @@ const getEnrolledStudents = async (req, res) => {
 const updateEnrollmentStatus = async (req, res) => {
     try {
         const { status } = req.body;
-        const ALLOWED_STATUSES = ['ACTIVE', 'DROPPED', 'COMPLETED', 'PENDING', 'REJECTED'];
-
-        if (!ALLOWED_STATUSES.includes(String(status || '').toUpperCase())) {
-            return res.status(400).json({ message: 'Invalid enrollment status' });
-        }
 
         const enrollment = await Enrollment.findById(req.params.id).populate('course_id');
 
@@ -258,8 +266,12 @@ const updateEnrollmentStatus = async (req, res) => {
             return res.status(404).json({ message: 'Enrollment not found' });
         }
 
-        // Verify that the instructor owns the course
-        const course = await Course.findById(enrollment.course_id._id);
+        // Verify that the instructor owns the course. The course may have been deleted, in which
+        // case populate yields null — treat that as a missing course rather than dereferencing it.
+        const course = enrollment.course_id;
+        if (!course) {
+            return res.status(404).json({ message: 'Course not found' });
+        }
         if (course.instructor.toString() !== req.user._id.toString() && !isAdminRole(req.user.role)) {
             return res.status(401).json({ message: 'Not authorized' });
         }

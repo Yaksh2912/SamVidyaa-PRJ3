@@ -2,11 +2,10 @@ const path = require('path');
 const Course = require('../models/Course');
 const Module = require('../models/Module');
 const Enrollment = require('../models/Enrollment');
-const { pathExists } = require('../utils/fileSystem');
+const { pathExists, normalizeRelativePath, resolveWithinUploads } = require('../utils/fileSystem');
 
 const ALLOWED_STUDENT_FILE_STATUSES = ['ACTIVE', 'APPROVED'];
 
-const normalizeRelativePath = (input = '') => path.posix.normalize(String(input).replace(/\\/g, '/')).replace(/^\/+/, '');
 const isAdminRole = (role) => role === 'ADMIN' || role === 'admin';
 const isStudentRole = (role) => role === 'STUDENT' || role === 'student';
 
@@ -65,15 +64,12 @@ async function getProtectedFile(req, res, next) {
             return res.status(400).json({ message: 'File path is required' });
         }
 
-        const relativePath = normalizeRelativePath(rawPath);
-        if (!relativePath.startsWith('uploads/')) {
+        const { relativePath, absolutePath, isWithinUploads } = resolveWithinUploads(rawPath);
+        if (!isWithinUploads) {
             return res.status(400).json({ message: 'Invalid file path' });
         }
 
-        const absolutePath = path.resolve(__dirname, '..', relativePath);
-        const uploadsRoot = path.resolve(__dirname, '..', 'uploads');
-
-        if (!absolutePath.startsWith(uploadsRoot) || !(await pathExists(absolutePath))) {
+        if (!(await pathExists(absolutePath))) {
             return res.status(404).json({ message: 'File not found' });
         }
 

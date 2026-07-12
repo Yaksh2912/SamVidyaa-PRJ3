@@ -53,4 +53,4 @@ const instructorOrAdmin = (req, res, next) => {
     }
 };
 
-module.exports = { protect, admin, instructorOrAdmin };
+module.exports = { protect, admin, instructorOrAdmin, isAdminRole, isInstructorOrAdminRole };

@@ -1,9 +1,12 @@
 const path = require('path');
 const multer = require('multer');
+const Enrollment = require('../models/Enrollment');
 
 const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
 const TASK_DIFFICULTIES = new Set(['EASY', 'MEDIUM', 'HARD']);
 const TASK_RESULT_STATUSES = new Set(['PASSED', 'FAILED']);
+// Derived from the schema so the allowed set can never drift from the model enum.
+const ENROLLMENT_STATUSES = new Set(Enrollment.schema.path('status').enumValues);
 const ANNOUNCEMENT_AUDIENCES = new Set(['GLOBAL', 'COURSE']);
 const TASK_IMPORT_EXTENSIONS = new Set(['.pdf', '.doc', '.docx', '.rtf', '.txt', '.md', '.csv', '.xlsx']);
 const TASK_IMPORT_MIME_TYPES = new Set([
@@ -507,6 +510,11 @@ const validateAnnouncementDeleteRequest = validateRequest((req, errors) => {
     validateObjectId(req.params.id, 'id', errors, { required: true });
 });
 
+const validateEnrollmentStatusRequest = validateRequest((req, errors) => {
+    validateObjectId(req.params.id, 'id', errors, { required: true });
+    validateEnum(req.body.status, 'status', errors, ENROLLMENT_STATUSES, { required: true });
+});
+
 const validateDesktopAppUploadRequest = validateRequest((req, errors) => {
     validateFile(req.file, 'installer', errors, {
         required: true,
@@ -537,5 +545,6 @@ module.exports = {
     validateRewardDeleteRequest,
     validateAnnouncementCreateRequest,
     validateAnnouncementDeleteRequest,
+    validateEnrollmentStatusRequest,
     validateDesktopAppUploadRequest,
 };
